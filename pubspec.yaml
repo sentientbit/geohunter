@@ -1,0 +1,154 @@
+name: geohunter
+description: Location based scavenger hunt game with a RPG questline which takes place in real life.
+
+# The following line prevents the package from being accidentally published to
+# pub.dev using `pub publish`. This is preferred for private packages.
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+# The following defines the version and build number for your application.
+# A version number is three numbers separated by dots, like 1.2.43
+# followed by an optional build number separated by a +.
+# Both the version and the builder number may be overridden in flutter
+# build by specifying --build-name and --build-number, respectively.
+# In Android, build-name is used as versionName while build-number used as versionCode.
+# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
+# In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
+# Read more about iOS versioning at
+# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+
+# 3. Build a new AppBundle (for uploading into https://play.google.com/apps/publish)
+# flutter build appbundle
+
+# 4. Find out SHA-1 Fingerprint (see https://github.com/flame-engine/play_games/blob/master/doc/signin.md)
+# keytool -list -v -alias geocraft -keystore android\app\geocraft.jks
+# versionCode AUTOINCREMENTED in android/app/build.gradle versionCode +1
+version: 1.1.60
+
+environment:
+  sdk: ">=2.11.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # https://api.flutter.dev/flutter/material/Icons-class.html
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^1.0.0
+
+  flutter_localizations:
+    sdk: flutter
+
+  admob_flutter: ^1.0.1
+  after_layout: ^1.0.7+2
+  animated_splash: ^1.0.0
+  app_settings: ^4.0.1+1
+  back_button_interceptor: ^4.3.0
+  cached_network_image: ^2.5.0
+  crypto: ^2.1.5
+  device_info: '^1.0.0'
+  dio: ^3.0.10
+  double_back_to_close_app: ^2.0.1
+  encrypt: ^4.0.2
+  #firebase_auth: ^0.18.4+1
+  #firebase_core: ^0.5.2
+  flame: ^0.28.0
+  flutter_countdown_timer: ^4.0.0
+  flutter_map: ^0.11.0
+  get_it: ^4.0.2
+  geolocator: ^6.1.6
+  # google_maps_flutter: ^1.0.5
+  # firebase_admob replaced by google_mobile_ads
+  # google_mobile_ads: ^0.11.0+2
+  # google_sign_in: ^4.5.6
+  in_app_purchase: ^0.3.4+16
+  image_picker: ^0.6.7+14
+  intl: ^0.17.0
+  latlong: ^0.6.1
+  loading_overlay: ^0.2.1
+  logger: ^0.9.4
+  # mapbox_gl: ^0.9.0
+  package_info: ^0.4.3+2
+  qr_flutter: ^3.1.0
+  qrscan: ^0.2.17
+  requests: ^3.3.0
+  sentry: ^2.3.1
+  shared_preferences: ^0.5.12+4
+  url_launcher: ^6.0.2
+  # Deep Links
+  # uni_links: ^0.2.0
+  # barcode_scan: ^1.0.0
+  percent_indicator: "^2.1.1"
+  rxdart: ^0.25.0
+  flutter_offline: "^2.0.0"
+  flutter_secure_storage: ^3.3.5
+  flutter_html: ^0.11.1
+
+dev_dependencies:
+  pedantic:
+  flutter_launcher_icons: "^0.8.1"
+  flutter_test:
+    sdk: flutter
+
+flutter_icons:
+  # How to regenerate icons
+  # flutter pub run flutter_launcher_icons:main
+  image_path_android: "assets/images/icon-512.png"
+  image_path_ios: "assets/images/icon-512.png"
+  android: true # can specify file name here e.g. "android"
+  ios: true # can specify file name here e.g. "ios"
+  # image_path: "assets/icon.png"
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter.
+flutter:
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+
+  # To add assets to your application, add an assets section, like this:
+  assets:
+    - assets/images/
+    - assets/images/avatars/
+    - assets/images/blueprints/
+    - assets/images/items/
+    - assets/images/markers/
+    - assets/images/materials/
+    - assets/images/placeholders/
+    - assets/images/research/
+    - assets/achievements/first_wood.png
+    - assets/map_style.json
+    - assets/map_style_aubergine.json
+    - assets/fonts/CustomIcon.ttf
+    - assets/secrets.json
+    - assets/i18n/ro.json
+    - assets/i18n/en.json
+    - assets/audio/sfx/
+
+  fonts:
+    - family: Open Sans
+      fonts:
+        - asset: assets/fonts/OpenSans-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/OpenSans-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/OpenSans-Light.ttf
+          weight: 300
+        - asset: assets/fonts/OpenSans-Regular.ttf
+          weight: 400
+    - family: Cormorant SC
+      fonts:
+        - asset: assets/fonts/CormorantSC-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/CormorantSC-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/CormorantSC-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/CormorantSC-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/CormorantSC-Light.ttf
+          weight: 300
