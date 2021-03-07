@@ -1,0 +1,52 @@
+{
+  "project_info": {
+    "project_number": "470951679086",
+    "firebase_url": "https://api-project-470951679086.firebaseio.com",
+    "project_id": "api-project-470951679086",
+    "storage_bucket": "api-project-470951679086.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:470951679086:android:32580c5ab1e40b2e40027f",
+        "android_client_info": {
+          "package_name": "com.apsoni.geocraft"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "470951679086-gbinueerntfomib3ujt0s8r5fb3f786k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.apsoni.geocraft",
+            "certificate_hash": "a4374c5862e13b3f950baa1fe601068f44a4afaa"
+          }
+        },
+        {
+          "client_id": "470951679086-pi9pdbuecpt97r8v1u3botr0r348baqq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.apsoni.geocraft",
+            "certificate_hash": "84f415c223bb9f6591548035d5e1bf12a55d9a8f"
+          }
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCc1YQzLkR1yQ3eTH70Fe0V-JhUv_5zEZA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "470951679086-epjclojaclf3ctcnagnug3btohuob6lr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
