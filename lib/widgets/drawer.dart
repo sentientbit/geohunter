@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 // import 'package:logger/logger.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:image_picker/image_picker.dart';
@@ -38,6 +39,8 @@ class _DrawerPageState extends State<DrawerPage> {
 
   /// Curent loggedin user
   User _user;
+
+  final _storage = FlutterSecureStorage();
 
   /// Safe holding for coins
   double _currentCoins = 0.0;
@@ -362,8 +365,10 @@ class _DrawerPageState extends State<DrawerPage> {
                         AppLocalizations.of(context).translate('drawer_logout'),
                         style: Style.menuTextStyle),
                     onTap: () async => {
+                          // Logout
                           await CustomInterceptors.deleteStoredCookies(
                               GlobalConstants.apiHostUrl),
+                          await _storage.delete(key: 'api_key'),
                           Navigator.of(context).pop(),
                           Navigator.of(context).pushReplacementNamed('/login')
                         }),

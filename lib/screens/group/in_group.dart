@@ -411,7 +411,7 @@ class _InGroupState extends State<InGroup> {
                           if (_isLocked && _isGroupOwner)
                             Text(
                               AppLocalizations.of(context)
-                                  .translate('your_password_input_label'),
+                                  .translate('password_input_label'),
                               semanticsLabel: 'Password',
                               style: TextStyle(
                                   color: Colors.white,

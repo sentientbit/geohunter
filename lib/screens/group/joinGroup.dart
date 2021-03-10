@@ -278,7 +278,7 @@ class _JoinGroupState extends State<JoinGroup> {
                                 if (_isLocked)
                                   Text(
                                     AppLocalizations.of(context)
-                                        .translate('your_password_input_label'),
+                                        .translate('password_input_label'),
                                     semanticsLabel: 'Password',
                                     style: TextStyle(
                                         color: Colors.white,

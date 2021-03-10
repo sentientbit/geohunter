@@ -1,6 +1,6 @@
 ///
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
@@ -320,6 +320,25 @@ String hashStringMD5(String input) {
   var digest = md5.convert(utf8.encode(input));
   //print("Digest as hex string: $digest");
   return digest.toString();
+}
+
+///
+Map<String, dynamic> parseJwt(String token) {
+  final parts = token.split('.');
+  if (parts.length != 3) {
+    throw Exception('invalid token');
+  }
+
+  // ignore: omit_local_variable_types
+  String normalizedSource = base64Url.normalize(parts[1]);
+  final payload = utf8.decode(base64Url.decode(normalizedSource));
+
+  final payloadMap = json.decode(payload);
+  if (payloadMap is! Map<String, dynamic>) {
+    throw Exception('invalid payload');
+  }
+
+  return payloadMap;
 }
 
 ///
