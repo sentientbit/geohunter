@@ -207,7 +207,6 @@ class _NoGroupState extends State<NoGroup> {
 
     if (response["success"] == true) {
       tmp["jwt"] = response["jwt"];
-      tmp["expiresAt"] = response["expiresAt"];
       tmp["user"] = response["user"];
       await CustomInterceptors.setStoredCookies(
           GlobalConstants.apiHostUrl, tmp);

@@ -15,6 +15,8 @@ Google APIs & Services Management
 
 https://pay.google.com/payments/home
 
+https://appstoreconnect.apple.com/
+
 ## Android Changes
 
 android/app/src/main/AndroidManifest.xml
@@ -59,6 +61,7 @@ cd ..
 flutter clean
 flutter pub get
 flutter run -d all
+flutter build ios --release
 ```
 
 ## Make space on IOS
