@@ -9,10 +9,6 @@
 
 analyzer:
   exclude:
-    - lib/google_maps_flutter-0.5.21+15/*
-    - lib/google_maps_flutter-0.5.21+15/**
-    - lib/google_maps_flutter-0.5.21+15/lib/src/**
-    - lib/google_maps_flutter-0.5.21+15/lib/src/*
     - lib/google_maps_flutter*
     - lib/google_maps_flutter**
 
