@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 // import 'package:logger/logger.dart';
 import 'package:flutter_offline/flutter_offline.dart';
 
@@ -27,6 +28,8 @@ class _ForgotPageState extends State<ForgotPage> {
   final _emailController = TextEditingController();
   String _emailControllerMessage = '';
   bool _showEmailError = false;
+
+  final _storage = FlutterSecureStorage();
 
   _recoverPassword() async {
     _showEmailError = false;
@@ -71,6 +74,7 @@ class _ForgotPageState extends State<ForgotPage> {
   @override
   void initState() {
     super.initState();
+    populateEmail();
     BackButtonInterceptor.add(myInterceptor);
   }
 
@@ -78,6 +82,13 @@ class _ForgotPageState extends State<ForgotPage> {
   void dispose() {
     BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
+  }
+
+  void populateEmail() async {
+    var secureStorage = await _storage.readAll();
+    if (secureStorage.containsKey("email")) {
+      _emailController.text = secureStorage["email"];
+    }
   }
 
   // ignore: avoid_positional_boolean_parameters

@@ -158,6 +158,7 @@ Future<Null> main() async {
 
     runApp(
       MaterialApp(
+        debugShowCheckedModeBanner: false,
         home: SplashScreen(),
         navigatorObservers: <NavigatorObserver>[routeObserver],
         supportedLocales: [
@@ -363,8 +364,25 @@ class SplashScreenState extends State<SplashScreen> {
       //log.i(cookies);
 
       if (cookies.isEmpty || !cookies.containsKey('jwt')) {
+        Flame.audio.play('sfx/doorClose_1.ogg');
         Navigator.of(context).pushNamed('/login');
         return;
+      }
+
+      Map jwtdata = parseJwt(cookies["jwt"]);
+      final expirationDate = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true)
+          .add(Duration(seconds: jwtdata['exp'].toInt()));
+      //log.i(jwtdata);
+      //log.i(expirationDate);
+      var now = DateTime.now().toUtc();
+      //log.i(now);
+      if (now.isAfter(expirationDate)) {
+        print('session expired');
+        Flame.audio.play('sfx/doorClose_3.ogg');
+        Navigator.of(context).pushNamed('/login');
+        return;
+      } else {
+        print('session is still valid');
       }
 
       if (cookies["user"]["guild"]["id"].toString() == "0") {
@@ -387,33 +405,15 @@ class SplashScreenState extends State<SplashScreen> {
 
       _userDataStreamSubscription = _userdata.stream$.listen(_updateUserData);
 
-      var now = DateTime.now();
-      var expiresIn = now;
-      if (cookies["expiresAt"] != null) {
-        expiresIn = DateTime.parse(cookies["expiresAt"]);
-      }
+      //final tmp = await _apiProvider.get('/profile');
+      //final quest = Quest.fromJson(cookies["user"]["current_quests"][0]);
 
-      // log.d('NOW ${now.toIso8601String()}');
-      // log.d("expires at ${expiresIn.toIso8601String()}");
-      // log.d("Differences ${expiresIn.difference(now)}");
-      final expired = expiresIn.difference(now).inHours;
+      Flame.audio.play(
+          'sfx/doorOpen_${(math.Random.secure().nextInt(2) + 1).toString()}.ogg');
 
-      //log.d('Time to expire $expired');
-      if (expired <= 0) {
-        await CustomInterceptors.deleteStoredCookies(
-            GlobalConstants.apiHostUrl);
+      Navigator.of(context).pushNamed('/poi-map');
+      //Navigator.of(context).pushNamed('/quests-full-page', arguments: quest);
 
-        Navigator.of(context).pushNamed('/login');
-      } else {
-        //final tmp = await _apiProvider.get('/profile');
-        //final quest = Quest.fromJson(cookies["user"]["current_quests"][0]);
-
-        Flame.audio.play(
-            'sfx/doorOpen_${(math.Random.secure().nextInt(2) + 1).toString()}.ogg');
-
-        Navigator.of(context).pushNamed('/poi-map');
-        //Navigator.of(context).pushNamed('/quests-full-page', arguments: quest);
-      }
     } on DioError catch (err) {
       showDialog(
         context: context,
@@ -623,7 +623,7 @@ class SplashScreenState extends State<SplashScreen> {
           '/radar?cntr_lng=${currentLocation.longitude}&cntr_lat=${currentLocation.latitude}2&zoom=${secureStorage["mapZoom"]}&sw_lng=${secureStorage["swLng"]}&sw_lat=${secureStorage["swLat"]}&ne_lng=${secureStorage["neLng"]}&ne_lat=${secureStorage["neLat"]}');
     } on DioError catch (err) {
       print(err?.response?.data);
-      return;
+      return _mines;
     }
 
     // Get all the mines in the immediate location
