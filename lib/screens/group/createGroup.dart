@@ -310,7 +310,7 @@ class _CreateGroupState extends State<CreateGroup> {
                                 if (_isLocked)
                                   Text(
                                     AppLocalizations.of(context)
-                                        .translate('your_password_input_label'),
+                                        .translate('password_input_label'),
                                     semanticsLabel: 'Password',
                                     style: TextStyle(
                                         color: Colors.white,

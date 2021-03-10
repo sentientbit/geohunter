@@ -7,9 +7,6 @@ class User {
   final String uid;
 
   ///
-  final String expiresAt;
-
-  ///
   final String jwt;
 
   ///
@@ -20,17 +17,16 @@ class User {
     @required this.uid,
     @required this.details,
     @required this.jwt,
-    @required this.expiresAt,
   });
 
   ///
   static User fromJson(Map<String, dynamic> json) {
     var details = UserData.fromJson(json["user"]);
     return User(
-        uid: details.id,
-        details: details,
-        jwt: json["jwt"],
-        expiresAt: json["expiresAt"]);
+      uid: details.id,
+      details: details,
+      jwt: json["jwt"],
+    );
   }
 
   ///
@@ -38,13 +34,11 @@ class User {
         'uid': uid,
         'details': details.toJson(),
         'jwt': jwt,
-        'expiresAt': expiresAt,
       };
 
   ///
   Map<String, dynamic> toMap() {
     return {
-      "expiresAt": expiresAt,
       "user": {
         "user_id": details.id,
         "username": details.username,
