@@ -48,7 +48,10 @@ class ApiProvider {
   }
 
   ///
-  Future post(String endpoint, dynamic body) async {
+  Future post(String endpoint, dynamic body, {dynamic headers}) async {
+    if (headers != null) {
+      api.options.headers = headers;
+    }
     var response = await api.post(endpoint, data: body);
     try {
       return response.data;
@@ -92,10 +95,10 @@ class ApiProvider {
   Future<User> getStoredUser() async {
     //ignore: omit_local_variable_types
     User tmp = User(
-        uid: '',
-        details: UserData(username: '', coins: 0.0, miningSpeed: 0),
-        jwt: '',
-        expiresAt: '');
+      uid: '',
+      details: UserData(username: '', coins: 0.0, miningSpeed: 0),
+      jwt: '',
+    );
     final userDatastored =
         await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
     try {

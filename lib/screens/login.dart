@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_offline/flutter_offline.dart';
 import 'package:encrypt/encrypt.dart' as enq;
-// import 'package:logger/logger.dart';
+//import 'package:logger/logger.dart';
 
 ///
 import '../app_localizations.dart';
@@ -45,9 +45,9 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  // final Logger log = Logger(
-  //     printer: PrettyPrinter(
-  //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
+  //final Logger log = Logger(
+  //    printer: PrettyPrinter(
+  //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -103,7 +103,6 @@ class _LoginPageState extends State<LoginPage> {
   //       final tmp = await CustomInterceptors.getStoredCookies(
   //           GlobalConstants.apiHostUrl);
   //       tmp["jwt"] = response["jwt"];
-  //       tmp["expiresAt"] = response["expiresAt"];
   //       tmp["user"] = response["user"];
   //       await CustomInterceptors.setStoredCookies(
   //           GlobalConstants.apiHostUrl, tmp);
@@ -126,6 +125,51 @@ class _LoginPageState extends State<LoginPage> {
   //   }
   // }
 
+  Future getInFull(String jwt, Map<String, dynamic> userObject) async {
+    final tmp =
+        await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
+    tmp["jwt"] = jwt;
+    tmp["user"] = userObject;
+    await CustomInterceptors.setStoredCookies(GlobalConstants.apiHostUrl, tmp);
+    return true;
+  }
+
+  Future getInPartial(String jwt) async {
+    final tmp =
+        await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
+    tmp["jwt"] = jwt;
+    // First store the new token
+    await CustomInterceptors.setStoredCookies(GlobalConstants.apiHostUrl, tmp);
+
+    // then get all the info
+    bool isOk = await _getUserDetails();
+    return isOk;
+  }
+
+  Future _getUserDetails() async {
+    //print('_getUserDetails');
+    final response = await _apiProvider.get('/profile');
+    final tmp =
+        await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
+
+    if (response["success"] == true) {
+      tmp["jwt"] = response["jwt"];
+      tmp["user"] = response["user"];
+      Map jwtdata = parseJwt(response["jwt"]);
+
+      // Todo: better user validation
+      if (jwtdata.containsKey("usr")) {
+        if (jwtdata["usr"] != null) {
+          await CustomInterceptors.setStoredCookies(
+              GlobalConstants.apiHostUrl, tmp);
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   void login() async {
     _showEmailError = false;
     _showPasswordError = false;
@@ -143,26 +187,32 @@ class _LoginPageState extends State<LoginPage> {
       });
       return;
     }
+
     final encoded = stringToBase64
         .encode("${_emailController.text}:${_passwordController.text}");
     try {
       final response = await ApiProvider()
           .get("/login", headers: {"Authorization": "Basic $encoded"});
 
-      final tmp =
-          await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
-      tmp["jwt"] = response["jwt"];
-      tmp["expiresAt"] = response["expiresAt"];
-      tmp["user"] = response["user"];
+      Map jwtdata = parseJwt(response["jwt"]);
 
-      await CustomInterceptors.setStoredCookies(
-          GlobalConstants.apiHostUrl, tmp);
+      // Todo: better user validation
+      if (jwtdata.containsKey("usr")) {
+        if (jwtdata["usr"] != null) {
+          bool isOk = await getInFull(response["jwt"], response["user"]);
+          if (isOk == true) {
+            await _storage.write(key: 'email', value: jwtdata["usr"]);
+            await _storage.write(key: 'api_key', value: response["api_key"]);
+            Navigator.of(context).pushReplacementNamed('/poi-map');
+            return;
+          }
+        }
+      }
 
-      await _storage.write(key: 'email', value: _emailController.text);
-
-      //final quest = Quest.fromJson(tmp["user"]["current_quests"][0]);
-      //Navigator.of(context).pushReplacementNamed('/quests-full-page', arguments: quest);
-      Navigator.of(context).pushReplacementNamed('/poi-map');
+      setState(() {
+        _passwordControllerMessage = 'Invalid credentials';
+        _showPasswordError = true;
+      });
     } on DioError catch (err) {
       showDialog(
         context: context,
@@ -178,8 +228,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _populateEmail();
-    //silently _trySignIn();
+    _tryAutoSignIn();
   }
 
   @override
@@ -189,9 +238,30 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _populateEmail() async {
+  // Get the email and the api_key from secure_storage
+  void _tryAutoSignIn() async {
     var secureStorage = await _storage.readAll();
     _emailController.text = secureStorage["email"];
+
+    if (secureStorage.containsKey("api_key")) {
+      if (secureStorage["api_key"] != null) {
+        final response = await ApiProvider().post("/refreshtoken", {},
+            headers: {"X-API-KEY": secureStorage["api_key"]});
+
+        Map jwtdata = parseJwt(response["jwt"]);
+        // Todo: better user validation
+        if (jwtdata.containsKey("usr")) {
+          if (jwtdata["usr"] != null) {
+            bool isOk = await getInPartial(response["jwt"]);
+            if (isOk) {
+              await _storage.write(key: 'email', value: jwtdata["usr"]);
+              Navigator.of(context).pushReplacementNamed('/poi-map');
+              return;
+            }
+          }
+        }
+      }
+    }
   }
 
   Widget build(BuildContext context) {
@@ -349,8 +419,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   SizedBox(height: 24.0),
                   Text(
-                    AppLocalizations.of(context)
-                        .translate('your_email_input_label'),
+                    AppLocalizations.of(context).translate('email_input_label'),
                     style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -403,7 +472,7 @@ class _LoginPageState extends State<LoginPage> {
                   SizedBox(height: 18.0),
                   Text(
                     AppLocalizations.of(context)
-                        .translate('your_password_input_label'),
+                        .translate('password_input_label'),
                     semanticsLabel: 'Password',
                     style: TextStyle(
                         color: Colors.white,
@@ -432,7 +501,7 @@ class _LoginPageState extends State<LoginPage> {
                             controller: _passwordController,
                             obscureText: true,
                             decoration: InputDecoration(
-                                border: InputBorder.none, hintText: "Pass"),
+                                border: InputBorder.none, hintText: "Password"),
                             onSubmitted: (text) {},
                           ),
                         )
