@@ -7,7 +7,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_offline/flutter_offline.dart';
-import 'package:encrypt/encrypt.dart' as enq;
+//import 'package:encrypt/encrypt.dart' as enq;
+import 'package:loading_overlay/loading_overlay.dart';
 //import 'package:logger/logger.dart';
 
 ///
@@ -48,6 +49,8 @@ class _LoginPageState extends State<LoginPage> {
   //final Logger log = Logger(
   //    printer: PrettyPrinter(
   //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
+
+  bool _isLoading = true;
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -125,6 +128,7 @@ class _LoginPageState extends State<LoginPage> {
   //   }
   // }
 
+  // When the user was already logged in, and we know everything
   Future getInFull(String jwt, Map<String, dynamic> userObject) async {
     final tmp =
         await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
@@ -134,6 +138,7 @@ class _LoginPageState extends State<LoginPage> {
     return true;
   }
 
+  // When we know only the api key
   Future getInPartial(String jwt) async {
     final tmp =
         await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
@@ -171,12 +176,16 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void login() async {
+    setState(() {
+      _isLoading = true;
+    });
     _showEmailError = false;
     _showPasswordError = false;
     if (_emailController.text.isEmpty) {
       setState(() {
         _emailControllerMessage = 'Please fill email';
         _showEmailError = true;
+        _isLoading = false;
       });
       return;
     }
@@ -184,6 +193,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         _passwordControllerMessage = 'Please fill password';
         _showPasswordError = true;
+        _isLoading = false;
       });
       return;
     }
@@ -212,6 +222,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         _passwordControllerMessage = 'Invalid credentials';
         _showPasswordError = true;
+        _isLoading = false;
       });
     } on DioError catch (err) {
       showDialog(
@@ -223,6 +234,10 @@ class _LoginPageState extends State<LoginPage> {
         ),
       );
     }
+    setState(() {
+      _isLoading = false;
+    });
+    return;
   }
 
   @override
@@ -262,6 +277,9 @@ class _LoginPageState extends State<LoginPage> {
         }
       }
     }
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   Widget build(BuildContext context) {
@@ -287,7 +305,7 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
 
-    final forgotLabel = FlatButton(
+    final forgotLabel = TextButton(
       child: Text(
         AppLocalizations.of(context).translate('forgot_password_btn_label'),
         style: TextStyle(
@@ -306,6 +324,27 @@ class _LoginPageState extends State<LoginPage> {
       ),
       onPressed: () {
         Navigator.of(context).pushNamed('/forgot');
+      },
+    );
+
+    final registerButton = TextButton(
+      child: Text(
+        AppLocalizations.of(context).translate('create_account_btn_label'),
+        style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontFamily: 'Open Sans',
+            fontWeight: FontWeight.bold,
+            shadows: <Shadow>[
+              Shadow(
+                  offset: Offset(1.0, 1.0),
+                  blurRadius: 3.0,
+                  color: Color.fromARGB(255, 0, 0, 0))
+            ]),
+      ),
+      onPressed: () {
+        //Flame.audio.play('sfx/bookOpen_${(math.Random.secure().nextInt(2) + 1).toString()}.ogg');
+        Navigator.of(context).pushNamed('/register');
       },
     );
 
@@ -342,26 +381,6 @@ class _LoginPageState extends State<LoginPage> {
     //   ),
     // );
 
-    final createAccountButton = FlatButton(
-      child: Text(
-        AppLocalizations.of(context).translate('create_account_btn_label'),
-        style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontFamily: 'Open Sans',
-            fontWeight: FontWeight.bold,
-            shadows: <Shadow>[
-              Shadow(
-                  offset: Offset(1.0, 1.0),
-                  blurRadius: 3.0,
-                  color: Color.fromARGB(255, 0, 0, 0))
-            ]),
-      ),
-      onPressed: () {
-        Navigator.of(context).pushNamed('/register');
-      },
-    );
-
     return Scaffold(
       backgroundColor: Colors.white,
       resizeToAvoidBottomInset: false,
@@ -386,170 +405,177 @@ class _LoginPageState extends State<LoginPage> {
             return child;
           }
         },
-        child: Stack(
-          children: <Widget>[
-            Container(
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('assets/images/forest_jungle.jpg'),
-                  fit: BoxFit.fill,
+        child: LoadingOverlay(
+          isLoading: _isLoading,
+          opacity: 0.5,
+          color: Colors.black,
+          progressIndicator: CircularProgressIndicator(
+            backgroundColor: Colors.black,
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xffe6a04e)),
+          ),
+          child: Stack(
+            children: <Widget>[
+              Container(
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('assets/images/forest_jungle.jpg'),
+                    fit: BoxFit.fill,
+                  ),
                 ),
               ),
-            ),
-            Container(
-              height: szHeight,
-              child: ListView(
-                //physics: NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                padding: EdgeInsets.only(top: 90, left: 24.0, right: 24.0),
-                children: <Widget>[
-                  Text(
-                    AppLocalizations.of(context).translate('authentication'),
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontFamily: 'Cormorant SC',
-                        fontWeight: FontWeight.bold,
-                        shadows: <Shadow>[
-                          Shadow(
-                              offset: Offset(1.0, 1.0),
-                              blurRadius: 3.0,
-                              color: Color.fromARGB(255, 0, 0, 0))
-                        ]),
-                  ),
-                  SizedBox(height: 24.0),
-                  Text(
-                    AppLocalizations.of(context).translate('email_input_label'),
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontFamily: 'Open Sans',
-                        fontWeight: FontWeight.bold,
-                        shadows: <Shadow>[
-                          Shadow(
-                              offset: Offset(1.0, 1.0),
-                              blurRadius: 3.0,
-                              color: Color.fromARGB(255, 0, 0, 0))
-                        ]),
-                  ),
-                  Card(
-                    elevation: 8,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(10))),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: <Widget>[
-                        SizedBox(
-                          width: 20,
-                        ),
-                        Expanded(
-                          child: TextField(
-                            controller: _emailController,
-                            decoration: InputDecoration(
-                                border: InputBorder.none, hintText: "Email"),
-                            onSubmitted: (text) {},
-                          ),
-                        )
-                      ],
-                    ),
-                  ),
-                  _showEmailError
-                      ? Text(
-                          _emailControllerMessage,
-                          style: TextStyle(
-                              color: Colors.red,
-                              fontSize: 16,
-                              fontFamily: 'Open Sans',
-                              fontWeight: FontWeight.bold,
-                              shadows: <Shadow>[
-                                Shadow(
-                                    offset: Offset(1.0, 1.0),
-                                    blurRadius: 3.0,
-                                    color: Color.fromARGB(255, 0, 0, 0))
-                              ]),
-                        )
-                      : Text(''),
-                  SizedBox(height: 18.0),
-                  Text(
-                    AppLocalizations.of(context)
-                        .translate('password_input_label'),
-                    semanticsLabel: 'Password',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontFamily: 'Open Sans',
-                        fontWeight: FontWeight.bold,
-                        shadows: <Shadow>[
-                          Shadow(
-                              offset: Offset(1.0, 1.0),
-                              blurRadius: 3.0,
-                              color: Color.fromARGB(255, 0, 0, 0))
-                        ]),
-                  ),
-                  Card(
-                    elevation: 8,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(10))),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: <Widget>[
-                        SizedBox(
-                          width: 20,
-                        ),
-                        Expanded(
-                          child: TextField(
-                            controller: _passwordController,
-                            obscureText: true,
-                            decoration: InputDecoration(
-                                border: InputBorder.none, hintText: "Password"),
-                            onSubmitted: (text) {},
-                          ),
-                        )
-                      ],
-                    ),
-                  ),
-                  _showPasswordError
-                      ? Text(
-                          _passwordControllerMessage,
-                          style: TextStyle(
-                              color: Colors.red,
-                              fontSize: 16,
-                              fontFamily: 'Open Sans',
-                              fontWeight: FontWeight.bold,
-                              shadows: <Shadow>[
-                                Shadow(
-                                    offset: Offset(1.0, 1.0),
-                                    blurRadius: 3.0,
-                                    color: Color.fromARGB(255, 0, 0, 0))
-                              ]),
-                        )
-                      : Text(''),
-                  SizedBox(height: 24.0),
-                  loginButton,
-                  forgotLabel,
-                  //googleButton,
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 50, left: 0),
-              child: Container(
-                alignment: Alignment.bottomLeft,
-                child: Column(
-                  // mainAxisSize: MainAxisSize.max,
-
+              Container(
+                height: szHeight,
+                child: ListView(
+                  //physics: NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
+                  padding: EdgeInsets.only(top: 90, left: 24.0, right: 24.0),
                   children: <Widget>[
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.bottomCenter,
-                        child: createAccountButton,
+                    Text(
+                      AppLocalizations.of(context).translate('authentication'),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontFamily: 'Cormorant SC',
+                          fontWeight: FontWeight.bold,
+                          shadows: <Shadow>[
+                            Shadow(
+                                offset: Offset(1.0, 1.0),
+                                blurRadius: 3.0,
+                                color: Color.fromARGB(255, 0, 0, 0))
+                          ]),
+                    ),
+                    SizedBox(height: 24.0),
+                    Text(
+                      AppLocalizations.of(context)
+                          .translate('email_input_label'),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontFamily: 'Open Sans',
+                          fontWeight: FontWeight.bold,
+                          shadows: <Shadow>[
+                            Shadow(
+                                offset: Offset(1.0, 1.0),
+                                blurRadius: 3.0,
+                                color: Color.fromARGB(255, 0, 0, 0))
+                          ]),
+                    ),
+                    Card(
+                      elevation: 8,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(10))),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: <Widget>[
+                          SizedBox(
+                            width: 20,
+                          ),
+                          Expanded(
+                            child: TextField(
+                              controller: _emailController,
+                              decoration: InputDecoration(
+                                  border: InputBorder.none, hintText: "Email"),
+                              onSubmitted: (text) {},
+                            ),
+                          )
+                        ],
                       ),
                     ),
+                    _showEmailError
+                        ? Text(
+                            _emailControllerMessage,
+                            style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 16,
+                                fontFamily: 'Open Sans',
+                                fontWeight: FontWeight.bold,
+                                shadows: <Shadow>[
+                                  Shadow(
+                                      offset: Offset(1.0, 1.0),
+                                      blurRadius: 3.0,
+                                      color: Color.fromARGB(255, 0, 0, 0))
+                                ]),
+                          )
+                        : Text(''),
+                    SizedBox(height: 18.0),
+                    Text(
+                      AppLocalizations.of(context)
+                          .translate('password_input_label'),
+                      semanticsLabel: 'Password',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontFamily: 'Open Sans',
+                          fontWeight: FontWeight.bold,
+                          shadows: <Shadow>[
+                            Shadow(
+                                offset: Offset(1.0, 1.0),
+                                blurRadius: 3.0,
+                                color: Color.fromARGB(255, 0, 0, 0))
+                          ]),
+                    ),
+                    Card(
+                      elevation: 8,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(10))),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: <Widget>[
+                          SizedBox(
+                            width: 20,
+                          ),
+                          Expanded(
+                            child: TextField(
+                              controller: _passwordController,
+                              obscureText: true,
+                              decoration: InputDecoration(
+                                  border: InputBorder.none,
+                                  hintText: "Password"),
+                              onSubmitted: (text) {},
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                    _showPasswordError
+                        ? Text(
+                            _passwordControllerMessage,
+                            style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 16,
+                                fontFamily: 'Open Sans',
+                                fontWeight: FontWeight.bold,
+                                shadows: <Shadow>[
+                                  Shadow(
+                                      offset: Offset(1.0, 1.0),
+                                      blurRadius: 3.0,
+                                      color: Color.fromARGB(255, 0, 0, 0))
+                                ]),
+                          )
+                        : Text(''),
+                    SizedBox(height: 24.0),
+                    loginButton,
+                    SizedBox(height: 18.0),
+                    forgotLabel,
+                    SizedBox(height: 2.0),
+                    registerButton,
+                    //googleButton,
                   ],
                 ),
               ),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.only(bottom: 50, left: 0),
+                child: Container(
+                  alignment: Alignment.bottomLeft,
+                  child: Column(
+                    // mainAxisSize: MainAxisSize.max,
+
+                    children: <Widget>[],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

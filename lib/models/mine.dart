@@ -7,7 +7,7 @@ import '../shared/constants.dart';
 ///
 class Mine {
   ///
-  int id;
+  int id = 0;
 
   ///
   Geometry geometry;
@@ -22,7 +22,7 @@ class Mine {
   String lastVisited;
 
   ///
-  double distanceToPoint;
+  double distanceToPoint = 0.0;
 
   ///
   List<Item> items = [];
