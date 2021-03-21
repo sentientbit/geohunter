@@ -17,29 +17,27 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>$(MARKETING_VERSION)</string>
+	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-5663066771209660~3615389107</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>MGLMapboxAccessToken</key>
-    <string>pk.eyJ1Ijoic2VudGllbnRiaXQiLCJhIjoiY2toaXdkZGpnMTY4MTJzcXFtaW5sbTU4OSJ9.ycyLmkYivIgO_yi4WOI2jA</string>
-    <key>io.flutter.embedded_views_preview</key>
-    <true/>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>Needed to access location</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Needed to access location</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Needed to upload Pictures</string>
+	<string>pk.eyJ1Ijoic2VudGllbnRiaXQiLCJhIjoiY2toaXdkZGpnMTY4MTJzcXFtaW5sbTU4OSJ9.ycyLmkYivIgO_yi4WOI2jA</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Needed to take Pictures and scan QR codes</string>
+	<string>Needed to take Pictures and scan QR codes for solving quests and joining friends</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>The app needs your location to determine if you are close to a hidden treasure</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>The app needs your location to determine if you are close to completing a challenge, hunting down a monster, or digging up a hidden treasure</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Needed to record Videos</string>
+	<string>Needed to record Videos of current outdoor locations</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Needed to upload Pictures of current outdoor locations</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -60,20 +58,6 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
 	<key>io.flutter.embedded_views_preview</key>
-    <true/>
-	<!-- Google Sign-in Section -->
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<!-- TODO Replace this value: -->
-				<!-- Copied from GoogleService-Info.plist key REVERSED_CLIENT_ID -->
-				<string>com.googleusercontent.apps.470951679086-sa44sf055bea6r742nommsugq5h06066</string>
-			</array>
-		</dict>
-	</array>
+	<true/>
 </dict>
 </plist>
