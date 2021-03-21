@@ -50,7 +50,7 @@ class _LoginPageState extends State<LoginPage> {
   //    printer: PrettyPrinter(
   //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
-  bool _isLoading = true;
+  bool _isLoading = false;
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -268,6 +268,9 @@ class _LoginPageState extends State<LoginPage> {
 
   // Get the email and the api_key from secure_storage
   void _tryAutoSignIn() async {
+    setState(() {
+      _isLoading = true;
+    });
     var secureStorage = await _storage.readAll();
     _emailController.text = secureStorage["email"];
 
