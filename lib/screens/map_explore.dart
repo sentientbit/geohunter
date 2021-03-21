@@ -292,8 +292,7 @@ class _PoiMapState extends State<PoiMap>
   //   return null;
   // }
 
-  String distanceInMeters(meters) {
-    print(meters);
+  String distanceInMeters(double meters) {
     final showDistanceIn = meters > 1000
         ? '${(meters / 1000).toStringAsFixed(2)}km'
         : '${meters.toStringAsFixed(2)}m';
@@ -696,10 +695,11 @@ class _PoiMapState extends State<PoiMap>
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: <Widget>[
-                  Text(
-                    "Distance ${distanceInMeters(_pois[_mineIdx].distanceToPoint)}",
-                    style: TextStyle(color: GlobalConstants.appFg),
-                  ),
+                  if (_pois.contains(_mineIdx))
+                    Text(
+                      "Distance ${distanceInMeters(_pois[_mineIdx]?.distanceToPoint)}",
+                      style: TextStyle(color: GlobalConstants.appFg),
+                    ),
                 ],
               ),
               SizedBox(
@@ -1084,6 +1084,7 @@ class _PoiMapState extends State<PoiMap>
         list.add(SizedBox(width: 10));
       }
     }
+
     if (_thumbnails.length > 0) {
       for (var thumb in _thumbnails) {
         list.add(
@@ -1093,7 +1094,7 @@ class _PoiMapState extends State<PoiMap>
         list.add(SizedBox(width: 10));
       }
     }
-    print(" ${_pois[_mineIdx].properties.ico}");
+
     if (_images.length == 0 && _thumbnails.length == 0) {
       list.add(Image.asset(
         'assets/images/magnifying_glass.png',

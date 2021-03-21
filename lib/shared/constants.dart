@@ -35,7 +35,7 @@ class GlobalConstants {
   static String apiHostUrl = "thegeohunter.com";
 
   ///
-  static const String appNamespace = "com.apsoni.geocraft";
+  static const String appNamespace = "com.sentientbit.thegeohunter";
 
   ///
   static const List<String> keywords = [
