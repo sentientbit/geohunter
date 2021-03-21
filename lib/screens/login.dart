@@ -154,22 +154,35 @@ class _LoginPageState extends State<LoginPage> {
   Future _getUserDetails() async {
     //print('_getUserDetails');
     final response = await _apiProvider.get('/profile');
-    final tmp =
-        await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
+    try {
+      final tmp =
+          await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
+      if (response["success"] == true) {
+        tmp["jwt"] = response["jwt"];
+        tmp["user"] = response["user"];
+        Map jwtdata = parseJwt(response["jwt"]);
 
-    if (response["success"] == true) {
-      tmp["jwt"] = response["jwt"];
-      tmp["user"] = response["user"];
-      Map jwtdata = parseJwt(response["jwt"]);
-
-      // Todo: better user validation
-      if (jwtdata.containsKey("usr")) {
-        if (jwtdata["usr"] != null) {
-          await CustomInterceptors.setStoredCookies(
-              GlobalConstants.apiHostUrl, tmp);
-          return true;
+        // Todo: better user validation
+        if (jwtdata.containsKey("usr")) {
+          if (jwtdata["usr"] != null) {
+            await CustomInterceptors.setStoredCookies(
+                GlobalConstants.apiHostUrl, tmp);
+            return true;
+          }
         }
       }
+    } on DioError catch (err) {
+      showDialog(
+        context: context,
+        builder: (context) => CustomDialog(
+          title: "Error",
+          description: err.response?.data["message"],
+          buttonText: "Okay",
+        ),
+      );
+      setState(() {
+        _isLoading = false;
+      });
     }
 
     return false;
