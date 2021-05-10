@@ -253,7 +253,7 @@ class SplashScreenState extends State<SplashScreen> {
   ///
   bool isPositionStreaming = false;
 
-  String _appVersion = "";
+  String _appVersion = GlobalConstants.appVersion;
 
   @override
   void dispose() {
@@ -322,7 +322,7 @@ class SplashScreenState extends State<SplashScreen> {
       uniqueId += iosInfo.isPhysicalDevice ? ',true,' : ',false,';
       uniqueId += iosInfo.identifierForVendor;
     }
-    print("unique id: $uniqueId : ${hashStringMD5(uniqueId)}");
+    print("unique id: $uniqueId : ${hashStringMurmur(uniqueId)}");
   }
 
   /// SystemChannels.platform.invokeMethod('SystemNavigator.pop');
@@ -595,7 +595,7 @@ class SplashScreenState extends State<SplashScreen> {
                           ),
                           Text(
                             // ignore: lines_longer_than_80_chars
-                            "ver: $_appVersion",
+                            "version: $_appVersion",
                             style:
                                 TextStyle(fontSize: 14.0, color: Colors.white),
                           ),

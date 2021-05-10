@@ -18,6 +18,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+//import 'package:logger/logger.dart';
 
 ///
 import '../app_localizations.dart';
@@ -83,6 +84,10 @@ class PoiMap extends StatefulWidget {
 
 class _PoiMapState extends State<PoiMap>
     with SingleTickerProviderStateMixin<PoiMap> {
+  //final Logger log = Logger(
+  //    printer: PrettyPrinter(
+  //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
+
   ///
   String _mapStyle = '';
   String _mapStyleAubergine = '';
@@ -138,7 +143,7 @@ class _PoiMapState extends State<PoiMap>
   final _storage = FlutterSecureStorage();
 
   Mine _mine;
-  int _mineIdx = 0;
+  int _mineIdx = -1;
   int _mineId = 0;
   String _mineUid;
 
@@ -292,7 +297,24 @@ class _PoiMapState extends State<PoiMap>
   //   return null;
   // }
 
-  String distanceInMeters(double meters) {
+  String distanceInMeters(int mineIdx) {
+    if (mineIdx < 0) {
+      return "n/a";
+    }
+
+    List tmp = _pois.asMap().keys.toList();
+    var isInList = false;
+    for (dynamic elem in tmp) {
+      if (elem == mineIdx) {
+        isInList = true;
+      }
+    }
+
+    if (!isInList) {
+      return "n/a";
+    }
+
+    double meters = _pois[_mineIdx].distanceToPoint;
     final showDistanceIn = meters > 1000
         ? '${(meters / 1000).toStringAsFixed(2)}km'
         : '${meters.toStringAsFixed(2)}m';
@@ -395,7 +417,7 @@ class _PoiMapState extends State<PoiMap>
 
   // When clicking on a map or called from a mine
   void selectPoint(int idx, int id, LtLn ltln, String comment) {
-    print('selectPoint');
+    //print('selectPoint $idx');
     setState(() {
       _mineId = id;
       _images.clear();
@@ -695,11 +717,10 @@ class _PoiMapState extends State<PoiMap>
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: <Widget>[
-                  if (_pois.contains(_mineIdx))
-                    Text(
-                      "Distance ${distanceInMeters(_pois[_mineIdx]?.distanceToPoint)}",
-                      style: TextStyle(color: GlobalConstants.appFg),
-                    ),
+                  Text(
+                    "Distance: ${distanceInMeters(_mineIdx)}",
+                    style: TextStyle(color: GlobalConstants.appFg),
+                  )
                 ],
               ),
               SizedBox(
@@ -730,7 +751,7 @@ class _PoiMapState extends State<PoiMap>
             borderRadius: BorderRadius.circular(10),
           ),
           onPressed: () {
-            selectPoint(0, 0, _userLocation, "");
+            selectPoint(-1, 0, _userLocation, "");
             setState(() {
               _showAddPin = false;
               _textFieldController.text = "";
@@ -875,6 +896,7 @@ class _PoiMapState extends State<PoiMap>
             ? LatLng(widget.latitude, widget.longitude)
             : LatLng(_userLocation.latitude, _userLocation.longitude),
         zoom: _mapZoom,
+        maxZoom: 18.0,
         onPositionChanged: (mapPosition, boolValue) => {
           _debouncer.run(() => {
                 if (_recenterBtnPressed)
@@ -966,7 +988,7 @@ class _PoiMapState extends State<PoiMap>
     //           _loadPois(_userLatitude, _userLongitude)
     //         })
     //   },
-    //   onTap: (latlng) => selectPoint(0, 0, latlng, ""),
+    //   onTap: (latlng) => selectPoint(-1, 0, latlng, ""),
     //   initialCameraPosition: CameraPosition(
     //     target: widget.goToRemoteLocation
     //         ? LatLng(widget.latitude, widget.longitude)

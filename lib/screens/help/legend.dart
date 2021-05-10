@@ -4,12 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 
 ///
+import '../../shared/constants.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/drawer.dart';
 
 ///
 class LegendPage extends StatelessWidget {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  String _appVersion = GlobalConstants.appVersion;
 
   final List<dynamic> _listViewData = [
     {
@@ -116,6 +119,11 @@ class LegendPage extends StatelessWidget {
                       ))
                   .toList(),
             ),
+          ),
+          Text(
+            // ignore: lines_longer_than_80_chars
+            "version: $_appVersion",
+            style: TextStyle(fontSize: 14.0, color: Colors.white),
           )
         ])
       ]),
