@@ -1,7 +1,7 @@
 /// based on https://medium.com/@afegbua/this-is-the-second-part-of-the-beautiful-list-ui-and-detail-page-article-ecb43e203915
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:flutter/material.dart';
-// import 'package:logger/logger.dart';
+//import 'package:logger/logger.dart';
 
 ///
 import '../../models/friends.dart';
@@ -9,6 +9,7 @@ import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
 import '../../providers/api_provider.dart';
+import '../../screens/map_explore.dart' show PoiMap;
 
 //import '../app_localizations.dart';
 
@@ -26,9 +27,9 @@ class PalDetailPage extends StatefulWidget {
 
 ///
 class _PalDetailState extends State<PalDetailPage> {
-  // final Logger log = Logger(
-  //     printer: PrettyPrinter(
-  //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
+  //final Logger log = Logger(
+  //    printer: PrettyPrinter(
+  //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
   ///
   final ApiProvider _apiProvider = ApiProvider();
@@ -39,7 +40,6 @@ class _PalDetailState extends State<PalDetailPage> {
   @override
   void initState() {
     super.initState();
-
     BackButtonInterceptor.add(myInterceptor);
   }
 
@@ -53,6 +53,56 @@ class _PalDetailState extends State<PalDetailPage> {
   bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
     Navigator.of(context).pop();
     return true;
+  }
+
+  Widget privacyWidget(Friend friend) {
+    if ((friend.locationPrivacy & 1) == 1) {
+      return OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          padding: EdgeInsets.all(16),
+          backgroundColor: GlobalConstants.appBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          side: BorderSide(width: 1, color: Colors.white),
+        ),
+        onPressed: () {
+          Navigator.of(context).pop();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PoiMap(
+                goToRemoteLocation: true,
+                latitude: friend.lat,
+                longitude: friend.lng,
+              ),
+            ),
+          );
+        },
+        child: Text(
+          "Go to user location",
+          style: TextStyle(
+              color: Color(0xffe6a04e),
+              fontSize: 18,
+              fontFamily: 'Cormorant SC',
+              fontWeight: FontWeight.bold),
+        ),
+      );
+    }
+    return Row(
+      children: <Widget>[
+        Icon(
+          Icons.location_disabled,
+          size: 24,
+          color: Colors.white,
+        ),
+        SizedBox(width: 10.0),
+        Text(
+          'Location is private',
+          style: TextStyle(color: GlobalConstants.appFg, fontSize: 18.0),
+        ),
+      ],
+    );
   }
 
   Widget build(BuildContext context) {
@@ -123,7 +173,8 @@ class _PalDetailState extends State<PalDetailPage> {
                       padding: EdgeInsets.only(left: 10.0),
                       child: Text(
                         " Experience ${widget.friend.xp}",
-                        style: TextStyle(color: Colors.white),
+                        style: TextStyle(
+                            color: GlobalConstants.appFg, fontSize: 18.0),
                       ),
                     ),
                   ],
@@ -160,13 +211,6 @@ class _PalDetailState extends State<PalDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                SizedBox(height: 18),
-                Text(
-                  "Coming soon.",
-                  style:
-                      TextStyle(color: GlobalConstants.appFg, fontSize: 18.0),
-                ),
-                SizedBox(height: 18),
                 Text(
                   'Explore together',
                   textAlign: TextAlign.left,
@@ -181,11 +225,7 @@ class _PalDetailState extends State<PalDetailPage> {
                   height: 180.0,
                   width: 180.0,
                 ),
-                Text(
-                  "Go to user location. Coming soon.",
-                  style:
-                      TextStyle(color: GlobalConstants.appFg, fontSize: 18.0),
-                ),
+                privacyWidget(widget.friend),
                 SizedBox(height: 18),
                 Text(
                   'Trading',

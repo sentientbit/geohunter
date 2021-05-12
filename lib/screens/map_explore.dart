@@ -150,6 +150,8 @@ class _PoiMapState extends State<PoiMap>
   /// Curent loggedin user
   User _user;
 
+  String mapType = "outdoors-v11";
+
   // Map<MarkerId, Marker> markers = <MarkerId, Marker>{};
 
   Future _loadPois(LtLn location) async {
@@ -368,6 +370,8 @@ class _PoiMapState extends State<PoiMap>
       _mapStyleAubergine = string;
     });
 
+    dayAndNight(_userLocation);
+
     BackButtonInterceptor.add(myInterceptor,
         name: widget.name, context: context);
   }
@@ -438,56 +442,46 @@ class _PoiMapState extends State<PoiMap>
 
   // Change map theme based on daylight
   void dayAndNight(LtLn location) async {
-    //print('--- widget.latitude ---');
-    //print(widget.latitude);
-    //print('--- widget.longitude ---');
-    //print(widget.longitude);
-
-    if (widget.goToRemoteLocation) {
-      _showRecenterBtn = true;
-      _moveCameraToLocation(widget.latitude, widget.longitude);
-      _loadPois(LtLn(widget.latitude, widget.longitude));
-      widget.goToRemoteLocation = false;
-    } else {
-      _showRecenterBtn = false;
-      await _loadPois(location);
-    }
-
     var datenow = DateTime.now();
-    //var datenow = DateTime.parse("2020-05-30 15:18:04Z");
-    //print('--- dayAndNight ---'); print(datenow);
+
+    //datenow = DateTime.parse("2020-05-30 13:18:04Z"); print('--- dayAndNight ---'); print(datenow);
 
     final astroResult =
         SunCalc.getTimes(datenow, location.latitude, location.longitude);
-    //print(_mapStyleState);
+
+    var isDayTime =
+        SunCalc.isDaytime(datenow, astroResult.sunrise, astroResult.sunset);
+
     if (_mapStyleState == 0 /* day */) {
-      //mapController.setMapStyle
       setState(() => {
             _customAppBarTextColor = Colors.black,
             _customAppBarIconColor = Colors.black,
             _systemHeaderBrightness = Brightness.light,
+            mapType = 'outdoors-v11',
           });
     } else if (_mapStyleState == 1 /* night */) {
-      //mapController.setMapStyle
       setState(() => {
             _customAppBarTextColor = Colors.white,
             _customAppBarIconColor = Colors.white,
-            _systemHeaderBrightness = Brightness.dark
+            _systemHeaderBrightness = Brightness.dark,
+            mapType = 'dark-v10',
           });
     } else if (_mapStyleState == 2 /* auto */) {
-      if (SunCalc.isDaytime(datenow, astroResult.sunrise, astroResult.sunset)) {
+      if (isDayTime == true) {
         /// Day
         setState(() => {
               _customAppBarTextColor = Colors.black,
               _customAppBarIconColor = Colors.black,
               _systemHeaderBrightness = Brightness.light,
+              mapType = 'outdoors-v11',
             });
       } else {
         /// Night
         setState(() => {
               _customAppBarTextColor = Colors.white,
               _customAppBarIconColor = Colors.white,
-              _systemHeaderBrightness = Brightness.dark
+              _systemHeaderBrightness = Brightness.dark,
+              mapType = 'dark-v10',
             });
       }
     }
@@ -565,6 +559,18 @@ class _PoiMapState extends State<PoiMap>
     setState(() {
       _showAddPin = true;
     });
+  }
+
+  LatLng _centerOfMap() {
+    if (widget.goToRemoteLocation == true) {
+      _showRecenterBtn = true;
+      _loadPois(LtLn(widget.latitude, widget.longitude));
+      widget.goToRemoteLocation = false;
+      _mapZoom = 16;
+      return LatLng(widget.latitude, widget.longitude);
+    }
+
+    return LatLng(_userLocation.latitude, _userLocation.longitude);
   }
 
   Widget _myCustomPopup() {
@@ -848,91 +854,91 @@ class _PoiMapState extends State<PoiMap>
       // );
 
       return Marker(
-          point: LatLng(
-              mine.geometry.coordinates[1], mine.geometry.coordinates[0]),
-          builder: (BuildContext ctx) {
-            return GestureDetector(
-              onTap: () {
-                _onClickMarker(idx, mine);
-                _onAddPinButtonPressed();
-              },
-              child: Stack(
-                children: <Widget>[
-                  Opacity(
-                    opacity: _infoWindowVisible ? 1.0 : 0.0,
-                    child: Container(
-                      alignment: Alignment.bottomCenter,
-                      width: 279.0,
-                      height: 256.0,
-                      decoration: BoxDecoration(
-                        image: DecorationImage(
-                            image:
-                                AssetImage("assets/images/ic_info_window.png"),
-                            fit: BoxFit.cover),
-                      ),
-                      child: Text('1234'),
+        point:
+            LatLng(mine.geometry.coordinates[1], mine.geometry.coordinates[0]),
+        builder: (BuildContext ctx) {
+          return GestureDetector(
+            onTap: () {
+              _onClickMarker(idx, mine);
+              _onAddPinButtonPressed();
+            },
+            child: Stack(
+              children: <Widget>[
+                Opacity(
+                  opacity: _infoWindowVisible ? 1.0 : 0.0,
+                  child: Container(
+                    alignment: Alignment.bottomCenter,
+                    width: 279.0,
+                    height: 256.0,
+                    decoration: BoxDecoration(
+                      image: DecorationImage(
+                          image: AssetImage("assets/images/ic_info_window.png"),
+                          fit: BoxFit.cover),
+                    ),
+                    child: Text('1234'),
+                  ),
+                ),
+                Opacity(
+                  child: Container(
+                    alignment: Alignment.bottomCenter,
+                    child: Image.asset(
+                      "assets/images/markers/${icoVar.toString()}.png",
+                      width: 200,
+                      height: 266,
                     ),
                   ),
-                  Opacity(
-                    child: Container(
-                      alignment: Alignment.bottomCenter,
-                      child: Image.asset(
-                        "assets/images/markers/${icoVar.toString()}.png",
-                        width: 200,
-                        height: 266,
-                      ),
-                    ),
-                    opacity: _infoWindowVisible ? 0.0 : 1.0,
-                  ),
-                ],
-              ),
-            );
-          });
+                  opacity: _infoWindowVisible ? 0.0 : 1.0,
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    }
+
+    _createMap() {
+      return TileLayerOptions(
+        urlTemplate: "https://api.mapbox.com/styles/v1/"
+            "{id}/tiles/{z}/{x}/{y}?access_token={accessToken}",
+        additionalOptions: {
+          'accessToken': GlobalConstants.mapboxToken,
+          'id': "mapbox/$mapType",
+        },
+      );
     }
 
     final mapWidget = FlutterMap(
       options: MapOptions(
-        center: widget.goToRemoteLocation
-            ? LatLng(widget.latitude, widget.longitude)
-            : LatLng(_userLocation.latitude, _userLocation.longitude),
+        center: _centerOfMap(),
         zoom: _mapZoom,
         maxZoom: 18.0,
         onPositionChanged: (mapPosition, boolValue) => {
-          _debouncer.run(() => {
-                if (_recenterBtnPressed)
-                  {
-                    setState(() {
-                      _showRecenterBtn = false;
-                      _recenterBtnPressed = false;
-                    })
-                  }
-                else
-                  {
-                    setState(() {
-                      _showRecenterBtn = true;
-                    })
-                  },
-                setState(() {
-                  _displayWindowCenter = mapPosition.center;
-                  _mapZoom = mapPosition.zoom;
-                }),
-                _loadPois(_userLocation)
-              })
+          _debouncer.run(
+            () => {
+              if (_recenterBtnPressed)
+                {
+                  setState(() {
+                    _showRecenterBtn = false;
+                    _recenterBtnPressed = false;
+                  })
+                }
+              else
+                {
+                  setState(() {
+                    _showRecenterBtn = true;
+                  })
+                },
+              setState(() {
+                _displayWindowCenter = mapPosition.center;
+                _mapZoom = mapPosition.zoom;
+              }),
+              _loadPois(_userLocation)
+            },
+          )
         },
       ),
       layers: [
-        TileLayerOptions(
-          // Free
-          //urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          //subdomains: ['a', 'b', 'c'],
-          // MapBox
-          urlTemplate: "https://api.mapbox.com/styles/v1/"
-              "{id}/tiles/{z}/{x}/{y}?access_token={accessToken}",
-          additionalOptions: {
-            'accessToken': GlobalConstants.mapboxToken,
-            'id': 'mapbox/outdoors-v11',
-          },
-        ),
+        _createMap(),
         MarkerLayerOptions(
           markers: List<Marker>.of(
             _pois.asMap().entries.map(
@@ -1341,7 +1347,7 @@ class _PoiMapState extends State<PoiMap>
     });
     if (mapController != null) {
       mapController.move(
-        LatLng(_userLocation.latitude, _userLocation.longitude),
+        LatLng(latitude, longitude),
         _mapZoom,
       );
       // ignore: lines_longer_than_80_chars
