@@ -56,8 +56,12 @@ class _ForgeState extends State<ForgePage> {
   List<ProductDetails> _iapProducts = [];
 
   List<String> _productIds = ["gold11coins", "", ""];
-  List<String> _productDescriptions = ["", "", ""];
-  List<String> _productPrices = ["", "", ""];
+  List<String> _productDescriptions = [
+    "Alternative payment\nComing soon",
+    "",
+    ""
+  ];
+  List<String> _productPrices = ["N/A", "", ""];
 
   List<PurchaseDetails> _purchases = [];
 
@@ -269,7 +273,8 @@ class _ForgeState extends State<ForgePage> {
   // so it's only relevant for non-consumed products
 
   /// Purchase a product
-  void _buyProduct(ProductDetails prod) {
+  void _buyProduct(int idx) {
+    ProductDetails prod = _iapProducts[idx];
     //ignore: omit_local_variable_types
     final PurchaseParam purchaseParam = PurchaseParam(productDetails: prod);
     // _iap.buyNonConsumable(purchaseParam: purchaseParam);
@@ -528,7 +533,7 @@ class _ForgeState extends State<ForgePage> {
             borderRadius: BorderRadius.circular(10),
           ),
           onPressed: () {
-            _buyProduct(_iapProducts[idx]);
+            _buyProduct(idx);
           },
           padding:
               EdgeInsets.only(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
