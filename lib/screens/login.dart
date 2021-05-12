@@ -276,20 +276,32 @@ class _LoginPageState extends State<LoginPage> {
 
     if (secureStorage.containsKey("api_key")) {
       if (secureStorage["api_key"] != null) {
-        final response = await ApiProvider().post("/refreshtoken", {},
-            headers: {"X-API-KEY": secureStorage["api_key"]});
+        try {
+          final response = await ApiProvider().post("/refreshtoken", {},
+              headers: {"X-API-KEY": secureStorage["api_key"]});
 
-        Map jwtdata = parseJwt(response["jwt"]);
-        // Todo: better user validation
-        if (jwtdata.containsKey("usr")) {
-          if (jwtdata["usr"] != null) {
-            bool isOk = await getInPartial(response["jwt"]);
-            if (isOk) {
-              await _storage.write(key: 'email', value: jwtdata["usr"]);
-              Navigator.of(context).pushReplacementNamed('/poi-map');
-              return;
+          Map jwtdata = parseJwt(response["jwt"]);
+          // Todo: better user validation
+          if (jwtdata.containsKey("usr")) {
+            if (jwtdata["usr"] != null) {
+              bool isOk = await getInPartial(response["jwt"]);
+              if (isOk) {
+                await _storage.write(key: 'email', value: jwtdata["usr"]);
+                Navigator.of(context).pushReplacementNamed('/poi-map');
+                return;
+              } else {
+                setState(() {
+                  _isLoading = false;
+                });
+                return;
+              }
             }
           }
+        } on DioError catch (err) {
+          setState(() {
+            _isLoading = false;
+          });
+          return;
         }
       }
     }

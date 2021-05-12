@@ -118,8 +118,12 @@ class _PlacesState extends State<PlacesPage> {
   List<ProductDetails> _iapProducts = [];
 
   List<String> _productIds = ["gold11coins", "", ""];
-  List<String> _productDescriptions = ["", "", ""];
-  List<String> _productPrices = ["", "", ""];
+  List<String> _productDescriptions = [
+    "Alternative payment\nComing soon",
+    "",
+    ""
+  ];
+  List<String> _productPrices = ["N/A", "", ""];
 
   List<PurchaseDetails> _purchases = [];
 
@@ -919,8 +923,8 @@ class _PlacesState extends State<PlacesPage> {
                                   padding: EdgeInsets.all(16),
                                   child: Text(
                                     (_recommandations.length > 0)
-                                        ? 'Nearby recommandations'
-                                        : 'No nearby recommandations',
+                                        ? 'Nearby recommendations'
+                                        : 'No nearby recommendations',
                                     textAlign: TextAlign.left,
                                     style: TextStyle(
                                       color: Color(0xffe6a04e),
