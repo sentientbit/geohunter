@@ -209,7 +209,9 @@ class _MaterialSelectState extends State<MaterialSelectPage> {
         if (response.containsKey("materials")) {
           for (dynamic elem in response["materials"]) {
             final mat = Materialmodel.fromJson(elem);
-            tmp.add(mat);
+            if (mat.nr > 0) {
+              tmp.add(mat);
+            }
           }
         }
       }
