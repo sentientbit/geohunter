@@ -15,10 +15,13 @@ import '../../providers/api_provider.dart';
 ///
 class ShowQRPage extends StatefulWidget {
   ///
-  final String qr;
+  double latitude = 51.5;
 
   ///
-  ShowQRPage({Key key, this.qr}) : super(key: key);
+  double longitude = 0.0;
+
+  ///
+  ShowQRPage({Key key, this.latitude, this.longitude}) : super(key: key);
 
   @override
   _ShowQRState createState() => _ShowQRState();
@@ -34,11 +37,15 @@ class _ShowQRState extends State<ShowQRPage> {
   final ApiProvider _apiProvider = ApiProvider();
 
   ///
+  String _qrEndpoint = '';
+
+  ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
+    generateNewQr();
     BackButtonInterceptor.add(myInterceptor);
   }
 
@@ -52,6 +59,20 @@ class _ShowQRState extends State<ShowQRPage> {
   bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
     Navigator.of(context).pop();
     return true;
+  }
+
+  Future<void> generateNewQr() async {
+    if (!mounted) return;
+    final response = await _apiProvider.post('/friends', {});
+    if (response.containsKey("success")) {
+      if (response["success"] == true) {
+        if (response.containsKey("friendship_qr")) {
+          setState(() {
+            _qrEndpoint = response["friendship_qr"];
+          });
+        }
+      }
+    }
   }
 
   Widget build(BuildContext context) {
@@ -127,14 +148,16 @@ class _ShowQRState extends State<ShowQRPage> {
                         ],
                       ),
                       SizedBox(height: 20.0),
-                      QrImage(
-                        errorCorrectionLevel: QrErrorCorrectLevel.M,
-                        data: widget.qr,
-                        version: QrVersions.auto,
-                        size: 240,
-                        gapless: true,
-                        backgroundColor: Colors.white,
-                      ),
+                      (_qrEndpoint.length > 0)
+                          ? QrImage(
+                              errorCorrectionLevel: QrErrorCorrectLevel.M,
+                              data: _qrEndpoint,
+                              version: QrVersions.auto,
+                              size: 240,
+                              gapless: true,
+                              backgroundColor: Colors.white,
+                            )
+                          : SizedBox(height: 240.0),
                       SizedBox(height: 10.0),
                       Stack(
                         children: <Widget>[

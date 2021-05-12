@@ -14,7 +14,7 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <application
         android:name="io.flutter.app.FlutterApplication"
-        android:label="geohunter"
+        android:label="GeoHunter"
         android:icon="@mipmap/ic_launcher">
         <meta-data
             android:name="com.mapbox.token"

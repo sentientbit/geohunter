@@ -38,7 +38,7 @@ class CustomInterceptors extends InterceptorsWrapper {
   ///
   static Future<Map<String, dynamic>> getStoredCookies(String hostname) async {
     try {
-      final hostnameHash = hashStringMD5(hostname);
+      final hostnameHash = hashStringMurmur(hostname);
       final cookiesJson = await storageGet('$prefix-$hostnameHash');
       var cookies = fromJson(cookiesJson);
       return Map<String, dynamic>.from(cookies);
@@ -51,14 +51,14 @@ class CustomInterceptors extends InterceptorsWrapper {
   ///
   static Future setStoredCookies(
       String hostname, Map<String, dynamic> cookies) async {
-    final hostnameHash = hashStringMD5(hostname);
+    final hostnameHash = hashStringMurmur(hostname);
     final cookiesJson = CustomInterceptors.toJson(cookies);
     await CustomInterceptors.storageSet('$prefix-$hostnameHash', cookiesJson);
   }
 
   ///
   static Future clearStoredCookies(String hostname) async {
-    final hostnameHash = hashStringMD5(hostname);
+    final hostnameHash = hashStringMurmur(hostname);
     await CustomInterceptors.storageSet('$prefix-$hostnameHash', null);
   }
 
