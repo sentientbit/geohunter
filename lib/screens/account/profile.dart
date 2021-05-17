@@ -1,23 +1,24 @@
 ///
 import 'dart:ui';
 import 'package:back_button_interceptor/back_button_interceptor.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_offline/flutter_offline.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
-//import 'package:logger/logger.dart';
+import 'package:logger/logger.dart';
 import '../../screens/account/equipment.dart';
 
 ///
 import '../../app_localizations.dart';
-import '../../text_style.dart';
 import '../../models/item.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/custom_interceptors.dart';
 import '../../providers/stream_userdata.dart';
 import '../../shared/constants.dart';
+import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
 import '../../widgets/network_status_message.dart';
@@ -53,6 +54,8 @@ class _ProfilePageState extends State<ProfilePage> {
   ///
   final ApiProvider _apiProvider = ApiProvider();
 
+  ImageProvider _avatar = AssetImage("assets/images/avatars/default01.jpg");
+
   /// Make sure back button is pressed twice
   bool ifPop = false;
 
@@ -66,18 +69,15 @@ class _ProfilePageState extends State<ProfilePage> {
 
   String _currentSex = "1";
 
-  // final Logger log = Logger(
-  //     printer: PrettyPrinter(
-  //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
+  final Logger log = Logger(
+      printer: PrettyPrinter(
+          colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
   /// Curent loggedin user
   User _user;
   List<DropdownMenuItem<String>> _locationPrivacies;
   List<DropdownMenuItem<String>> _sexes;
   List<DropdownMenuItem<String>> _languages;
-
-  ///
-  double percentage = 0.0;
 
   ///
   int currentLevel = 0;
@@ -114,8 +114,9 @@ class _ProfilePageState extends State<ProfilePage> {
         underline: Container(
           height: 1.0,
           decoration: const BoxDecoration(
-              border: Border(
-                  bottom: BorderSide(color: Colors.transparent, width: 0.0))),
+            border: Border(
+                bottom: BorderSide(color: Colors.transparent, width: 0.0)),
+          ),
         ),
         hint: Text('Select gender'),
         dropdownColor: GlobalConstants.appBg,
@@ -223,7 +224,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return true;
   }
 
-  Widget ItemLogo(int index, Item eqp) {
+  Widget itemLogo(int index, Item eqp) {
     var rarity = 0;
     if (eqp != null) {
       rarity = int.tryParse(eqp.rarity.toString()) ?? 0;
@@ -282,9 +283,32 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Widget expBar(
+    int xp,
+    int currentExperience,
+    int nextExperienceLevel,
+    Color color,
+  ) {
+    double percentage = xp / nextExperienceLevel;
+    return SizedBox(
+      height: 40,
+      width: 180,
+      child: LinearPercentIndicator(
+        lineHeight: 14.0,
+        percent: percentage,
+        center: Text(
+          "${currentExperience.toString()} / ${nextExperienceLevel.toString()}",
+          style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.bold),
+        ),
+        linearStrokeCap: LinearStrokeCap.roundAll,
+        backgroundColor: Colors.white,
+        progressColor: color,
+      ),
+    );
+  }
+
   Widget build(BuildContext context) {
     // Determining the screen width & height
-    var szHeight = MediaQuery.of(context).size.height;
     var szWidth = MediaQuery.of(context).size.width;
 
     /// Application top Bar
@@ -430,6 +454,83 @@ class _ProfilePageState extends State<ProfilePage> {
                         SizedBox(
                           height: 80.0,
                         ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            CircleAvatar(
+                              radius: szWidth / 5,
+                              backgroundImage: _avatar,
+                              backgroundColor: Colors.transparent,
+                            ),
+                          ],
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            Expanded(
+                              flex: 2,
+                              child: Icon(
+                                Icons.school,
+                                size: 24,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Expanded(
+                              flex: 6,
+                              child: expBar(
+                                currentExperience,
+                                currentExperience,
+                                nextExperienceLevel,
+                                Colors.orange,
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                ' XP',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            Expanded(
+                              flex: 2,
+                              child: Icon(
+                                Icons.healing,
+                                size: 24,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Expanded(
+                              flex: 6,
+                              child: expBar(
+                                100,
+                                100,
+                                100,
+                                Colors.red,
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                ' Health',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                         SizedBox(height: 18),
                         Text(
                           'Equipment',
@@ -478,90 +579,13 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                   children: _equipments.asMap().entries.map(
                                     (entry) {
-                                      return ItemLogo(entry.key, entry.value);
+                                      return itemLogo(entry.key, entry.value);
                                     },
                                   ).toList(),
                                 ),
                               )
                             ],
                           ),
-                        ),
-                        SizedBox(height: 18),
-                        Text(
-                          'Stats',
-                          textAlign: TextAlign.left,
-                          style: TextStyle(
-                            color: Color(0xffe6a04e),
-                            fontSize: 24,
-                            fontFamily: 'Cormorant SC',
-                            fontWeight: FontWeight.bold,
-                            shadows: <Shadow>[
-                              Shadow(
-                                  offset: Offset(1.0, 1.0),
-                                  blurRadius: 3.0,
-                                  color: Color.fromARGB(255, 0, 0, 0))
-                            ],
-                          ),
-                        ),
-                        SizedBox(height: 18),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: <Widget>[
-                            Expanded(
-                              flex: 3,
-                              child: Container(
-                                child: Row(
-                                  children: <Widget>[
-                                    Padding(
-                                      padding: EdgeInsets.only(left: 10.0),
-                                      child: Text(
-                                        "Experience ",
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                    ),
-                                    Text(' '),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              flex: 1,
-                              child: Text(
-                                '',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ),
-                            Expanded(
-                              flex: 4,
-                              child: SizedBox(
-                                height: 40,
-                                width: 180,
-                                child: LinearPercentIndicator(
-                                  lineHeight: 14.0,
-                                  percent: percentage,
-                                  center: Text(
-                                    "${currentExperience.toString()} / ${nextExperienceLevel.toString()}",
-                                    style: TextStyle(
-                                        fontSize: 12.0,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                  linearStrokeCap: LinearStrokeCap.roundAll,
-                                  backgroundColor: Colors.white,
-                                  progressColor: Colors.orange,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: Text(
-                                '',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          ],
                         ),
                         SizedBox(height: 18),
                         Text(
@@ -574,9 +598,10 @@ class _ProfilePageState extends State<ProfilePage> {
                             fontWeight: FontWeight.bold,
                             shadows: <Shadow>[
                               Shadow(
-                                  offset: Offset(1.0, 1.0),
-                                  blurRadius: 3.0,
-                                  color: Color.fromARGB(255, 0, 0, 0))
+                                offset: Offset(1.0, 1.0),
+                                blurRadius: 3.0,
+                                color: Color.fromARGB(255, 0, 0, 0),
+                              )
                             ],
                           ),
                         ),
@@ -586,16 +611,18 @@ class _ProfilePageState extends State<ProfilePage> {
                           AppLocalizations.of(context)
                               .translate('update_profile_username_label'),
                           style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontFamily: 'Open Sans',
-                              fontWeight: FontWeight.bold,
-                              shadows: <Shadow>[
-                                Shadow(
-                                    offset: Offset(1.0, 1.0),
-                                    blurRadius: 3.0,
-                                    color: Color.fromARGB(255, 0, 0, 0))
-                              ]),
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontFamily: 'Open Sans',
+                            fontWeight: FontWeight.bold,
+                            shadows: <Shadow>[
+                              Shadow(
+                                offset: Offset(1.0, 1.0),
+                                blurRadius: 3.0,
+                                color: Color.fromARGB(255, 0, 0, 0),
+                              )
+                            ],
+                          ),
                         ),
                         // Username
                         Card(
@@ -650,24 +677,26 @@ class _ProfilePageState extends State<ProfilePage> {
                           AppLocalizations.of(context)
                               .translate('update_profile_gender_label'),
                           style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontFamily: 'Open Sans',
-                              fontWeight: FontWeight.bold,
-                              shadows: <Shadow>[
-                                Shadow(
-                                    offset: Offset(1.0, 1.0),
-                                    blurRadius: 3.0,
-                                    color: Color.fromARGB(255, 0, 0, 0))
-                              ]),
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontFamily: 'Open Sans',
+                            fontWeight: FontWeight.bold,
+                            shadows: <Shadow>[
+                              Shadow(
+                                offset: Offset(1.0, 1.0),
+                                blurRadius: 3.0,
+                                color: Color.fromARGB(255, 0, 0, 0),
+                              )
+                            ],
+                          ),
                         ),
                         // Gender
                         Card(
                           elevation: 8,
                           color: GlobalConstants.appBg,
                           shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(10))),
+                            borderRadius: BorderRadius.all(Radius.circular(10)),
+                          ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: <Widget>[
@@ -690,16 +719,18 @@ class _ProfilePageState extends State<ProfilePage> {
                           AppLocalizations.of(context).translate(
                               'update_profile_location_privacy_label'),
                           style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontFamily: 'Open Sans',
-                              fontWeight: FontWeight.bold,
-                              shadows: <Shadow>[
-                                Shadow(
-                                    offset: Offset(1.0, 1.0),
-                                    blurRadius: 3.0,
-                                    color: Color.fromARGB(255, 0, 0, 0))
-                              ]),
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontFamily: 'Open Sans',
+                            fontWeight: FontWeight.bold,
+                            shadows: <Shadow>[
+                              Shadow(
+                                offset: Offset(1.0, 1.0),
+                                blurRadius: 3.0,
+                                color: Color.fromARGB(255, 0, 0, 0),
+                              )
+                            ],
+                          ),
                         ),
                         // Location privacy
                         Card(
@@ -904,8 +935,8 @@ class _ProfilePageState extends State<ProfilePage> {
       currentExperience = int.tryParse(_user.details.experience) ?? 0;
       currentLevel = expToLevel(currentExperience);
       nextExperienceLevel = levelToExp(currentLevel + 1);
-      percentage =
-          (int.tryParse(_user.details.experience) ?? 0) / nextExperienceLevel;
+      _avatar = CachedNetworkImageProvider(
+          'https://${GlobalConstants.apiHostUrl}${_user.details.picture}');
     });
   }
 
@@ -960,6 +991,7 @@ class _ProfilePageState extends State<ProfilePage> {
         "",
         double.tryParse(response["coins"].toString()) ?? 0.0,
         0,
+        response["guild"]["id"],
       );
       _user.details.coins =
           double.tryParse(response["coins"].toString()) ?? 0.0;

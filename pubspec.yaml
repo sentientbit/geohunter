@@ -22,7 +22,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # 4. Find out SHA-1 Fingerprint (see https://github.com/flame-engine/play_games/blob/master/doc/signin.md)
 # keytool -list -v -alias geocraft -keystore android\app\geocraft.jks
 # versionCode AUTOINCREMENTED in android/app/build.gradle versionCode +1
-version: 1.1.65
+version: 1.1.67
 
 environment:
   sdk: ">=2.11.0 <3.0.0"

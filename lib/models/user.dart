@@ -20,6 +20,7 @@ class User {
   });
 
   ///
+  // ignore: prefer_constructors_over_static_methods
   static User fromJson(Map<String, dynamic> json) {
     var details = UserData.fromJson(json["user"]);
     return User(
@@ -44,11 +45,7 @@ class User {
         "username": details.username,
         "mining_speed": details.miningSpeed,
         "unapproved_members": details.unnaprovedMembers,
-        "guild": {
-          "id": details.guild.id,
-          "permissions": details.guild.permissions,
-          "guid": details.guild.guid
-        },
+        "guild": {"id": details.guildId, "permissions": 0, "guid": "0"},
         "status": details.status,
         "lat": details.lat,
         "lng": details.lng,
@@ -69,19 +66,43 @@ class User {
 ///
 class UserGuild {
   ///
-  String id;
+  String guildId;
 
   ///
-  String permissions;
+  int permissions;
 
   /// Guild Unique Id
   String guid;
 
   ///
-  UserGuild.fromJson(dynamic json) {
-    id = json["id"].toString();
-    permissions = json["permissions"].toString();
-    guid = json["guid"].toString();
+  UserGuild({
+    this.guildId,
+    this.permissions,
+    this.guid,
+  });
+
+  ///
+  factory UserGuild.fromJson(Map<String, dynamic> json) {
+    return convertMaptoObject(json);
+  }
+
+  ///
+  // ignore: prefer_constructors_over_static_methods
+  static UserGuild convertMaptoObject(Map<String, dynamic> json) {
+    return UserGuild(
+      guildId: json['id'].toString(),
+      permissions: int.tryParse(json['permissions'].toString()) ?? 0,
+      guid: json['guid'].toString(),
+    );
+  }
+
+  ///
+  Map<String, dynamic> toJson() {
+    return {
+      'guildId': guildId,
+      'permissions': permissions,
+      'guid': guid,
+    };
   }
 }
 
@@ -94,7 +115,7 @@ class UserData {
   String username;
 
   ///
-  UserGuild guild;
+  String guildId;
 
   ///
   double lat;
@@ -143,6 +164,7 @@ class UserData {
     this.username = '',
     this.coins = 0.0,
     this.miningSpeed = 0,
+    this.guildId,
   });
 
   ///
@@ -152,7 +174,7 @@ class UserData {
     }
     id = json["user_id"].toString();
     username = json["username"];
-    guild = UserGuild.fromJson(json["guild"]);
+    guildId = json["guild"]["id"];
     lat = double.parse(json["lat"].toString());
     lng = double.parse(json["lng"].toString());
     picture = json["picture"]["thumbnail"];

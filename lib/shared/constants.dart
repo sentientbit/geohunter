@@ -39,7 +39,7 @@ class GlobalConstants {
   static const String appNamespace = "com.apsoni.geocraft";
 
   ///
-  static const String appVersion = "1.1.65";
+  static const String appVersion = "1.1.67";
 
   ///
   static const List<String> keywords = [
@@ -345,6 +345,7 @@ Map<String, dynamic> parseJwt(String token) {
   return payloadMap;
 }
 
+/// Murmur hash
 class Murmur32 {
   ///
   int c1 = 0xcc9e2d51.toUnsigned(32);
@@ -374,11 +375,14 @@ class Murmur32 {
     length = 0;
   }
 
+  ///
   ByteData computeHashFromString(String source) {
+    // ignore: omit_local_variable_types
     Uint8List buffer = Uint8List.fromList(utf8.encode(source));
     return computeHash(buffer, 0, buffer.length);
   }
 
+  ///
   ByteData computeHash(Uint8List buffer, int offset, int count) {
     _reset();
     hashCore(buffer, 0, buffer.length);
@@ -387,6 +391,7 @@ class Murmur32 {
     return ByteData(4)..buffer.asByteData().setUint32(0, h1);
   }
 
+  ///
   int fMix(int h) {
     // pipelining friendly algorithm
     h = ((h ^ (h >> 16)) * 0x85ebca6b).toUnsigned(32);
@@ -394,10 +399,12 @@ class Murmur32 {
     return (h ^ (h >> 16)).toUnsigned(32);
   }
 
+  ///
   int rotateLeft(int x, int r) {
     return ((x << r) | (x >> (32 - r))).toUnsigned(32);
   }
 
+  ///
   int toUint32(Uint8List data, int start) {
     return Endian.host == Endian.little
         ? (data[start] |
@@ -410,12 +417,15 @@ class Murmur32 {
             data[start + 3]);
   }
 
+  ///
   void hashCore(Uint8List buffer, int start, int count) {
     length += count.toUnsigned(32);
+    // ignore: omit_local_variable_types
     int remainder = count & 3;
+    // ignore: omit_local_variable_types
     int alignedLength = (start + (count - remainder)).toUnsigned(32);
 
-    for (int i = start; i < alignedLength; i += 4) {
+    for (var i = start; i < alignedLength; i += 4) {
       var v1 = (toUint32(buffer, i) * c1).toUnsigned(32);
       var v2 = rotateLeft(v1, 15);
       var v3 = (v2 * c2).toUnsigned(32);
@@ -428,7 +438,7 @@ class Murmur32 {
 
     if (remainder > 0) {
       // create our keys and initialize to 0
-      int k1 = 0;
+      var k1 = 0;
 
       // determine how many bytes we have left to work with based on length
       switch (remainder) {
@@ -498,4 +508,23 @@ class AdManager {
       throw UnsupportedError("Unsupported platform");
     }
   }
+}
+
+///
+Color colorRarity(int rarity) {
+  if (rarity == 1) {
+    // Uncommon
+    return Color(0xff7ecb3a);
+  } else if (rarity == 2) {
+    // Rare
+    return Color(0xff0da3d8);
+  } else if (rarity == 3) {
+    // Epic
+    return Color(0xffaa66d8);
+  } else if (rarity == 4) {
+    // Legendary
+    return Color(0xfffeb53b);
+  }
+  // Commons
+  return Color(0xffcccccc);
 }

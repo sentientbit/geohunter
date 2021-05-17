@@ -451,6 +451,7 @@ class _StudyDetailState extends State<StudyDetailPage> {
           "",
           double.tryParse(response["coins"].toString()) ?? 0.0,
           0,
+          response["guild"]["id"],
         );
       }
       showDialog(
