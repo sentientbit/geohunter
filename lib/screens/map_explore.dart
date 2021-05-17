@@ -615,7 +615,7 @@ class _PoiMapState extends State<PoiMap>
                                 Icon(Icons.camera_alt,
                                     color: Color(0xffe6a04e)),
                                 Text(
-                                  " Camera",
+                                  " Cam",
                                   style: TextStyle(
                                       color: Color(0xffe6a04e),
                                       fontSize: 16,
@@ -642,7 +642,7 @@ class _PoiMapState extends State<PoiMap>
                               children: <Widget>[
                                 Icon(Icons.photo, color: Color(0xffe6a04e)),
                                 Text(
-                                  " Gallery",
+                                  " Pic",
                                   style: TextStyle(
                                       color: Color(0xffe6a04e),
                                       fontSize: 16,
@@ -673,7 +673,7 @@ class _PoiMapState extends State<PoiMap>
                                 Icon(Icons.directions_walk,
                                     color: Color(0xffe6a04e)),
                                 Text(
-                                  " Directions",
+                                  " Go",
                                   style: TextStyle(
                                       color: Color(0xffe6a04e),
                                       fontSize: 16,

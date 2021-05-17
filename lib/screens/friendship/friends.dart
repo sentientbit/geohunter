@@ -10,11 +10,11 @@ import 'package:flutter_offline/flutter_offline.dart';
 
 ///
 import '../../app_localizations.dart';
-import '../../shared/constants.dart';
-import '../../text_style.dart';
-import '../../screens/friendship/showqr.dart';
 import '../../models/friends.dart';
 import '../../providers/api_provider.dart';
+import '../../screens/friendship/showqr.dart';
+import '../../shared/constants.dart';
+import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
 import '../../widgets/friends_summary.dart';
@@ -240,16 +240,19 @@ class _FriendsPageState extends State<FriendsPage> {
           child,
         ) {
           if (connectivity == ConnectivityResult.none) {
-            return Stack(children: <Widget>[
-              child,
-              BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                child: Container(
+            return Stack(
+              children: <Widget>[
+                child,
+                BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  child: Container(
                     color: Colors.black.withOpacity(0),
                     // child: child,
-                    child: NetworkStatusMessage()),
-              )
-            ]);
+                    child: NetworkStatusMessage(),
+                  ),
+                )
+              ],
+            );
           } else {
             return child;
           }

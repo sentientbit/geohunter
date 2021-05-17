@@ -14,15 +14,16 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:loading_overlay/loading_overlay.dart';
 import '../../app_localizations.dart';
-// import 'package:logger/logger.dart';
+
+import 'package:logger/logger.dart';
 
 ///
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/custom_interceptors.dart';
 import '../../providers/stream_userdata.dart';
-import '../../screens/inventory/blueprints.dart';
-import '../../screens/inventory/materials.dart';
+import '../../screens/forge/blueprints.dart';
+import '../../screens/forge/materials.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
@@ -77,6 +78,7 @@ class _ForgeState extends State<ForgePage> {
 
   String _craftedItemImg = "";
   String _craftedItemName = "";
+  String _craftedItemRarity = "";
 
   /// Curent loggedin user
   User _user;
@@ -96,9 +98,9 @@ class _ForgeState extends State<ForgePage> {
   String _admobType;
   int _admobAmount;
 
-  // final Logger log = Logger(
-  //     printer: PrettyPrinter(
-  //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
+  final Logger log = Logger(
+      printer: PrettyPrinter(
+          colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
   ///
   final ApiProvider _apiProvider = ApiProvider();
@@ -385,7 +387,7 @@ class _ForgeState extends State<ForgePage> {
 
   Widget build(BuildContext context) {
     //ignore: omit_local_variable_types
-    int currentTabIndex = 2;
+    int currentTabIndex = 0;
 
     /// Application top Bar
     final topBar = AppBar(
@@ -460,38 +462,67 @@ class _ForgeState extends State<ForgePage> {
       setState(() {
         currentTabIndex = index;
       });
-      if (index == 0) {
-        //Navigator.of(context).pop();
-        Navigator.of(context).pushReplacementNamed('/inventory');
-      } else if (index == 1) {
+      /* if index == 0 We are here: Forge */
+      if (index == 1) {
         //Navigator.of(context).pop();
         Navigator.of(context).pushReplacementNamed('/research');
       }
     }
 
-    final craftButton = RaisedButton(
-      shape: OutlineInputBorder(
-        borderSide: const BorderSide(color: Colors.white, width: 1.0),
-        borderRadius: BorderRadius.circular(10),
+    final cleanButton = OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        padding: EdgeInsets.all(2),
+        backgroundColor: GlobalConstants.appBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+        side: BorderSide(width: 1, color: Colors.white),
+      ),
+      onPressed: () async {
+        await _clearPlacements();
+      },
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Icon(Icons.autorenew, color: Color(0xffe6a04e)),
+          Text(
+            " Clean",
+            style: TextStyle(
+                color: Color(0xffe6a04e),
+                fontSize: 18,
+                fontFamily: 'Cormorant SC',
+                fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+
+    final craftButton = OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        padding: EdgeInsets.all(2),
+        backgroundColor: GlobalConstants.appBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+        side: BorderSide(width: 1, color: Colors.white),
       ),
       onPressed: () async {
         await _craftItem();
       },
-      padding:
-          EdgeInsets.only(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0),
-      color: Colors.black,
-      child:
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
-        Icon(Icons.gavel, color: Color(0xffe6a04e)),
-        Text(
-          " Craft for ${GlobalConstants.craftingCost.toString()} Coins",
-          style: TextStyle(
-              color: Color(0xffe6a04e),
-              fontSize: 18,
-              fontFamily: 'Cormorant SC',
-              fontWeight: FontWeight.bold),
-        ),
-      ]),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Icon(Icons.gavel, color: Color(0xffe6a04e)),
+          Text(
+            " Craft",
+            style: TextStyle(
+                color: Color(0xffe6a04e),
+                fontSize: 18,
+                fontFamily: 'Cormorant SC',
+                fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
     );
 
     final watchAdButton = Padding(
@@ -524,6 +555,14 @@ class _ForgeState extends State<ForgePage> {
       ),
     );
 
+    ///
+    Color itemColorRarity(String rarity) {
+      if (rarity == "") {
+        return Colors.white;
+      }
+      return colorRarity(int.tryParse(rarity) ?? 0);
+    }
+
     Widget purchaseCoinsButton(int idx) {
       return Padding(
         padding: EdgeInsets.all(0),
@@ -539,18 +578,19 @@ class _ForgeState extends State<ForgePage> {
               EdgeInsets.only(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
           color: Colors.black,
           child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Icon(Icons.shopping_cart, color: Color(0xffe6a04e)),
-                Text(
-                  " ${_productPrices[idx]}",
-                  style: TextStyle(
-                      color: Color(0xffe6a04e),
-                      fontSize: 18,
-                      fontFamily: 'Cormorant SC',
-                      fontWeight: FontWeight.bold),
-                ),
-              ]),
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Icon(Icons.shopping_cart, color: Color(0xffe6a04e)),
+              Text(
+                " ${_productPrices[idx]}",
+                style: TextStyle(
+                    color: Color(0xffe6a04e),
+                    fontSize: 18,
+                    fontFamily: 'Cormorant SC',
+                    fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -664,16 +704,57 @@ class _ForgeState extends State<ForgePage> {
                 child: Column(
                   children: <Widget>[
                     _showCoinSheet ? coinSheet : SizedBox(height: 1),
-                    Card(
-                      color: Colors.transparent,
-                      child: SizedBox(
-                          child: blueprintPlace(), width: 120, height: 110),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        Expanded(
+                          flex: 1,
+                          child: Text(""),
+                        ),
+                        Expanded(
+                          flex: 3,
+                          child: Container(
+                            padding: const EdgeInsets.all(7.0),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.white),
+                              borderRadius: BorderRadius.circular(5.0),
+                              color: Colors.black,
+                            ),
+                            child: Text(
+                              "No bonus",
+                              style: TextStyle(
+                                color: GlobalConstants.appFg,
+                                fontSize: 18.0,
+                                backgroundColor: Colors.black,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 4,
+                          child: Card(
+                            color: Colors.transparent,
+                            child: SizedBox(
+                                child: blueprintPlace(),
+                                width: 110,
+                                height: 110),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 3,
+                          child: cleanButton,
+                        ),
+                        Expanded(
+                          flex: 1,
+                          child: Text(""),
+                        ),
+                      ],
                     ),
                     Card(
                       color: Color.fromARGB(140, 0, 0, 0),
                       child: Text(
                         (_blueprintName == "")
-                            ? "Select Blueprint"
+                            ? " Select Blueprint "
                             : _blueprintName,
                         style: TextStyle(
                           color: Colors.white,
@@ -700,28 +781,44 @@ class _ForgeState extends State<ForgePage> {
                           height: 30),
                     ),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
-                        Card(
-                          color: Colors.transparent,
-                          child: SizedBox(
-                              child: materialPlace(0), width: 120, height: 110),
+                        Expanded(
+                          flex: 4,
+                          child: Card(
+                            color: Colors.transparent,
+                            child: SizedBox(
+                                child: materialPlace(0),
+                                width: 110,
+                                height: 110),
+                          ),
                         ),
-                        Card(
-                          color: Colors.transparent,
-                          child: SizedBox(
-                              child: materialPlace(1), width: 120, height: 110),
+                        Expanded(
+                          flex: 4,
+                          child: Card(
+                            color: Colors.transparent,
+                            child: SizedBox(
+                                child: materialPlace(1),
+                                width: 110,
+                                height: 110),
+                          ),
                         ),
-                        Card(
-                          color: Colors.transparent,
-                          child: SizedBox(
-                              child: materialPlace(2), width: 120, height: 110),
+                        Expanded(
+                          flex: 4,
+                          child: Card(
+                            color: Colors.transparent,
+                            child: SizedBox(
+                                child: materialPlace(2),
+                                width: 110,
+                                height: 110),
+                          ),
                         ),
                       ],
                     ),
                     Card(
                       color: Color.fromARGB(140, 0, 0, 0),
                       child: Text(
-                        'Materials',
+                        " Materials ",
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 24,
@@ -746,14 +843,65 @@ class _ForgeState extends State<ForgePage> {
                           width: 30,
                           height: 30),
                     ),
-                    Card(
-                      color: Colors.transparent,
-                      child:
-                          SizedBox(child: itemLogo(), width: 120, height: 120),
-                    ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[craftButton],
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: <Widget>[
+                        Expanded(
+                          flex: 1,
+                          child: Text(""),
+                        ),
+                        Expanded(
+                          flex: 3,
+                          child: Container(
+                            padding: const EdgeInsets.all(7.0),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.white),
+                              borderRadius: BorderRadius.circular(5.0),
+                              color: Colors.black,
+                            ),
+                            child: Text(
+                              "${GlobalConstants.craftingCost.toString()} Coins",
+                              style: TextStyle(
+                                color: GlobalConstants.appFg,
+                                fontSize: 18.0,
+                                backgroundColor: Colors.black,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 4,
+                          child: Card(
+                            color: Colors.transparent,
+                            child: SizedBox(
+                                child: itemLogo(), width: 110, height: 110),
+                          ),
+                        ),
+                        Expanded(flex: 3, child: craftButton),
+                        Expanded(
+                          flex: 1,
+                          child: Text(""),
+                        ),
+                      ],
+                    ),
+                    Card(
+                      color: Color.fromARGB(140, 0, 0, 0),
+                      child: Text(
+                        (_craftedItemName == "") ? " Item " : _craftedItemName,
+                        style: TextStyle(
+                          color: itemColorRarity(_craftedItemRarity),
+                          fontSize: 24,
+                          fontFamily: 'Cormorant SC',
+                          fontWeight: FontWeight.bold,
+                          shadows: <Shadow>[
+                            Shadow(
+                                offset: Offset(1.0, 1.0),
+                                blurRadius: 3.0,
+                                color: Color.fromARGB(255, 0, 0, 0))
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -768,37 +916,19 @@ class _ForgeState extends State<ForgePage> {
         onTap: onTapped,
         currentIndex: currentTabIndex,
         backgroundColor: GlobalConstants.appBg,
+        selectedItemColor: Color(0xfffeb53b),
+        selectedLabelStyle: TextStyle(fontSize: 14),
+        unselectedItemColor: Colors.white,
+        unselectedLabelStyle: TextStyle(fontSize: 14),
         items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.format_list_bulleted, color: Colors.white),
-            title: Text(
-              'Items',
-              style: TextStyle(
-                  color: (currentTabIndex == 0)
-                      ? Color(0xfffeb53b)
-                      : Colors.white),
-            ),
+            icon: Icon(Icons.gavel, color: Colors.white),
+            label: 'Forge',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.import_contacts, color: Colors.white),
-            title: Text(
-              'Research',
-              style: TextStyle(
-                  color: (currentTabIndex == 1)
-                      ? Color(0xfffeb53b)
-                      : Colors.white),
-            ),
+            label: 'Research',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.gavel, color: Colors.white),
-            title: Text(
-              'Forge',
-              style: TextStyle(
-                  color: (currentTabIndex == 2)
-                      ? Color(0xfffeb53b)
-                      : Colors.white),
-            ),
-          )
         ],
       ),
     );
@@ -859,6 +989,7 @@ class _ForgeState extends State<ForgePage> {
       setState(() {
         _craftedItemImg = "";
         _craftedItemName = "";
+        _craftedItemRarity = "";
       });
       return;
     }
@@ -883,16 +1014,20 @@ class _ForgeState extends State<ForgePage> {
       if (response["success"] == true) {
         if (response["items"][0]["nr"] > 0) {
           await _clearPlacements();
+          log.d(response);
           setState(() {
             _craftedItemImg = response["items"][0]["img"];
             _craftedItemName = response["items"][0]["name"];
+            _craftedItemRarity = response["items"][0]["rarity"];
           });
         }
+
         if (response.containsKey("coins")) {
           _userdata.updateUserData(
             "",
             double.tryParse(response["coins"].toString()) ?? 0.0,
             0,
+            response["guild"]["id"],
           );
         }
       }
@@ -941,6 +1076,7 @@ class _ForgeState extends State<ForgePage> {
           "",
           double.tryParse(response["coins"].toString()) ?? 0.0,
           0,
+          response["guild"]["id"],
         );
 
         /// Retain the current total funds

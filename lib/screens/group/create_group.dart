@@ -15,23 +15,27 @@ import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_dialog.dart';
 
 ///
-class JoinGroup extends StatefulWidget {
+class CreateGroup extends StatefulWidget {
   ///
-  static String tag = 'join-group';
+  static String tag = 'create-group';
   @override
-  _JoinGroupState createState() => _JoinGroupState();
+  _CreateGroupState createState() => _CreateGroupState();
 }
 
-class _JoinGroupState extends State<JoinGroup> {
+class _CreateGroupState extends State<CreateGroup> {
   final ApiProvider _apiProvider = ApiProvider();
 
   // final Logger log = Logger(
   //     printer: PrettyPrinter(
   //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
-  final _guildUidController = TextEditingController();
-  String _guildUidControllerMessage = '';
-  bool _showGuildUidError = false;
+  final _groupNameController = TextEditingController();
+  String _groupNameControllerMessage = '';
+  bool _showGroupNameError = false;
+
+  /// if the Guild is public or not
+  bool _isHidden = false;
+  void _isHiddenChanged(bool value) => setState(() => _isHidden = value);
 
   /// if the Guild is public or not
   bool _isLocked = false;
@@ -48,11 +52,13 @@ class _JoinGroupState extends State<JoinGroup> {
   void initState() {
     super.initState();
     _getUserDetails();
-    BackButtonInterceptor.add(myInterceptor);
+    BackButtonInterceptor.add(myInterceptor, zIndex: 2, name: "SomeName");
   }
 
   @override
   void dispose() {
+    _groupNameController.dispose();
+    _passwordController.dispose();
     BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
   }
@@ -66,18 +72,18 @@ class _JoinGroupState extends State<JoinGroup> {
   Widget build(BuildContext context) {
     final deviceSize = MediaQuery.of(context).size;
 
-    final joinButton = Padding(
+    final createButton = Padding(
       padding: EdgeInsets.all(0),
       child: RaisedButton(
         shape: OutlineInputBorder(
           borderSide: const BorderSide(color: Colors.white, width: 1.0),
           borderRadius: BorderRadius.circular(10),
         ),
-        onPressed: () => _joinGuild(context),
+        onPressed: () => _addGuild(context),
         padding: EdgeInsets.all(16),
         color: Colors.black,
         child: Text(
-          'Join',
+          'Create',
           style: TextStyle(
               color: Color(0xffe6a04e),
               fontSize: 18,
@@ -149,10 +155,10 @@ class _JoinGroupState extends State<JoinGroup> {
                               padding: EdgeInsets.only(left: 24.0, right: 24.0),
                               children: <Widget>[
                                 Text(
-                                  'Join existing guild',
+                                  'Create a new guild',
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 40,
+                                    fontSize: 32,
                                     fontFamily: 'Cormorant SC',
                                     fontWeight: FontWeight.bold,
                                     shadows: <Shadow>[
@@ -165,22 +171,7 @@ class _JoinGroupState extends State<JoinGroup> {
                                 ),
                                 SizedBox(height: 24.0),
                                 Text(
-                                  'To join an existing guild you have to know the guild\'s unique id and be accepted by the leader.',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 20,
-                                      fontFamily: 'Open Sans',
-                                      fontWeight: FontWeight.bold,
-                                      shadows: <Shadow>[
-                                        Shadow(
-                                            offset: Offset(1.0, 1.0),
-                                            blurRadius: 3.0,
-                                            color: Color.fromARGB(255, 0, 0, 0))
-                                      ]),
-                                ),
-                                SizedBox(height: 24.0),
-                                Text(
-                                  'Guild Unique ID',
+                                  'Guild Name',
                                   style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 16,
@@ -207,19 +198,19 @@ class _JoinGroupState extends State<JoinGroup> {
                                       ),
                                       Expanded(
                                         child: TextField(
-                                          controller: _guildUidController,
+                                          controller: _groupNameController,
                                           decoration: InputDecoration(
                                               border: InputBorder.none,
-                                              hintText: "Guild Unique ID"),
+                                              hintText: "Guild Name"),
                                           onSubmitted: (text) {},
                                         ),
                                       )
                                     ],
                                   ),
                                 ),
-                                _showGuildUidError
+                                _showGroupNameError
                                     ? Text(
-                                        _guildUidControllerMessage,
+                                        _groupNameControllerMessage,
                                         style: TextStyle(
                                             color: Colors.red,
                                             fontSize: 16,
@@ -235,7 +226,48 @@ class _JoinGroupState extends State<JoinGroup> {
                                       )
                                     : Text(''),
                                 Text(
-                                  'I have a password',
+                                  'Will it be public ?',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontFamily: 'Open Sans',
+                                      fontWeight: FontWeight.bold,
+                                      shadows: <Shadow>[
+                                        Shadow(
+                                            offset: Offset(1.0, 1.0),
+                                            blurRadius: 3.0,
+                                            color: Color.fromARGB(255, 0, 0, 0))
+                                      ]),
+                                ),
+                                Row(
+                                  children: <Widget>[
+                                    Switch(
+                                      value: _isHidden,
+                                      onChanged: _isHiddenChanged,
+                                      activeTrackColor: Colors.white,
+                                      activeColor: Color(0xffe6a04e),
+                                    ),
+                                    Text(
+                                      _isHidden ? 'Hidden' : 'Public',
+                                      maxLines: 1,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontFamily: 'Open Sans',
+                                        fontWeight: FontWeight.bold,
+                                        shadows: <Shadow>[
+                                          Shadow(
+                                              offset: Offset(1.0, 1.0),
+                                              blurRadius: 3.0,
+                                              color:
+                                                  Color.fromARGB(255, 0, 0, 0))
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  'Will it be locked with a password ?',
                                   style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 16,
@@ -319,26 +351,25 @@ class _JoinGroupState extends State<JoinGroup> {
                                       ],
                                     ),
                                   ),
-                                if (_isLocked)
-                                  _showPasswordError
-                                      ? Text(
-                                          _passwordControllerMessage,
-                                          style: TextStyle(
-                                              color: Colors.red,
-                                              fontSize: 16,
-                                              fontFamily: 'Open Sans',
-                                              fontWeight: FontWeight.bold,
-                                              shadows: <Shadow>[
-                                                Shadow(
-                                                    offset: Offset(1.0, 1.0),
-                                                    blurRadius: 3.0,
-                                                    color: Color.fromARGB(
-                                                        255, 0, 0, 0))
-                                              ]),
-                                        )
-                                      : Text(''),
+                                _showPasswordError
+                                    ? Text(
+                                        _passwordControllerMessage,
+                                        style: TextStyle(
+                                            color: Colors.red,
+                                            fontSize: 16,
+                                            fontFamily: 'Open Sans',
+                                            fontWeight: FontWeight.bold,
+                                            shadows: <Shadow>[
+                                              Shadow(
+                                                  offset: Offset(1.0, 1.0),
+                                                  blurRadius: 3.0,
+                                                  color: Color.fromARGB(
+                                                      255, 0, 0, 0))
+                                            ]),
+                                      )
+                                    : Text(''),
                                 SizedBox(height: 24.0),
-                                joinButton,
+                                createButton,
                                 SizedBox(width: 105),
                                 cancelButton
                               ],
@@ -366,80 +397,55 @@ class _JoinGroupState extends State<JoinGroup> {
         GlobalConstants.apiHostUrl, _user.toMap());
   }
 
-  /// 5556665 should pass
-  bool isValidGuid(String guid) {
-    if (guid.length != 7) {
-      return false;
-    }
-
-    var bits = List(6);
-    bits[0] = int.parse(guid[0]) * 4;
-    bits[1] = int.parse(guid[1]) * 6;
-    bits[2] = int.parse(guid[2]) * 7;
-    bits[3] = int.parse(guid[3]) * 9;
-    bits[4] = int.parse(guid[4]) * 2;
-    bits[5] = int.parse(guid[5]) * 5;
-
-    var sum = bits[0] + bits[1] + bits[2] + bits[3] + bits[4] + bits[5];
-    var ck = sum % 11;
-    if (ck == 10) {
-      ck = 1;
-    }
-    if (ck != int.parse(guid[6])) {
-      return false;
-    }
-    return true;
-  }
-
-  void _joinGuild(BuildContext context) async {
-    _showGuildUidError = false;
-    if (_guildUidController.text.isEmpty) {
+  void _addGuild(BuildContext context) async {
+    _showGroupNameError = false;
+    if (_groupNameController.text.isEmpty) {
       setState(() {
-        _guildUidControllerMessage = 'Please enter a Guild Unique ID';
-        _showGuildUidError = true;
+        _groupNameControllerMessage = 'Please choose a guild name';
+        _showGroupNameError = true;
       });
       return;
     }
-    if (!isValidGuid(_guildUidController.text)) {
-      setState(() {
-        _guildUidControllerMessage = 'Please enter a valid Guild Unique ID';
-        _showGuildUidError = true;
-      });
-      return;
-    }
-    if (_isLocked && _passwordController.text.isEmpty) {
-      setState(() {
-        _passwordControllerMessage = 'Please enter a Password';
-        _showPasswordError = true;
-      });
-      return;
-    }
-    try {
-      var data = {"guid": _guildUidController.text};
-      if (_isLocked && _passwordController.text.isNotEmpty) {
-        data["password"] = _passwordController.text;
+
+    _showPasswordError = false;
+    if (_isLocked) {
+      if (_passwordController.text.isEmpty) {
+        setState(() {
+          _passwordControllerMessage = 'Please fill a password';
+          _showPasswordError = true;
+        });
+        return;
       }
-      dynamic response = await _apiProvider.post('/membership', data);
+    }
 
-      if (int.parse(response["guild_id"] ?? 0) > 0) {
-        _user.details.guild.id = response["guild_id"];
-        _user.details.guild.permissions = "0";
+    try {
+      final response = await _apiProvider.post('/guild', {
+        "name": _groupNameController.text,
+        "is_hidden": _isHidden ? "1" : "0",
+        "is_locked": _isLocked ? "1" : "0",
+        "password": _passwordController.text
+      });
+
+      if (response["success"] == true) {
+        _user.details.guildId = response["guild_id"].toString();
         await CustomInterceptors.setStoredCookies(
             GlobalConstants.apiHostUrl, _user.toMap());
-
-        showDialog(
-          context: context,
-          builder: (context) => CustomDialog(
-            title: AppLocalizations.of(context).translate('congrats'),
-            description: response["message"],
-            buttonText: "Okay",
-            callback: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pushReplacementNamed('/in-group');
-            },
-          ),
-        );
       }
+
+      _groupNameController.text = "";
+      showDialog(
+        context: context,
+        builder: (context) => CustomDialog(
+          title: AppLocalizations.of(context).translate('congrats'),
+          description: response["message"],
+          buttonText: "Okay",
+          callback: () {
+            Navigator.of(context).pop();
+            Navigator.of(context).pushReplacementNamed('/in-group');
+          },
+        ),
+      );
+      // _images.clear();
     } on DioError catch (err) {
       showDialog(
         context: context,
@@ -449,6 +455,7 @@ class _JoinGroupState extends State<JoinGroup> {
           buttonText: "Okay",
         ),
       );
+      //log.e(err.response);
     }
   }
 }

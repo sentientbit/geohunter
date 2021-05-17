@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_offline/flutter_offline.dart';
 //import 'package:encrypt/encrypt.dart' as enq;
 import 'package:loading_overlay/loading_overlay.dart';
+
 //import 'package:logger/logger.dart';
 
 ///
@@ -217,17 +218,19 @@ class _LoginPageState extends State<LoginPage> {
       final response = await ApiProvider()
           .get("/login", headers: {"Authorization": "Basic $encoded"});
 
-      Map jwtdata = parseJwt(response["jwt"]);
+      if (response.containsKey("jwt")) {
+        Map jwtdata = parseJwt(response["jwt"]);
 
-      // Todo: better user validation
-      if (jwtdata.containsKey("usr")) {
-        if (jwtdata["usr"] != null) {
-          bool isOk = await getInFull(response["jwt"], response["user"]);
-          if (isOk == true) {
-            await _storage.write(key: 'email', value: jwtdata["usr"]);
-            await _storage.write(key: 'api_key', value: response["api_key"]);
-            Navigator.of(context).pushReplacementNamed('/poi-map');
-            return;
+        // Todo: better user validation
+        if (jwtdata.containsKey("usr")) {
+          if (jwtdata["usr"] != null) {
+            bool isOk = await getInFull(response["jwt"], response["user"]);
+            if (isOk == true) {
+              await _storage.write(key: 'email', value: jwtdata["usr"]);
+              await _storage.write(key: 'api_key', value: response["api_key"]);
+              Navigator.of(context).pushReplacementNamed('/poi-map');
+              return;
+            }
           }
         }
       }
@@ -242,7 +245,7 @@ class _LoginPageState extends State<LoginPage> {
         context: context,
         builder: (context) => CustomDialog(
           title: "Error",
-          description: err.response?.data["message"],
+          description: "Check internet connection, or try again later",
           buttonText: "Okay",
         ),
       );
