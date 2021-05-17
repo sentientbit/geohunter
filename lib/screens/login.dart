@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_offline/flutter_offline.dart';
 //import 'package:encrypt/encrypt.dart' as enq;
 import 'package:loading_overlay/loading_overlay.dart';
+
 //import 'package:logger/logger.dart';
 
 ///
@@ -50,7 +51,7 @@ class _LoginPageState extends State<LoginPage> {
   //    printer: PrettyPrinter(
   //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
-  bool _isLoading = true;
+  bool _isLoading = false;
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -154,22 +155,35 @@ class _LoginPageState extends State<LoginPage> {
   Future _getUserDetails() async {
     //print('_getUserDetails');
     final response = await _apiProvider.get('/profile');
-    final tmp =
-        await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
+    try {
+      final tmp =
+          await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
+      if (response["success"] == true) {
+        tmp["jwt"] = response["jwt"];
+        tmp["user"] = response["user"];
+        Map jwtdata = parseJwt(response["jwt"]);
 
-    if (response["success"] == true) {
-      tmp["jwt"] = response["jwt"];
-      tmp["user"] = response["user"];
-      Map jwtdata = parseJwt(response["jwt"]);
-
-      // Todo: better user validation
-      if (jwtdata.containsKey("usr")) {
-        if (jwtdata["usr"] != null) {
-          await CustomInterceptors.setStoredCookies(
-              GlobalConstants.apiHostUrl, tmp);
-          return true;
+        // Todo: better user validation
+        if (jwtdata.containsKey("usr")) {
+          if (jwtdata["usr"] != null) {
+            await CustomInterceptors.setStoredCookies(
+                GlobalConstants.apiHostUrl, tmp);
+            return true;
+          }
         }
       }
+    } on DioError catch (err) {
+      showDialog(
+        context: context,
+        builder: (context) => CustomDialog(
+          title: "Error",
+          description: err.response?.data["message"],
+          buttonText: "Okay",
+        ),
+      );
+      setState(() {
+        _isLoading = false;
+      });
     }
 
     return false;
@@ -204,17 +218,19 @@ class _LoginPageState extends State<LoginPage> {
       final response = await ApiProvider()
           .get("/login", headers: {"Authorization": "Basic $encoded"});
 
-      Map jwtdata = parseJwt(response["jwt"]);
+      if (response.containsKey("jwt")) {
+        Map jwtdata = parseJwt(response["jwt"]);
 
-      // Todo: better user validation
-      if (jwtdata.containsKey("usr")) {
-        if (jwtdata["usr"] != null) {
-          bool isOk = await getInFull(response["jwt"], response["user"]);
-          if (isOk == true) {
-            await _storage.write(key: 'email', value: jwtdata["usr"]);
-            await _storage.write(key: 'api_key', value: response["api_key"]);
-            Navigator.of(context).pushReplacementNamed('/poi-map');
-            return;
+        // Todo: better user validation
+        if (jwtdata.containsKey("usr")) {
+          if (jwtdata["usr"] != null) {
+            bool isOk = await getInFull(response["jwt"], response["user"]);
+            if (isOk == true) {
+              await _storage.write(key: 'email', value: jwtdata["usr"]);
+              await _storage.write(key: 'api_key', value: response["api_key"]);
+              Navigator.of(context).pushReplacementNamed('/poi-map');
+              return;
+            }
           }
         }
       }
@@ -229,7 +245,7 @@ class _LoginPageState extends State<LoginPage> {
         context: context,
         builder: (context) => CustomDialog(
           title: "Error",
-          description: err.response?.data["message"],
+          description: "Check internet connection, or try again later",
           buttonText: "Okay",
         ),
       );
@@ -255,25 +271,40 @@ class _LoginPageState extends State<LoginPage> {
 
   // Get the email and the api_key from secure_storage
   void _tryAutoSignIn() async {
+    setState(() {
+      _isLoading = true;
+    });
     var secureStorage = await _storage.readAll();
     _emailController.text = secureStorage["email"];
 
     if (secureStorage.containsKey("api_key")) {
       if (secureStorage["api_key"] != null) {
-        final response = await ApiProvider().post("/refreshtoken", {},
-            headers: {"X-API-KEY": secureStorage["api_key"]});
+        try {
+          final response = await ApiProvider().post("/refreshtoken", {},
+              headers: {"X-API-KEY": secureStorage["api_key"]});
 
-        Map jwtdata = parseJwt(response["jwt"]);
-        // Todo: better user validation
-        if (jwtdata.containsKey("usr")) {
-          if (jwtdata["usr"] != null) {
-            bool isOk = await getInPartial(response["jwt"]);
-            if (isOk) {
-              await _storage.write(key: 'email', value: jwtdata["usr"]);
-              Navigator.of(context).pushReplacementNamed('/poi-map');
-              return;
+          Map jwtdata = parseJwt(response["jwt"]);
+          // Todo: better user validation
+          if (jwtdata.containsKey("usr")) {
+            if (jwtdata["usr"] != null) {
+              bool isOk = await getInPartial(response["jwt"]);
+              if (isOk) {
+                await _storage.write(key: 'email', value: jwtdata["usr"]);
+                Navigator.of(context).pushReplacementNamed('/poi-map');
+                return;
+              } else {
+                setState(() {
+                  _isLoading = false;
+                });
+                return;
+              }
             }
           }
+        } on DioError catch (err) {
+          setState(() {
+            _isLoading = false;
+          });
+          return;
         }
       }
     }

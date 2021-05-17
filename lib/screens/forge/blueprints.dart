@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 
 ///
 import '../../models/blueprint.dart';
-import '../../models/materialmodel.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
@@ -14,45 +13,16 @@ import '../../providers/api_provider.dart';
 //import '../app_localizations.dart';
 
 ///
-enum PopupMenuChoice {
+class BlueprintSelectPage extends StatefulWidget {
   ///
-  all,
-
-  ///
-  weak,
-
-  ///
-  common,
-
-  ///
-  strong
-}
-
-///
-class BlueprintListPage extends StatefulWidget {
-  ///
-  int blueprintId = 0;
-
-  ///
-  int placement = 0;
-
-  ///
-  int mat0 = 0;
-
-  ///
-  BlueprintListPage({
-    Key key,
-    this.blueprintId,
-    this.placement,
-    this.mat0,
-  }) : super(key: key);
+  BlueprintSelectPage({Key key}) : super(key: key);
 
   @override
-  _BlueprintListState createState() => _BlueprintListState();
+  _BlueprintSelectState createState() => _BlueprintSelectState();
 }
 
 ///
-class _BlueprintListState extends State<BlueprintListPage> {
+class _BlueprintSelectState extends State<BlueprintSelectPage> {
   /// Secure Storage for User Data
   final _storage = FlutterSecureStorage();
 
@@ -154,30 +124,14 @@ class _BlueprintListState extends State<BlueprintListPage> {
       ),
       trailing:
           Icon(Icons.keyboard_arrow_right, color: Colors.white, size: 30.0),
-      onTap: () {},
+      onTap: () {
+        _chooseBlueprint(context, _blueprints[index].id, _blueprints[index].img,
+            _blueprints[index].name);
+      },
     );
   }
 
-  void choiceAction(PopupMenuChoice choice) {}
-
   Widget build(BuildContext context) {
-    //ignore: omit_local_variable_types
-    int currentTabIndex = 1;
-
-    /// What happens when clicking the Bottom Navbar
-    onTapped(int index) {
-      setState(() {
-        currentTabIndex = index;
-      });
-      if (index == 0) {
-        Navigator.of(context).pushReplacementNamed('/inventory');
-      }
-      /* else index == 1 We are here: Blueprints */
-      else if (index == 2) {
-        Navigator.of(context).pushReplacementNamed('/materials');
-      }
-    }
-
     /// Application top Bar
     final topBar = AppBar(
       leading: IconButton(
@@ -192,92 +146,20 @@ class _BlueprintListState extends State<BlueprintListPage> {
       ),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
-      title: Text("Materials", style: Style.topBar),
+      title: Text("Select Blueprint", style: Style.topBar),
       actions: <Widget>[
-        PopupMenuButton<PopupMenuChoice>(
-          onSelected: choiceAction,
-          itemBuilder: (context) => <PopupMenuEntry<PopupMenuChoice>>[
-            PopupMenuItem<PopupMenuChoice>(
-              value: PopupMenuChoice.all,
-              child: Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.all_inclusive,
-                    size: 24,
-                    color: Colors.white,
-                  ),
-                  SizedBox(width: 10.0),
-                  Text(
-                    'All',
-                    style: TextStyle(
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            PopupMenuItem<PopupMenuChoice>(
-              value: PopupMenuChoice.weak,
-              child: Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.stop_outlined,
-                    size: 24,
-                    color: Colors.white,
-                  ),
-                  SizedBox(width: 10.0),
-                  Text(
-                    'Weak',
-                    style: TextStyle(
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            PopupMenuItem<PopupMenuChoice>(
-              value: PopupMenuChoice.common,
-              child: Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.stop_circle_outlined,
-                    size: 24,
-                    color: Colors.white,
-                  ),
-                  SizedBox(width: 10.0),
-                  Text(
-                    'Common',
-                    style: TextStyle(
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            PopupMenuItem<PopupMenuChoice>(
-              value: PopupMenuChoice.strong,
-              child: Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.star_half,
-                    size: 24,
-                    color: Colors.white,
-                  ),
-                  SizedBox(width: 10.0),
-                  Text(
-                    'Strong',
-                    style: TextStyle(
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          color: GlobalConstants.appBg,
-        ),
+        IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () async {
+            // await _storage.write(key: 'forgeBlueprintId', value: "0");
+            // await _storage.write(key: 'forgeBlueprintImg', value: "");
+            // await _storage.write(key: 'forgeBlueprintName', value: "");
+            Navigator.pop(context);
+          },
+        )
       ],
     );
+
     return Scaffold(
       backgroundColor: GlobalConstants.appBg,
       appBar: topBar,
@@ -304,29 +186,6 @@ class _BlueprintListState extends State<BlueprintListPage> {
       ),
       key: _scaffoldKey,
       drawer: DrawerPage(),
-      bottomNavigationBar: BottomNavigationBar(
-        onTap: onTapped,
-        currentIndex: currentTabIndex,
-        backgroundColor: GlobalConstants.appBg,
-        selectedItemColor: Color(0xfffeb53b),
-        selectedLabelStyle: TextStyle(fontSize: 14),
-        unselectedItemColor: Colors.white,
-        unselectedLabelStyle: TextStyle(fontSize: 14),
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.format_list_bulleted, color: Colors.white),
-            label: 'Items',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.library_books_outlined, color: Colors.white),
-            label: 'Blueprints',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.widgets, color: Colors.white),
-            label: 'Materials',
-          )
-        ],
-      ),
     );
   }
 
@@ -350,5 +209,20 @@ class _BlueprintListState extends State<BlueprintListPage> {
       _blueprints.clear();
       _blueprints.addAll(tmp.toList());
     });
+  }
+
+  /// Wear the item and get back
+  void _chooseBlueprint(
+      BuildContext context, int blpId, String blpImg, String blpName) async {
+    await _storage.write(key: 'forgeBlueprintId', value: blpId.toString());
+    await _storage.write(key: 'forgeBlueprintImg', value: blpImg);
+    await _storage.write(key: 'forgeBlueprintName', value: blpName);
+
+    setState(() {
+      _blueprints.clear();
+    });
+    Navigator.pop(context);
+    Navigator.pop(context);
+    Navigator.of(context).pushNamed('/forge');
   }
 }

@@ -40,10 +40,12 @@ import 'screens/account/profile.dart';
 import 'screens/forgot.dart';
 import 'screens/friendship/friends.dart';
 import 'screens/group/in_group.dart';
-import 'screens/group/noGroup.dart';
+import 'screens/group/no_group.dart';
 import 'screens/help/legend.dart';
 import 'screens/inventory/backpack.dart';
-import 'screens/inventory/forge.dart';
+import 'screens/forge/forge.dart';
+import 'screens/inventory/blueprints.dart';
+import 'screens/inventory/materials.dart';
 import 'screens/inventory/research.dart';
 import 'screens/login.dart';
 // import 'screens/planet_card.dart';
@@ -198,8 +200,10 @@ Future<Null> main() async {
           '/profile': (context) => ProfilePage(),
           '/poi-map': (context) => PoiMap(goToRemoteLocation: false),
           '/inventory': (context) => InventoryPage(),
+          '/blueprints': (context) => BlueprintListPage(),
           '/research': (context) => ResearchPage(),
           '/forge': (context) => ForgePage(),
+          '/materials': (context) => MaterialListPage(),
           '/friends': (context) => FriendsPage(),
           '/places': (context) => PlacesPage(),
           '/questline': (context) =>
@@ -209,7 +213,7 @@ Future<Null> main() async {
               (_groupStatus == GroupStatus.inGroup) ? InGroup() : NoGroup(),
           '/in-group': (context) => InGroup(),
           '/no-group': (context) => NoGroup(),
-          '/terms': (context) => TermsAndPrivacyPage()
+          '/terms': (context) => TermsAndPrivacyPage(),
         },
       ),
     );
@@ -253,14 +257,11 @@ class SplashScreenState extends State<SplashScreen> {
   ///
   bool isPositionStreaming = false;
 
-  String _appVersion = "";
+  String _appVersion = GlobalConstants.appVersion;
 
   @override
   void dispose() {
-    if (_positionStream != null) {
-      _positionStream.cancel();
-      _positionStream = null;
-    }
+    //if (_positionStream != null) { _positionStream.cancel(); _positionStream = null; }
     super.dispose();
   }
 
@@ -322,7 +323,7 @@ class SplashScreenState extends State<SplashScreen> {
       uniqueId += iosInfo.isPhysicalDevice ? ',true,' : ',false,';
       uniqueId += iosInfo.identifierForVendor;
     }
-    print("unique id: $uniqueId : ${hashStringMD5(uniqueId)}");
+    print("unique id: $uniqueId : ${hashStringMurmur(uniqueId)}");
   }
 
   /// SystemChannels.platform.invokeMethod('SystemNavigator.pop');
@@ -385,22 +386,16 @@ class SplashScreenState extends State<SplashScreen> {
         print('session is still valid');
       }
 
-      if (cookies["user"]["guild"]["id"].toString() == "0") {
-        setState(() {
-          //log.d('group status becomes Not in');
-          _groupStatus = GroupStatus.notInGroup;
-        });
-      } else {
-        setState(() {
-          //log.d('group status becomes In');
-          _groupStatus = GroupStatus.inGroup;
-        });
-      }
+      _groupStatus =
+          (int.tryParse(cookies["user"]["guild"]["id"].toString()) > 0)
+              ? GroupStatus.inGroup
+              : GroupStatus.notInGroup;
 
       _userdata.updateUserData(
         "",
         double.tryParse(cookies["user"]["coins"].toString()) ?? 0.0,
         0,
+        cookies["user"]["guild"]["id"],
       );
 
       _userDataStreamSubscription = _userdata.stream$.listen(_updateUserData);
@@ -595,7 +590,7 @@ class SplashScreenState extends State<SplashScreen> {
                           ),
                           Text(
                             // ignore: lines_longer_than_80_chars
-                            "ver: $_appVersion",
+                            "version: $_appVersion",
                             style:
                                 TextStyle(fontSize: 14.0, color: Colors.white),
                           ),
@@ -657,12 +652,6 @@ class SplashScreenState extends State<SplashScreen> {
             currentLocation.longitude == 0) {
           // It means Gps not ready yet, so we wait
           return;
-        }
-
-        if (cookies["user"]["guild"]["id"].toString() == "0") {
-          setState(() {
-            _groupStatus = GroupStatus.notInGroup;
-          });
         }
 
         var secureStorage = await _storage.readAll();
@@ -783,38 +772,44 @@ class SplashScreenState extends State<SplashScreen> {
                   _mines[0].properties.ico = "0";
                   mine.properties.ico = "0";
 
-                  Timer(Duration(seconds: 1), () {
-                    //ignore: omit_local_variable_types
-                    String mining = AppLocalizations.of(context)
-                        .translate('you_found_point');
-                    showDialog(
-                      context: context,
-                      builder: (context) => CustomDialog(
-                          title: AppLocalizations.of(context)
-                              .translate('congrats'),
-                          description:
-                              // ignore: lines_longer_than_80_chars
-                              "$mining ${mine?.id}, ${mine?.properties?.comment}",
-                          buttonText: "Okay",
-                          images: imagesArr),
-                    );
-                  });
+                  Timer(
+                    Duration(seconds: 1),
+                    () {
+                      //ignore: omit_local_variable_types
+                      String mining = AppLocalizations.of(context)
+                          .translate('you_found_point');
+                      showDialog(
+                        context: context,
+                        builder: (context) => CustomDialog(
+                            title: AppLocalizations.of(context)
+                                .translate('congrats'),
+                            description:
+                                // ignore: lines_longer_than_80_chars
+                                "$mining ${mine?.id}, ${mine?.properties?.comment}",
+                            buttonText: "Okay",
+                            images: imagesArr),
+                      );
+                    },
+                  );
                 }
               }
             } on DioError catch (err) {
               //log.e(err);
-              Timer(Duration(seconds: 1), () {
-                showDialog(
-                  context: context,
-                  builder: (context) => CustomDialog(
-                    title: 'Error',
-                    description:
-                        // ignore: lines_longer_than_80_chars
-                        '${err.response?.data}',
-                    buttonText: "Okay",
-                  ),
-                );
-              });
+              Timer(
+                Duration(seconds: 1),
+                () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => CustomDialog(
+                      title: 'Error',
+                      description:
+                          // ignore: lines_longer_than_80_chars
+                          '${err.response?.data}',
+                      buttonText: "Okay",
+                    ),
+                  );
+                },
+              );
             }
 
             _minesStream.updateMinesList(_mines);

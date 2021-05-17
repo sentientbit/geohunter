@@ -1,5 +1,7 @@
 ///
 import 'dart:ui';
+
+import 'package:geohunter/shared/constants.dart';
 //import 'package:logger/logger.dart';
 
 ///
@@ -57,21 +59,7 @@ class Item {
 
   ///
   static Color color(int rarity) {
-    if (rarity == 1) {
-      // Uncommon
-      return Color(0xff7ecb3a);
-    } else if (rarity == 2) {
-      // Rare
-      return Color(0xff0da3d8);
-    } else if (rarity == 3) {
-      // Epic
-      return Color(0xffaa66d8);
-    } else if (rarity == 4) {
-      // Legendary
-      return Color(0xfffeb53b);
-    }
-    // Common
-    return Color(0xffcccccc);
+    return colorRarity(rarity);
   }
 
   ///

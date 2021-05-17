@@ -268,6 +268,14 @@ class _DrawerPageState extends State<DrawerPage> {
                   },
                 ),
                 ListTile(
+                  leading: Icon(Icons.gavel, color: GlobalConstants.appFg),
+                  title: Text('Forge', style: Style.menuTextStyle),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).pushReplacementNamed('/forge');
+                  },
+                ),
+                ListTile(
                   leading: Icon(Icons.assignment, color: GlobalConstants.appFg),
                   title: Text(
                       AppLocalizations.of(context).translate('drawer_quests'),

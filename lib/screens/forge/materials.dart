@@ -13,22 +13,7 @@ import '../../providers/api_provider.dart';
 //import '../app_localizations.dart';
 
 ///
-enum PopupMenuChoice {
-  ///
-  all,
-
-  ///
-  weak,
-
-  ///
-  common,
-
-  ///
-  strong
-}
-
-///
-class MaterialListPage extends StatefulWidget {
+class MaterialSelectPage extends StatefulWidget {
   ///
   int blueprintId = 0;
 
@@ -39,7 +24,7 @@ class MaterialListPage extends StatefulWidget {
   int mat0 = 0;
 
   ///
-  MaterialListPage({
+  MaterialSelectPage({
     Key key,
     this.blueprintId,
     this.placement,
@@ -47,11 +32,11 @@ class MaterialListPage extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _MaterialListState createState() => _MaterialListState();
+  _MaterialSelectState createState() => _MaterialSelectState();
 }
 
 ///
-class _MaterialListState extends State<MaterialListPage> {
+class _MaterialSelectState extends State<MaterialSelectPage> {
   /// Secure Storage for User Data
   final _storage = FlutterSecureStorage();
 
@@ -67,7 +52,7 @@ class _MaterialListState extends State<MaterialListPage> {
   @override
   void initState() {
     super.initState();
-    _getMaterials("0");
+    _getMaterials();
     BackButtonInterceptor.add(myInterceptor);
   }
 
@@ -153,39 +138,14 @@ class _MaterialListState extends State<MaterialListPage> {
       ),
       trailing:
           Icon(Icons.keyboard_arrow_right, color: Colors.white, size: 30.0),
-      onTap: () {},
+      onTap: () {
+        _chooseMaterial(context, _materials[index].id, _materials[index].img,
+            _materials[index].name);
+      },
     );
   }
 
-  void choiceAction(PopupMenuChoice choice) {
-    if (choice == PopupMenuChoice.all) {
-      _getMaterials("0");
-    } else if (choice == PopupMenuChoice.weak) {
-      _getMaterials("1");
-    } else if (choice == PopupMenuChoice.common) {
-      _getMaterials("2");
-    } else if (choice == PopupMenuChoice.strong) {
-      _getMaterials("3");
-    }
-  }
-
   Widget build(BuildContext context) {
-    //ignore: omit_local_variable_types
-    int currentTabIndex = 2;
-
-    /// What happens when clicking the Bottom Navbar
-    onTapped(int index) {
-      setState(() {
-        currentTabIndex = index;
-      });
-      if (index == 0) {
-        Navigator.of(context).pushReplacementNamed('/inventory');
-      } else if (index == 1) {
-        Navigator.of(context).pushReplacementNamed('/blueprints');
-      }
-      /* else index == 2 We are here: Materials */
-    }
-
     /// Application top Bar
     final topBar = AppBar(
       leading: IconButton(
@@ -200,90 +160,14 @@ class _MaterialListState extends State<MaterialListPage> {
       ),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
-      title: Text("Materials", style: Style.topBar),
+      title: Text("Select Materials", style: Style.topBar),
       actions: <Widget>[
-        PopupMenuButton<PopupMenuChoice>(
-          onSelected: choiceAction,
-          itemBuilder: (context) => <PopupMenuEntry<PopupMenuChoice>>[
-            PopupMenuItem<PopupMenuChoice>(
-              value: PopupMenuChoice.all,
-              child: Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.all_inclusive,
-                    size: 24,
-                    color: Colors.white,
-                  ),
-                  SizedBox(width: 10.0),
-                  Text(
-                    'All',
-                    style: TextStyle(
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            PopupMenuItem<PopupMenuChoice>(
-              value: PopupMenuChoice.weak,
-              child: Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.stop_outlined,
-                    size: 24,
-                    color: Colors.white,
-                  ),
-                  SizedBox(width: 10.0),
-                  Text(
-                    'Weak',
-                    style: TextStyle(
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            PopupMenuItem<PopupMenuChoice>(
-              value: PopupMenuChoice.common,
-              child: Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.stop_circle_outlined,
-                    size: 24,
-                    color: Colors.white,
-                  ),
-                  SizedBox(width: 10.0),
-                  Text(
-                    'Common',
-                    style: TextStyle(
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            PopupMenuItem<PopupMenuChoice>(
-              value: PopupMenuChoice.strong,
-              child: Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.star_half,
-                    size: 24,
-                    color: Colors.white,
-                  ),
-                  SizedBox(width: 10.0),
-                  Text(
-                    'Strong',
-                    style: TextStyle(
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          color: GlobalConstants.appBg,
-        ),
+        IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () async {
+            Navigator.pop(context);
+          },
+        )
       ],
     );
     return Scaffold(
@@ -312,34 +196,12 @@ class _MaterialListState extends State<MaterialListPage> {
       ),
       key: _scaffoldKey,
       drawer: DrawerPage(),
-      bottomNavigationBar: BottomNavigationBar(
-        onTap: onTapped,
-        currentIndex: currentTabIndex,
-        backgroundColor: GlobalConstants.appBg,
-        selectedItemColor: Color(0xfffeb53b),
-        selectedLabelStyle: TextStyle(fontSize: 14),
-        unselectedItemColor: Colors.white,
-        unselectedLabelStyle: TextStyle(fontSize: 14),
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.format_list_bulleted, color: Colors.white),
-            label: 'Items',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.library_books_outlined, color: Colors.white),
-            label: 'Blueprints',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.widgets, color: Colors.white),
-            label: 'Materials',
-          )
-        ],
-      ),
     );
   }
 
-  void _getMaterials(String types) async {
-    final response = await _apiProvider.get('/materials/$types');
+  void _getMaterials() async {
+    final response = await _apiProvider
+        .get('/forge/${widget.blueprintId}/${widget.mat0.toString()}');
 
     var tmp = [];
     if (response.containsKey("success")) {
@@ -358,5 +220,29 @@ class _MaterialListState extends State<MaterialListPage> {
       _materials.clear();
       _materials.addAll(tmp.toList());
     });
+  }
+
+  /// Wear the item and get back
+  void _chooseMaterial(
+      BuildContext context, int matId, String matImg, String matName) async {
+    await _storage.write(
+      key: "forgeMaterial${widget.placement.toString()}Id",
+      value: matId.toString(),
+    );
+    await _storage.write(
+      key: "forgeMaterial${widget.placement.toString()}Img",
+      value: matImg,
+    );
+    await _storage.write(
+      key: "forgeMaterial${widget.placement.toString()}Name",
+      value: matName,
+    );
+
+    setState(() {
+      _materials.clear();
+    });
+    Navigator.pop(context);
+    Navigator.pop(context);
+    Navigator.of(context).pushNamed('/forge');
   }
 }
