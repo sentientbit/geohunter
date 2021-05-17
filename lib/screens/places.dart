@@ -118,11 +118,7 @@ class _PlacesState extends State<PlacesPage> {
   List<ProductDetails> _iapProducts = [];
 
   List<String> _productIds = ["gold11coins", "", ""];
-  List<String> _productDescriptions = [
-    "Alternative payment\nComing soon",
-    "",
-    ""
-  ];
+  List<String> _productDescriptions = ["Card payment\nComing soon", "", ""];
   List<String> _productPrices = ["N/A", "", ""];
 
   List<PurchaseDetails> _purchases = [];

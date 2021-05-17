@@ -33,7 +33,7 @@ ios/Runner/Info.plist
 
 ios/Podfile
 ```
-platform :ios, '9.0'
+platform :ios, '12.0'
 use_frameworks!
 ```
 
