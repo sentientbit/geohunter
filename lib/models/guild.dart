@@ -16,10 +16,10 @@ class Guild {
   String description = 'Guild description';
 
   ///
-  bool isLocked = false;
+  int isLocked = 0;
 
   ///
-  bool isHidden = false;
+  int isHidden = 0;
 
   ///
   Picture picture;
@@ -31,30 +31,36 @@ class Guild {
   List<GuildUser> users = [];
 
   ///
-  Guild(
-      {this.id,
-      this.factionId,
-      this.leaderId,
-      this.name,
-      this.description,
-      this.isLocked,
-      this.isHidden,
-      this.picture,
-      this.guid,
-      this.users});
+  int nrUsers = 0;
+
+  ///
+  Guild({
+    this.id,
+    this.factionId,
+    this.leaderId,
+    this.name,
+    this.description,
+    this.isLocked,
+    this.isHidden,
+    this.picture,
+    this.guid,
+    this.users,
+    this.nrUsers,
+  });
 
   ///
   Guild.fromJson(dynamic json) {
     id = int.parse(json["id"].toString());
     factionId = int.parse(json["faction_id"].toString());
-    leaderId = int.parse(json["leader_id"].toString());
+    leaderId = int.parse(json["leader_id"]?.toString());
     name = json["name"].toString();
-    isLocked = json["is_locked"].toString() == '1';
-    isHidden = json["is_hidden"].toString() == '1';
+    isLocked = int.tryParse(json["is_locked"]) ?? 0;
+    isHidden = int.tryParse(json["is_hidden"]) ?? 0;
     name = json["name"].toString();
     picture = Picture.fromJson(json["pictures"][0]);
     guid = json["guid"].toString();
     json["users"].forEach(addUser);
+    nrUsers = json["users"].length;
   }
 
   ///

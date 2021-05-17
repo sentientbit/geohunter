@@ -62,7 +62,7 @@ class FriendsSummary extends StatelessWidget {
                 child: Container(
                   child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
                     Icon(
-                      Icons.keyboard_arrow_up,
+                      Icons.school,
                       size: 16,
                       color: Colors.white,
                     ),
@@ -82,7 +82,7 @@ class FriendsSummary extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               Icon(
-                Icons.school,
+                Icons.trending_up,
                 size: 16,
                 color: Colors.white,
               ),

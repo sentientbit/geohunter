@@ -4,7 +4,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_offline/flutter_offline.dart';
-// import 'package:logger/logger.dart';
+import 'package:geohunter/screens/group/no_group.dart';
+
+//import 'package:logger/logger.dart';
 
 ///
 import '../../app_localizations.dart';
@@ -14,7 +16,6 @@ import '../../providers/api_provider.dart';
 import '../../providers/custom_interceptors.dart';
 import '../../shared/constants.dart';
 import '../../widgets/custom_alert.dart';
-import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
 import '../../widgets/network_status_message.dart';
@@ -39,12 +40,34 @@ class _InGroupState extends State<InGroup> {
   bool _showGuildNameError = false;
 
   /// if the Guild is public or not
-  bool _isHidden = false;
-  void _isHiddenChanged(bool value) => setState(() => _isHidden = value);
+  int _isHidden = 0;
+  void _isHiddenChanged(bool toggle) {
+    if (!toggle) {
+      setState(() {
+        _isHidden = 0;
+      });
+      return;
+    }
+    setState(() {
+      _isHidden = 1;
+    });
+    return;
+  }
 
   /// if the Guild is public or not
-  bool _isLocked = false;
-  void _isLockedChanged(bool value) => setState(() => _isLocked = value);
+  int _isLocked = 0;
+  void _isLockedChanged(bool toggle) {
+    if (!toggle) {
+      setState(() {
+        _isLocked = 0;
+      });
+      return;
+    }
+    setState(() {
+      _isLocked = 1;
+    });
+    return;
+  }
 
   final _passwordController = TextEditingController();
   String _passwordControllerMessage = '';
@@ -61,9 +84,9 @@ class _InGroupState extends State<InGroup> {
   /// Curent loggedin user
   User _user;
 
-  // final Logger log = Logger(
-  //     printer: PrettyPrinter(
-  //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
+  //final Logger log = Logger(
+  //    printer: PrettyPrinter(
+  //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
   @override
   void initState() {
@@ -126,51 +149,98 @@ class _InGroupState extends State<InGroup> {
     // Button to delete the guild and all members associated with it
     final deleteButton = Padding(
       padding: EdgeInsets.all(0),
-      child: RaisedButton(
-        shape: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.white, width: 1.0),
-          borderRadius: BorderRadius.circular(10),
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          padding: EdgeInsets.all(16),
+          backgroundColor: GlobalConstants.appBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          side: BorderSide(width: 1, color: Colors.white),
         ),
-        onPressed: () => _confirmDelete(context),
-        padding: EdgeInsets.all(16),
-        color: Colors.black,
-        child:
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
-          Icon(Icons.delete_outline, color: Color(0xffe6a04e)),
-          Text(
-            'Delete',
-            style: TextStyle(
+        onPressed: () {
+          _confirmDelete(_scaffoldKey.currentContext);
+        },
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(Icons.delete_outline, color: Color(0xffe6a04e)),
+            Text(
+              "Delete",
+              style: TextStyle(
                 color: Color(0xffe6a04e),
                 fontSize: 18,
                 fontFamily: 'Cormorant SC',
-                fontWeight: FontWeight.bold),
-          ),
-        ]),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
 
     final leaveButton = Padding(
       padding: EdgeInsets.all(0),
-      child: RaisedButton(
-        shape: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.white, width: 1.0),
-          borderRadius: BorderRadius.circular(10),
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          padding: EdgeInsets.all(16),
+          backgroundColor: GlobalConstants.appBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          side: BorderSide(width: 1, color: Colors.white),
         ),
-        onPressed: () => _confirmLeave(context),
-        padding: EdgeInsets.all(16),
-        color: Colors.black,
-        child:
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
-          Icon(Icons.transit_enterexit, color: Color(0xffe6a04e)),
-          Text(
-            'Leave',
-            style: TextStyle(
+        onPressed: () {
+          _confirmLeave(_scaffoldKey.currentContext);
+        },
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(Icons.undo, color: Color(0xffe6a04e)),
+            Text(
+              "Leave Guild",
+              style: TextStyle(
                 color: Color(0xffe6a04e),
                 fontSize: 18,
                 fontFamily: 'Cormorant SC',
-                fontWeight: FontWeight.bold),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final browseButton = Padding(
+      padding: EdgeInsets.all(0),
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          padding: EdgeInsets.all(16),
+          backgroundColor: GlobalConstants.appBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
           ),
-        ]),
+          side: BorderSide(width: 1, color: Colors.white),
+        ),
+        onPressed: () {
+          Navigator.push(
+              context, MaterialPageRoute(builder: (context) => NoGroup()));
+        },
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(Icons.list, color: Color(0xffe6a04e)),
+            Text(
+              "Browse",
+              style: TextStyle(
+                color: Color(0xffe6a04e),
+                fontSize: 18,
+                fontFamily: 'Cormorant SC',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
 
@@ -321,7 +391,7 @@ class _InGroupState extends State<InGroup> {
                               ),
                               _isGroupOwner
                                   ? Switch(
-                                      value: _isHidden,
+                                      value: (_isHidden > 0),
                                       onChanged: _isHiddenChanged,
                                       activeTrackColor: Colors.white,
                                       activeColor: Color(0xffe6a04e),
@@ -329,7 +399,7 @@ class _InGroupState extends State<InGroup> {
                                   : Row(
                                       children: <Widget>[
                                         Text("  "),
-                                        _isHidden
+                                        (_isHidden > 0)
                                             ? Icon(Icons.visibility_off,
                                                 color: Colors.white)
                                             : Icon(Icons.visibility,
@@ -338,7 +408,7 @@ class _InGroupState extends State<InGroup> {
                                       ],
                                     ),
                               Text(
-                                _isHidden ? 'Hidden' : 'Public',
+                                (_isHidden > 0) ? 'Hidden' : 'Public',
                                 maxLines: 1,
                                 style: TextStyle(
                                   color: Colors.white,
@@ -374,7 +444,7 @@ class _InGroupState extends State<InGroup> {
                               ),
                               _isGroupOwner
                                   ? Switch(
-                                      value: _isLocked,
+                                      value: (_isLocked > 0),
                                       onChanged: _isLockedChanged,
                                       activeTrackColor: Colors.white,
                                       activeColor: Color(0xffe6a04e),
@@ -382,7 +452,7 @@ class _InGroupState extends State<InGroup> {
                                   : Row(
                                       children: <Widget>[
                                         Text("  "),
-                                        _isLocked
+                                        (_isLocked > 0)
                                             ? Icon(Icons.lock_outline,
                                                 color: Colors.white)
                                             : Icon(Icons.lock_open,
@@ -391,7 +461,7 @@ class _InGroupState extends State<InGroup> {
                                       ],
                                     ),
                               Text(
-                                _isLocked ? 'Locked' : 'Open',
+                                (_isLocked > 0) ? 'Locked' : 'Open',
                                 maxLines: 1,
                                 style: TextStyle(
                                   color: Colors.white,
@@ -408,7 +478,7 @@ class _InGroupState extends State<InGroup> {
                               ),
                             ],
                           ),
-                          if (_isLocked && _isGroupOwner)
+                          if ((_isLocked > 0) && _isGroupOwner)
                             Text(
                               AppLocalizations.of(context)
                                   .translate('password_input_label'),
@@ -425,7 +495,7 @@ class _InGroupState extends State<InGroup> {
                                         color: Color.fromARGB(255, 0, 0, 0))
                                   ]),
                             ),
-                          if (_isLocked && _isGroupOwner)
+                          if ((_isLocked > 0) && _isGroupOwner)
                             Card(
                               elevation: 8,
                               shape: RoundedRectangleBorder(
@@ -451,7 +521,7 @@ class _InGroupState extends State<InGroup> {
                                 ],
                               ),
                             ),
-                          if (_isLocked && _isGroupOwner)
+                          if ((_isLocked > 0) && _isGroupOwner)
                             _showPasswordError
                                 ? Text(
                                     _passwordControllerMessage,
@@ -473,6 +543,7 @@ class _InGroupState extends State<InGroup> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: <Widget>[
+                              browseButton,
                               _isGroupOwner ? saveButton : leaveButton,
                               if (_isGroupOwner)
                                 Center(
@@ -498,22 +569,18 @@ class _InGroupState extends State<InGroup> {
   void _getGuildDetails() async {
     final user = await _apiProvider.getStoredUser();
 
-    if (user.details.guild.id == "0") {
+    if (user.details.guildId == "0") {
       Navigator.of(context).pop();
       return;
     }
 
     try {
       dynamic response =
-          await _apiProvider.get("/guild/${user.details.guild.id}");
-
-      //log.d('--- response ---');
-      //log.d(response);
+          await _apiProvider.get("/guild/${user.details.guildId}");
 
       if (response["guilds"].isEmpty) {
         _user = user;
-        _user.details.guild.id = '0';
-        _user.details.guild.permissions = '0';
+        _user.details.guildId = '0';
         await CustomInterceptors.setStoredCookies(
             GlobalConstants.apiHostUrl, _user.toMap());
       } else if (response["guilds"][0] != null) {
@@ -553,7 +620,7 @@ class _InGroupState extends State<InGroup> {
       return;
     }
     _showPasswordError = false;
-    if (_isLocked && _passwordController.text.isEmpty) {
+    if ((_isLocked > 0) && _passwordController.text.isEmpty) {
       setState(() {
         _passwordControllerMessage = 'Please enter a password';
         _showPasswordError = true;
@@ -564,10 +631,10 @@ class _InGroupState extends State<InGroup> {
       var data = {
         "guild_id": currentGuild.id,
         "name": _guildNameController.text,
-        "is_hidden": _isHidden ? "1" : "0",
-        "is_locked": _isLocked ? "1" : "0",
+        "is_hidden": _isHidden,
+        "is_locked": _isLocked,
       };
-      if (_isLocked && _passwordController.text != null) {
+      if ((_isLocked > 0) && _passwordController.text != null) {
         data["password"] = _passwordController.text;
       }
       final response = await _apiProvider.put("/guild", data);
@@ -607,14 +674,82 @@ class _InGroupState extends State<InGroup> {
     showDialog<void>(
       context: context,
       builder: (context) {
-        return CustomAlert(
-          title: "Please confirm",
-          description: "Are you sure you want to delete this Guild ?",
-          firstButtonText: 'Yes, delete it!',
-          secondButtonText: 'No',
-          callback: () {
-            _deleteGuild(context);
-          },
+        return AlertDialog(
+          title: Text(
+            "Please confirm",
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Cormorant SC',
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            "Are you sure you want to delete this Guild?",
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Open Sans',
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          backgroundColor: Color.fromRGBO(0, 0, 0, 0.9),
+          actions: [
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.all(16),
+                backgroundColor: GlobalConstants.appBg,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                side: BorderSide(width: 1, color: Colors.white),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Icon(Icons.close, color: Color(0xffe6a04e)),
+                  Text(
+                    " No",
+                    style: TextStyle(
+                        color: Color(0xffe6a04e),
+                        fontSize: 18,
+                        fontFamily: 'Cormorant SC',
+                        fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.all(16),
+                backgroundColor: GlobalConstants.appBg,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                side: BorderSide(width: 1, color: Colors.white),
+              ),
+              onPressed: () {
+                _deleteGuild(context);
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Icon(Icons.done, color: Color(0xffe6a04e)),
+                  Text(
+                    " Yes",
+                    style: TextStyle(
+                        color: Color(0xffe6a04e),
+                        fontSize: 18,
+                        fontFamily: 'Cormorant SC',
+                        fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );
@@ -624,14 +759,82 @@ class _InGroupState extends State<InGroup> {
     showDialog<void>(
       context: context,
       builder: (context) {
-        return CustomAlert(
-          title: "Please confirm",
-          description: "Are you sure you want to leave this Guild ?",
-          firstButtonText: 'Yes, I will leave',
-          secondButtonText: 'No',
-          callback: () {
-            _unjoinGuild(context);
-          },
+        return AlertDialog(
+          title: Text(
+            "Please confirm",
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Cormorant SC',
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            "Are you sure you want to leave this Guild?",
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Open Sans',
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          backgroundColor: Color.fromRGBO(0, 0, 0, 0.9),
+          actions: [
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.all(16),
+                backgroundColor: GlobalConstants.appBg,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                side: BorderSide(width: 1, color: Colors.white),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Icon(Icons.close, color: Color(0xffe6a04e)),
+                  Text(
+                    " No",
+                    style: TextStyle(
+                        color: Color(0xffe6a04e),
+                        fontSize: 18,
+                        fontFamily: 'Cormorant SC',
+                        fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.all(16),
+                backgroundColor: GlobalConstants.appBg,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                side: BorderSide(width: 1, color: Colors.white),
+              ),
+              onPressed: () {
+                _unjoinGuild(context);
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Icon(Icons.done, color: Color(0xffe6a04e)),
+                  Text(
+                    " Yes",
+                    style: TextStyle(
+                        color: Color(0xffe6a04e),
+                        fontSize: 18,
+                        fontFamily: 'Cormorant SC',
+                        fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );
@@ -643,8 +846,7 @@ class _InGroupState extends State<InGroup> {
           await _apiProvider.delete("/guild/${currentGuild.id}", {});
 
       if (response["success"] == true) {
-        _user.details.guild.id = '0';
-        _user.details.guild.permissions = '0';
+        _user.details.guildId = '0';
         await CustomInterceptors.setStoredCookies(
             GlobalConstants.apiHostUrl, _user.toMap());
       }
@@ -680,8 +882,7 @@ class _InGroupState extends State<InGroup> {
           .delete("/membership/${currentGuild.id}/${_user.details.id}", {});
 
       if (response["success"] == true) {
-        _user.details.guild.id = '0';
-        _user.details.guild.permissions = '0';
+        _user.details.guildId = '0';
         await CustomInterceptors.setStoredCookies(
             GlobalConstants.apiHostUrl, _user.toMap());
       }

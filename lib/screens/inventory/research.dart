@@ -220,11 +220,9 @@ class _ResearchState extends State<ResearchPage> {
       });
       if (index == 0) {
         //Navigator.of(context).pop();
-        Navigator.of(context).pushReplacementNamed('/inventory');
-      } else if (index == 2) {
-        //Navigator.of(context).pop();
         Navigator.of(context).pushReplacementNamed('/forge');
       }
+      /* if index == 1 We are here: Research */
     }
 
     return Scaffold(
@@ -257,37 +255,19 @@ class _ResearchState extends State<ResearchPage> {
         onTap: onTapped,
         currentIndex: currentTabIndex,
         backgroundColor: GlobalConstants.appBg,
+        selectedItemColor: Color(0xfffeb53b),
+        selectedLabelStyle: TextStyle(fontSize: 14),
+        unselectedItemColor: Colors.white,
+        unselectedLabelStyle: TextStyle(fontSize: 14),
         items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.format_list_bulleted, color: Colors.white),
-            title: Text(
-              'Items',
-              style: TextStyle(
-                  color: (currentTabIndex == 0)
-                      ? Color(0xfffeb53b)
-                      : Colors.white),
-            ),
+            icon: Icon(Icons.gavel, color: Colors.white),
+            label: 'Forge',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.import_contacts, color: Colors.white),
-            title: Text(
-              'Research',
-              style: TextStyle(
-                  color: (currentTabIndex == 1)
-                      ? Color(0xfffeb53b)
-                      : Colors.white),
-            ),
+            label: 'Research',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.gavel, color: Colors.white),
-            title: Text(
-              'Forge',
-              style: TextStyle(
-                  color: (currentTabIndex == 2)
-                      ? Color(0xfffeb53b)
-                      : Colors.white),
-            ),
-          )
         ],
       ),
     );

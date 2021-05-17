@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 
 ///
 import '../../models/item.dart';
+import '../../providers/api_provider.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
-import '../../providers/api_provider.dart';
 
 ///
 class EquipmentPage extends StatefulWidget {
@@ -174,7 +174,7 @@ class _EquipmentState extends State<EquipmentPage> {
       ],
     );
 
-    final unequipButton = RaisedButton(
+    final oldUnequipButton = RaisedButton(
       shape: OutlineInputBorder(
         borderSide: const BorderSide(color: Colors.white, width: 1.0),
         borderRadius: BorderRadius.circular(10),
@@ -185,18 +185,48 @@ class _EquipmentState extends State<EquipmentPage> {
       padding:
           EdgeInsets.only(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0),
       color: Colors.black,
-      child:
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
-        Icon(Icons.cached, color: Color(0xffe6a04e)),
-        Text(
-          " Unequip",
-          style: TextStyle(
-              color: Color(0xffe6a04e),
-              fontSize: 18,
-              fontFamily: 'Cormorant SC',
-              fontWeight: FontWeight.bold),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Icon(Icons.cached, color: Color(0xffe6a04e)),
+          Text(
+            " Unequip",
+            style: TextStyle(
+                color: Color(0xffe6a04e),
+                fontSize: 18,
+                fontFamily: 'Cormorant SC',
+                fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+
+    final unequipButton = OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        padding: EdgeInsets.all(16),
+        backgroundColor: GlobalConstants.appBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
         ),
-      ]),
+        side: BorderSide(width: 1, color: Colors.white),
+      ),
+      onPressed: () {
+        _unequipItem(context, widget.placement);
+      },
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Icon(Icons.cached, color: Color(0xffe6a04e)),
+          Text(
+            " Unequip",
+            style: TextStyle(
+                color: Color(0xffe6a04e),
+                fontSize: 18,
+                fontFamily: 'Cormorant SC',
+                fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
     );
 
     return Scaffold(

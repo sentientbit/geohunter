@@ -4,15 +4,17 @@ import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:qrscan/qrscan.dart' as scanner;
+//import 'package:qrscan/qrscan.dart' as scanner;
+import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:flutter_offline/flutter_offline.dart';
 
 ///
-import '../../shared/constants.dart';
-import '../../text_style.dart';
-import '../../screens/friendship/showqr.dart';
+import '../../app_localizations.dart';
 import '../../models/friends.dart';
 import '../../providers/api_provider.dart';
+import '../../screens/friendship/showqr.dart';
+import '../../shared/constants.dart';
+import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
 import '../../widgets/friends_summary.dart';
@@ -44,9 +46,29 @@ class _FriendsPageState extends State<FriendsPage> {
 
   final _friends = [];
   bool _isLoading = true;
-  // bool _isQrGenerated = false;
-  String _qrEndpoint = "";
   final _apiProvider = ApiProvider();
+
+  String _scanBarcode = '';
+
+  Future<void> scanQR() async {
+    String barcodeScanRes;
+    // Platform messages may fail, so we use a try/catch PlatformException.
+    try {
+      barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
+          '#ff6666', 'Cancel', true, ScanMode.QR);
+    } on Exception catch (err) {
+      barcodeScanRes = '';
+    }
+
+    // If the widget was removed from the tree while the asynchronous platform
+    // message was in flight, we want to discard the reply rather than calling
+    // setState to update our non-existent appearance.
+    if (!mounted) return;
+
+    setState(() {
+      _scanBarcode = barcodeScanRes;
+    });
+  }
 
   Future _loadFriends() async {
     setState(() {
@@ -54,27 +76,38 @@ class _FriendsPageState extends State<FriendsPage> {
     });
     _friends.clear();
     try {
-      final qrFriendshipResponse = await _apiProvider.post('/friends', {});
       final response = await _apiProvider.get('/friends');
       final friends = [];
 
-      //print(response);
-
+      var privacy = 0;
+      var lat = 0.0;
+      var lng = 0.0;
       if (response["success"] == true) {
         for (dynamic elem in response["friends"]) {
-          friends.add(Friend(
-            id: elem["id"],
-            sex: elem["sex"],
-            username: elem["username"],
-            xp: elem["xp"],
-            thumbnail: elem["thumbnail"],
-            isReq: elem["is_req"].toString(),
-          ));
+          privacy = 0;
+          if (elem.containsKey("privacy")) {
+            privacy = int.tryParse(elem["privacy"].toString()) ?? 0;
+            lat = double.parse(elem["lat"].toString()) ?? 0.0;
+            lng = double.parse(elem["lng"].toString()) ?? 0.0;
+          }
+          friends.add(
+            Friend(
+              id: elem["id"],
+              sex: elem["sex"],
+              username: elem["username"],
+              status: elem["status"],
+              locationPrivacy: privacy,
+              xp: elem["xp"],
+              thumbnail: elem["thumbnail"],
+              isReq: elem["is_req"].toString(),
+              lat: lat,
+              lng: lng,
+            ),
+          );
         }
       }
       setState(() {
         _friends.addAll(friends.toList());
-        _qrEndpoint = qrFriendshipResponse["friendship_qr"];
         _isLoading = false;
       });
     } on DioError catch (err) {
@@ -123,7 +156,7 @@ class _FriendsPageState extends State<FriendsPage> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => ShowQRPage(qr: _qrEndpoint),
+          builder: (context) => ShowQRPage(latitude: 51.5, longitude: 0.0),
         ),
       );
     }
@@ -207,16 +240,19 @@ class _FriendsPageState extends State<FriendsPage> {
           child,
         ) {
           if (connectivity == ConnectivityResult.none) {
-            return Stack(children: <Widget>[
-              child,
-              BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                child: Container(
+            return Stack(
+              children: <Widget>[
+                child,
+                BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  child: Container(
                     color: Colors.black.withOpacity(0),
                     // child: child,
-                    child: NetworkStatusMessage()),
-              )
-            ]);
+                    child: NetworkStatusMessage(),
+                  ),
+                )
+              ],
+            );
           } else {
             return child;
           }
@@ -286,11 +322,15 @@ class _FriendsPageState extends State<FriendsPage> {
   }
 
   Future _scan() async {
+    var response;
     try {
-      final barcode = await scanner.scan();
-
-      await _apiProvider.put('/friends?token=${barcode.split('/')[5]}', {});
-      _loadFriends();
+      await scanQR();
+      if (_scanBarcode.length > 0) {
+        final r = await _apiProvider
+            .put('/friends?token=${_scanBarcode.split('/')[5]}', {});
+        response = r;
+        _loadFriends();
+      }
     } on DioError catch (err) {
       _loadFriends();
       if (err.runtimeType == RangeError) {
@@ -298,7 +338,7 @@ class _FriendsPageState extends State<FriendsPage> {
           context: context,
           builder: (context) => CustomDialog(
             title: "Error",
-            description: "This is not a valid qr ",
+            description: "This is not a valid QR Code",
             buttonText: "Okay",
           ),
         );
@@ -313,6 +353,17 @@ class _FriendsPageState extends State<FriendsPage> {
         );
       }
     }
-    // setState(() => qrText = barcode);
+    if (response.containsKey("success")) {
+      if (response["success"] == true) {
+        showDialog(
+          context: context,
+          builder: (context) => CustomDialog(
+            title: AppLocalizations.of(context).translate('congrats'),
+            description: response["message"],
+            buttonText: "Okay",
+          ),
+        );
+      }
+    }
   }
 }

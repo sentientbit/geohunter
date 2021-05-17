@@ -278,10 +278,11 @@ class _InventoryState extends State<InventoryPage> {
       setState(() {
         currentTabIndex = index;
       });
+      /* if index == 0 We are here: Items */
       if (index == 1) {
-        Navigator.of(context).pushReplacementNamed('/research');
+        Navigator.of(context).pushReplacementNamed('/blueprints');
       } else if (index == 2) {
-        Navigator.of(context).pushReplacementNamed('/forge');
+        Navigator.of(context).pushReplacementNamed('/materials');
       }
     }
 
@@ -313,36 +314,22 @@ class _InventoryState extends State<InventoryPage> {
         onTap: onTapped,
         currentIndex: currentTabIndex,
         backgroundColor: GlobalConstants.appBg,
+        selectedItemColor: Color(0xfffeb53b),
+        selectedLabelStyle: TextStyle(fontSize: 14),
+        unselectedItemColor: Colors.white,
+        unselectedLabelStyle: TextStyle(fontSize: 14),
         items: [
           BottomNavigationBarItem(
             icon: Icon(Icons.format_list_bulleted, color: Colors.white),
-            title: Text(
-              'Items',
-              style: TextStyle(
-                  color: (currentTabIndex == 0)
-                      ? Color(0xfffeb53b)
-                      : Colors.white),
-            ),
+            label: 'Items',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.import_contacts, color: Colors.white),
-            title: Text(
-              'Research',
-              style: TextStyle(
-                  color: (currentTabIndex == 1)
-                      ? Color(0xfffeb53b)
-                      : Colors.white),
-            ),
+            icon: Icon(Icons.library_books_outlined, color: Colors.white),
+            label: 'Blueprints',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.gavel, color: Colors.white),
-            title: Text(
-              'Forge',
-              style: TextStyle(
-                  color: (currentTabIndex == 2)
-                      ? Color(0xfffeb53b)
-                      : Colors.white),
-            ),
+            icon: Icon(Icons.widgets, color: Colors.white),
+            label: 'Materials',
           )
         ],
       ),
