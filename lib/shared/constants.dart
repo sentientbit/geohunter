@@ -39,7 +39,9 @@ class GlobalConstants {
   static const String appNamespace = "com.apsoni.geocraft";
 
   ///
-  static const String appVersion = "1.1.67";
+  static const String appVersion = "1.1.68";
+
+  ///
 
   ///
   static const List<String> keywords = [
@@ -77,7 +79,32 @@ class GlobalConstants {
   ///
   static const double craftingCost = 0.9;
 
+  ///
   static String backButtonPage = '/poi-map';
+
+  ///
+  static const pointMine = "1";
+
+  ///
+  static const pointWood = "2";
+
+  ///
+  static const pointBattle = "3";
+
+  ///
+  static const pointBoy = "4";
+
+  ///
+  static const pointGirl = "5";
+
+  ///
+  static const pointRuins = "6";
+
+  ///
+  static const pointLibrary = "7";
+
+  ///
+  static const pointTrader = "8";
 }
 
 /// Distance to dig for treasure in meters

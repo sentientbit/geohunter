@@ -10,6 +10,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:geohunter/fonts/rpg_awesome_icons.dart';
 import 'package:get_it/get_it.dart';
 import 'package:latlong/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -18,7 +19,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
-//import 'package:logger/logger.dart';
+
+import 'package:logger/logger.dart';
 
 ///
 import '../app_localizations.dart';
@@ -84,9 +86,9 @@ class PoiMap extends StatefulWidget {
 
 class _PoiMapState extends State<PoiMap>
     with SingleTickerProviderStateMixin<PoiMap> {
-  //final Logger log = Logger(
-  //    printer: PrettyPrinter(
-  //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
+  final Logger log = Logger(
+      printer: PrettyPrinter(
+          colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
   ///
   String _mapStyle = '';
@@ -299,28 +301,21 @@ class _PoiMapState extends State<PoiMap>
   //   return null;
   // }
 
-  String distanceInMeters(int mineIdx) {
-    if (mineIdx < 0) {
-      return "n/a";
+  ///
+  bool isInPoisList(int i) {
+    if (i < 0) {
+      return false;
     }
 
     List tmp = _pois.asMap().keys.toList();
     var isInList = false;
     for (dynamic elem in tmp) {
-      if (elem == mineIdx) {
+      if (elem == i) {
         isInList = true;
       }
     }
 
-    if (!isInList) {
-      return "n/a";
-    }
-
-    double meters = _pois[_mineIdx].distanceToPoint;
-    final showDistanceIn = meters > 1000
-        ? '${(meters / 1000).toStringAsFixed(2)}km'
-        : '${meters.toStringAsFixed(2)}m';
-    return showDistanceIn;
+    return isInList;
   }
 
   // Future<void> _createMarkerImageFromAsset(BuildContext context, ico) async {
@@ -487,31 +482,29 @@ class _PoiMapState extends State<PoiMap>
     }
   }
 
-  // LatLngBounds boundsFromLatLngList(LatLng latLng) {
-  //   double x0, x1, y0, y1;
-  //   if (x0 == null) {
-  //     x0 = x1 = latLng.latitude;
-  //     y0 = y1 = latLng.longitude;
-  //   } else {
-  //     if (latLng.latitude > x1) x1 = latLng.latitude;
-  //     if (latLng.latitude < x0) x0 = latLng.latitude;
-  //     if (latLng.longitude > y1) y1 = latLng.longitude;
-  //     if (latLng.longitude < y0) y0 = latLng.longitude;
-  //   }
-
-  //   return LatLngBounds(northeast: LatLng(x1, y1), southwest: LatLng(x0, y0));
-  // }
-
   Widget popupTitle() {
     var dots = ".";
     dots = dots * _pinsToBeAdded.length;
     if (_mineId > 0) {
-      return Text(
-        "Point $_mineId",
-        style: TextStyle(
-          color: GlobalConstants.appFg,
-          fontFamily: 'Cormorant SC',
-        ),
+      return Row(
+        children: <Widget>[
+          Text(
+            "Point $_mineId ",
+            style: TextStyle(
+              color: GlobalConstants.appFg,
+              fontFamily: 'Cormorant SC',
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            " - User $_mineUid",
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade800,
+            ),
+          ),
+        ],
       );
     }
     return Text(
@@ -519,6 +512,7 @@ class _PoiMapState extends State<PoiMap>
       style: TextStyle(
         color: GlobalConstants.appFg,
         fontFamily: 'Cormorant SC',
+        fontWeight: FontWeight.bold,
       ),
     );
   }
@@ -573,259 +567,524 @@ class _PoiMapState extends State<PoiMap>
     return LatLng(_userLocation.latitude, _userLocation.longitude);
   }
 
-  Widget _myCustomPopup() {
-    return AlertDialog(
-      backgroundColor: GlobalConstants.appBg,
-      title: popupTitle(),
-      content: SizedBox(
-        //height: _images.length > 0 ? 300 : 100,
-        child: SingleChildScrollView(
-          child: Column(
-            children: <Widget>[
-              TextField(
-                controller: _textFieldController,
-                style: TextStyle(color: GlobalConstants.appFg),
-                decoration: InputDecoration(
-                    hintText: "Comment",
-                    hintStyle: TextStyle(color: Colors.grey),
-                    errorText: _commentIsEmpty == true
-                        ? 'Comment can\'t be empty'
-                        : null),
+  ///
+  Future _goMine(int _mineIdx) async {
+    dynamic response;
+    var mineId = _pois[_mineIdx].id;
+    var mineComment = _pois[_mineIdx]?.properties?.comment;
+    if (mineId < 1) {
+      return;
+    }
+    try {
+      response = await _apiProvider.get(
+        '/mine?mine_id=$mineId',
+      );
+
+      if (response.containsKey("success")) {
+        //ignore: omit_local_variable_types
+        List<Image> imagesArr = [];
+
+        if (response["items"].isNotEmpty) {
+          for (dynamic value in response["items"]) {
+            if (value.containsKey("img") && value["img"] != "") {
+              //mine.addItem(value);
+              imagesArr.add(Image.asset("assets/images/items/${value['img']}"));
+              //} else { log.d(value);
+            }
+          }
+        }
+
+        for (dynamic value in response["materials"]) {
+          if (value.containsKey("img") && value["img"] != "") {
+            //mine.addMaterial(value);
+            imagesArr
+                .add(Image.asset("assets/images/materials/${value['img']}"));
+            //} else { log.d(value);
+          }
+        }
+
+        for (dynamic value in response["blueprints"]) {
+          if (value.containsKey("img") && value["img"] != "") {
+            imagesArr
+                .add(Image.asset("assets/images/blueprints/${value['img']}"));
+            //} else { log.d(value);
+          }
+        }
+
+        // Show this mine as already mined
+        _pois[_mineIdx].properties.ico = "0";
+        _pois[_mineIdx].lastVisited =
+            DateTime.parse(DateTime.now().toUtc().toIso8601String())
+                .toLocal()
+                .toString();
+        selectPoint(-1, 0, _userLocation, "");
+        setState(() {
+          _showAddPin = false;
+          _textFieldController.text = "";
+          _images.clear();
+        });
+
+        Timer(
+          Duration(seconds: 1),
+          () {
+            //ignore: omit_local_variable_types
+            String mining =
+                AppLocalizations.of(context).translate('you_found_point');
+            showDialog(
+              context: context,
+              builder: (context) => CustomDialog(
+                title: AppLocalizations.of(context).translate('congrats'),
+                description:
+                    // ignore: lines_longer_than_80_chars
+                    "$mining $mineId, $mineComment",
+                buttonText: "Okay",
+                images: imagesArr,
               ),
-              SizedBox(
-                height: 10,
+            );
+          },
+        );
+      }
+    } on DioError catch (err) {
+      //log.e(err);
+      Timer(
+        Duration(seconds: 1),
+        () {
+          showDialog(
+            context: context,
+            builder: (context) => CustomDialog(
+              title: 'Error',
+              description:
+                  // ignore: lines_longer_than_80_chars
+                  '${err.response?.data}',
+              buttonText: "Okay",
+            ),
+          );
+        },
+      );
+    }
+  }
+
+  ///
+  Widget _actionWidget(BuildContext context) {
+    var info = "n/a";
+    var now = DateTime.parse(
+      DateTime.now().toUtc().toIso8601String(),
+    ).toLocal();
+    var timeFromLastMine = 65535;
+    // ignore: omit_local_variable_types
+    double meters = 65535.0;
+    // ignore: omit_local_variable_types
+    var actionText = "Mine";
+    var actionIcon = RPGAwesome.match;
+
+    if (isInPoisList(_mineIdx)) {
+      if (_pois[_mineIdx].lastVisited != null) {
+        timeFromLastMine = now
+            .difference(
+              DateTime.parse(_pois[_mineIdx].lastVisited),
+            )
+            .inSeconds;
+      }
+
+      meters = _pois[_mineIdx].distanceToPoint;
+      final showDistanceIn = (meters > 1000)
+          ? '${(meters / 1000).toStringAsFixed(1)}km'
+          : '${meters.toStringAsFixed(1)}m';
+
+      final lastVisited = (timeFromLastMine > 3600)
+          ? '${(timeFromLastMine / 3600).toStringAsFixed(1)}h'
+          : ((timeFromLastMine > 60)
+              ? '${(timeFromLastMine / 60).toStringAsFixed(1)}m'
+              : '${timeFromLastMine}s');
+      info = "$showDistanceIn ";
+      if (timeFromLastMine < 65535) {
+        info += " $lastVisited";
+      } else {
+        info += "";
+      }
+
+      //log.d(_pois[_mineIdx].properties.ico);
+      //log.d(_pois[_mineIdx].properties.ico.runtimeType);
+      if (_pois[_mineIdx].properties.ico == GlobalConstants.pointMine) {
+        actionText = "Mine";
+        actionIcon = RPGAwesome.shovel;
+      } else if (_pois[_mineIdx].properties.ico == GlobalConstants.pointWood) {
+        actionText = "Chop";
+        actionIcon = RPGAwesome.battered_axe;
+      } else if (_pois[_mineIdx].properties.ico ==
+          GlobalConstants.pointBattle) {
+        actionText = "Fight";
+        actionIcon = RPGAwesome.bowie_knife;
+      } else if (_pois[_mineIdx].properties.ico == GlobalConstants.pointBoy) {
+        actionText = "Campfire";
+        actionIcon = RPGAwesome.campfire;
+      } else if (_pois[_mineIdx].properties.ico == GlobalConstants.pointGirl) {
+        actionText = "Campfire";
+        actionIcon = RPGAwesome.campfire;
+      } else if (_pois[_mineIdx].properties.ico == GlobalConstants.pointRuins) {
+        actionText = "Search";
+        actionIcon = RPGAwesome.vase;
+      } else if (_pois[_mineIdx].properties.ico ==
+          GlobalConstants.pointLibrary) {
+        actionText = "Read";
+        actionIcon = RPGAwesome.scroll_unfurled;
+      } else if (_pois[_mineIdx].properties.ico ==
+          GlobalConstants.pointTrader) {
+        actionText = "Trade";
+        actionIcon = RPGAwesome.gold_bar;
+      }
+    }
+
+    if (meters <= digDistance && timeFromLastMine > _user.details.miningSpeed) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              padding: EdgeInsets.only(left: 3, right: 3, top: 10, bottom: 10),
+              backgroundColor: GlobalConstants.appBg,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.0),
               ),
-              _isOnline
-                  ? SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: <Widget>[
-                          RaisedButton(
-                            shape: OutlineInputBorder(
-                              borderSide: const BorderSide(
-                                  color: Colors.white, width: 1.0),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            onPressed: _takePhoto,
-                            padding: EdgeInsets.all(10),
-                            color: Colors.black,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: <Widget>[
-                                Icon(Icons.camera_alt,
-                                    color: Color(0xffe6a04e)),
-                                Text(
-                                  " Cam",
-                                  style: TextStyle(
-                                      color: Color(0xffe6a04e),
-                                      fontSize: 16,
-                                      fontFamily: 'Cormorant SC',
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(
-                            width: 10,
-                          ),
-                          RaisedButton(
-                            shape: OutlineInputBorder(
-                              borderSide: const BorderSide(
-                                  color: Colors.white, width: 1.0),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            onPressed: _loadFromGallery,
-                            padding: EdgeInsets.all(10),
-                            color: Colors.black,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: <Widget>[
-                                Icon(Icons.photo, color: Color(0xffe6a04e)),
-                                Text(
-                                  " Pic",
-                                  style: TextStyle(
-                                      color: Color(0xffe6a04e),
-                                      fontSize: 16,
-                                      fontFamily: 'Cormorant SC',
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(
-                            width: 10,
-                          ),
-                          OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              padding: EdgeInsets.all(10),
-                              backgroundColor: GlobalConstants.appBg,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10.0),
-                              ),
-                              side: BorderSide(width: 1, color: Colors.white),
-                            ),
-                            onPressed: () => launchMapApp(
-                                _pois[_mineIdx].geometry.coordinates[1],
-                                _pois[_mineIdx].geometry.coordinates[0]),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: <Widget>[
-                                Icon(Icons.directions_walk,
-                                    color: Color(0xffe6a04e)),
-                                Text(
-                                  " Go",
-                                  style: TextStyle(
-                                      color: Color(0xffe6a04e),
-                                      fontSize: 16,
-                                      fontFamily: 'Cormorant SC',
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(
-                            width: 10,
-                          ),
-                          RaisedButton(
-                            shape: OutlineInputBorder(
-                              borderSide: const BorderSide(
-                                  color: Colors.white, width: 1.0),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            onPressed: _clearFromGallery,
-                            padding: EdgeInsets.all(10),
-                            color: Colors.black,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: <Widget>[
-                                Icon(Icons.delete, color: Color(0xffe6a04e)),
-                                Text(
-                                  " Clear",
-                                  style: TextStyle(
-                                      color: Color(0xffe6a04e),
-                                      fontSize: 16,
-                                      fontFamily: 'Cormorant SC',
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : Text(
-                      "Offline",
-                      style: TextStyle(color: GlobalConstants.appFg),
-                    ),
-              SizedBox(
-                height: 10,
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    "Distance: ${distanceInMeters(_mineIdx)}",
-                    style: TextStyle(color: GlobalConstants.appFg),
-                  )
-                ],
-              ),
-              SizedBox(
-                height: 10,
-              ),
-              Container(
-                height: 200,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: _loadedImages(),
+              side: BorderSide(width: 1, color: Colors.white),
+            ),
+            onPressed: () {
+              _goMine(_mineIdx);
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Icon(actionIcon, color: Color(0xffe90e25)),
+                Text(
+                  actionText,
+                  style: TextStyle(
+                    color: Color(0xffe90e25),
+                    fontSize: 16,
+                    fontFamily: 'Cormorant SC',
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
+          ),
+        ],
+      );
+    } else {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Text(
+            info,
+            style: TextStyle(color: GlobalConstants.appFg),
+          )
+        ],
+      );
+    }
+  }
+
+  Widget _myCustomPopup2(BuildContext context) {
+    return Dialog(
+      backgroundColor: GlobalConstants.appBg,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(2),
+      ),
+      //elevation: 0,
+      insetPadding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 10,
+        ),
+        child: IntrinsicWidth(
+          child: IntrinsicHeight(
+            child: Column(
+              children: <Widget>[
+                SizedBox(
+                  height: 10,
+                ),
+                popupTitle(),
+                Column(
+                  children: <Widget>[
+                    TextField(
+                      controller: _textFieldController,
+                      style: TextStyle(color: GlobalConstants.appFg),
+                      decoration: InputDecoration(
+                          hintText: "Comment",
+                          hintStyle: TextStyle(color: Colors.grey),
+                          errorText: _commentIsEmpty == true
+                              ? 'Comment can\'t be empty'
+                              : null),
+                    ),
+                    SizedBox(
+                      height: 10,
+                    ),
+                    _isOnline
+                        ? SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: <Widget>[
+                                OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    padding: EdgeInsets.only(
+                                        left: 2, right: 2, top: 10, bottom: 10),
+                                    backgroundColor: GlobalConstants.appBg,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10.0),
+                                    ),
+                                    side: BorderSide(
+                                        width: 1, color: Colors.white),
+                                  ),
+                                  onPressed: _takePhoto,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: <Widget>[
+                                      Icon(
+                                        Icons.camera_alt,
+                                        color: Color(0xffe6a04e),
+                                      ),
+                                      Text(
+                                        " Cam",
+                                        style: TextStyle(
+                                            color: Color(0xffe6a04e),
+                                            fontSize: 16,
+                                            fontFamily: 'Cormorant SC',
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: 10,
+                                ),
+                                OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    padding: EdgeInsets.only(
+                                        left: 2, right: 2, top: 10, bottom: 10),
+                                    backgroundColor: GlobalConstants.appBg,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10.0),
+                                    ),
+                                    side: BorderSide(
+                                        width: 1, color: Colors.white),
+                                  ),
+                                  onPressed: _loadFromGallery,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: <Widget>[
+                                      Icon(
+                                        Icons.photo,
+                                        color: Color(0xffe6a04e),
+                                      ),
+                                      Text(
+                                        " Pic",
+                                        style: TextStyle(
+                                            color: Color(0xffe6a04e),
+                                            fontSize: 16,
+                                            fontFamily: 'Cormorant SC',
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: 10,
+                                ),
+                                OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    padding: EdgeInsets.only(
+                                        left: 2, right: 2, top: 10, bottom: 10),
+                                    backgroundColor: GlobalConstants.appBg,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10.0),
+                                    ),
+                                    side: BorderSide(
+                                        width: 1, color: Colors.white),
+                                  ),
+                                  onPressed: () => launchMapApp(
+                                      _pois[_mineIdx].geometry.coordinates[1],
+                                      _pois[_mineIdx].geometry.coordinates[0]),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: <Widget>[
+                                      Icon(Icons.directions_walk,
+                                          color: Color(0xffe6a04e)),
+                                      Text(
+                                        " Go",
+                                        style: TextStyle(
+                                            color: Color(0xffe6a04e),
+                                            fontSize: 16,
+                                            fontFamily: 'Cormorant SC',
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: 10,
+                                ),
+                                OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    padding: EdgeInsets.only(
+                                        left: 2, right: 2, top: 10, bottom: 10),
+                                    backgroundColor: GlobalConstants.appBg,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10.0),
+                                    ),
+                                    side: BorderSide(
+                                        width: 1, color: Colors.white),
+                                  ),
+                                  onPressed: _clearFromGallery,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: <Widget>[
+                                      Icon(
+                                        Icons.delete,
+                                        color: Color(0xffe6a04e),
+                                      ),
+                                      Text(
+                                        " Clear",
+                                        style: TextStyle(
+                                            color: Color(0xffe6a04e),
+                                            fontSize: 16,
+                                            fontFamily: 'Cormorant SC',
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : Text(
+                            "Offline",
+                            style: TextStyle(color: GlobalConstants.appFg),
+                          ),
+                    SizedBox(
+                      height: 10,
+                    ),
+                    Container(
+                      height: 200,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: _loadedImages(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(
+                  height: 30,
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: <Widget>[
+                    Expanded(
+                      flex: 4,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.only(
+                              left: 2, right: 2, top: 10, bottom: 10),
+                          backgroundColor: GlobalConstants.appBg,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
+                          side: BorderSide(width: 1, color: Colors.white),
+                        ),
+                        onPressed: () {
+                          selectPoint(-1, 0, _userLocation, "");
+                          setState(() {
+                            _showAddPin = false;
+                            _textFieldController.text = "";
+                            _images.clear();
+                          });
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            Icon(
+                              Icons.close,
+                              color: Color(0xffe6a04e),
+                            ),
+                            Text(
+                              "Cancel",
+                              style: TextStyle(
+                                  color: Color(0xffe6a04e),
+                                  fontSize: 16,
+                                  fontFamily: 'Cormorant SC',
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 4,
+                      child: _actionWidget(context),
+                    ),
+                    Expanded(
+                      flex: 4,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.only(
+                              left: 2, right: 2, top: 10, bottom: 10),
+                          backgroundColor: GlobalConstants.appBg,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
+                          side: BorderSide(width: 1, color: Colors.white),
+                        ),
+                        onPressed: () {
+                          if (_textFieldController.text == "") {
+                            setState(() {
+                              _commentIsEmpty = true;
+                            });
+                            return;
+                          } else {
+                            setState(() {
+                              _commentIsEmpty = false;
+                              _showAddPin = false;
+                            });
+                            _savePin();
+                            return;
+                          }
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            Icon(
+                              Icons.check,
+                              color: Color(0xffe6a04e),
+                            ),
+                            Text(
+                              "Save",
+                              style: TextStyle(
+                                  color: Color(0xffe6a04e),
+                                  fontSize: 16,
+                                  fontFamily: 'Cormorant SC',
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
-      actions: <Widget>[
-        Text(
-          "User $_mineUid",
-          style: TextStyle(color: Colors.grey.shade800),
-        ),
-        RaisedButton(
-          shape: OutlineInputBorder(
-            borderSide: const BorderSide(color: Colors.white, width: 1.0),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          onPressed: () {
-            selectPoint(-1, 0, _userLocation, "");
-            setState(() {
-              _showAddPin = false;
-              _textFieldController.text = "";
-              _images.clear();
-            });
-          },
-          padding: EdgeInsets.all(10),
-          color: Colors.black,
-          child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Icon(Icons.close, color: Color(0xffe6a04e)),
-                Text(
-                  " Cancel",
-                  style: TextStyle(
-                      color: Color(0xffe6a04e),
-                      fontSize: 18,
-                      fontFamily: 'Cormorant SC',
-                      fontWeight: FontWeight.bold),
-                ),
-              ]),
-        ),
-        RaisedButton(
-          shape: OutlineInputBorder(
-            borderSide: const BorderSide(color: Colors.white, width: 1.0),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          onPressed: () {
-            if (_textFieldController.text == "") {
-              setState(() {
-                _commentIsEmpty = true;
-              });
-              return;
-            } else {
-              setState(() {
-                _commentIsEmpty = false;
-                _showAddPin = false;
-              });
-              _savePin();
-              return;
-            }
-          },
-          padding: EdgeInsets.all(10),
-          color: Colors.black,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Icon(Icons.check, color: Color(0xffe6a04e)),
-              Text(
-                " Save",
-                style: TextStyle(
-                    color: Color(0xffe6a04e),
-                    fontSize: 18,
-                    fontFamily: 'Cormorant SC',
-                    fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        )
-      ],
     );
   }
 
   ///
   Widget build(BuildContext context) {
     // Determining the screen width & height
-    var szHeight = MediaQuery.of(context).size.height;
-    var szWidth = MediaQuery.of(context).size.width;
+    //var szHeight = MediaQuery.of(context).size.height;
+    //var szWidth = MediaQuery.of(context).size.width;
 
     // The marker generation function
     Marker _createMarker(context, int idx, Mine mine) {
@@ -838,20 +1097,6 @@ class _PoiMapState extends State<PoiMap>
                 ? 0
                 : int.parse(mine.properties.ico);
       }
-
-      // return Marker(
-      //   markerId: MarkerId(mine.id.toString()),
-      //   position:
-      //       LatLng(mine.geometry.coordinates[1], mine.geometry.coordinates[0]),
-      //   onTap: () => {
-      //     _onClickMarker(idx, mine),
-      //   },
-      //   infoWindow: _generatorInfoMarker(idx, mine.properties, mine.category,
-      //       mine.distanceToPoint, mine.geometry),
-      //   icon: _markerIcons.length > 1
-      //       ? _markerIcons[icoVar]
-      //       : BitmapDescriptor.defaultMarker,
-      // );
 
       return Marker(
         point:
@@ -949,60 +1194,6 @@ class _PoiMapState extends State<PoiMap>
       ],
       mapController: mapController,
     );
-    // GoogleMap(
-    //   onMapCreated: (controller) {
-    //     mapController = controller;
-    //     dayAndNight(_userLatitude, _userLongitude);
-    //   },
-    //   mapType: MapType.normal,
-    //   markers: Set<Marker>.of(
-    //     _pois.asMap().entries.map(
-    //           (entry) => _createMarker(context, entry.key, entry.value),
-    //         ),
-    //   ),
-    //   minMaxZoomPreference:
-    //       MinMaxZoomPreference(9 /* far away */, 18 /* close up */),
-    //   mapToolbarEnabled: true,
-    //   compassEnabled: false,
-    //   myLocationButtonEnabled: false,
-    //   myLocationEnabled: true,
-    //   rotateGesturesEnabled: true,
-    //   scrollGesturesEnabled: true,
-    //   tiltGesturesEnabled: true,
-    //   onCameraMoveStarted: () => {
-    //     if (_recenterBtnPressed)
-    //       {
-    //         setState(() {
-    //           _showRecenterBtn = false;
-    //           _recenterBtnPressed = false;
-    //         })
-    //       }
-    //     else
-    //       {
-    //         setState(() {
-    //           _showRecenterBtn = true;
-    //         })
-    //       }
-    //   },
-    //   onCameraMove: (object) => {
-    //     _debouncer.run(() => {
-    //           setState(() {
-    //             _displayWindowCenter =
-    //                 LtLn(object.target.latitude, object.target.longitude);
-    //             _mapZoom = object.zoom;
-    //           }),
-    //           _loadPois(_userLatitude, _userLongitude)
-    //         })
-    //   },
-    //   onTap: (latlng) => selectPoint(-1, 0, latlng, ""),
-    //   initialCameraPosition: CameraPosition(
-    //     target: widget.goToRemoteLocation
-    //         ? LatLng(widget.latitude, widget.longitude)
-    //         : LatLng(_userLatitude, _userLongitude),
-    //     tilt: 50.0,
-    //     zoom: 14,
-    //   ),
-    // );
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -1011,34 +1202,13 @@ class _PoiMapState extends State<PoiMap>
         children: <Widget>[
           mapWidget,
           ConstrainedBox(
-              // height: 0,
-              constraints: BoxConstraints(maxHeight: 80),
-              child: CustomAppBar(
-                  _customAppBarTextColor, _customAppBarIconColor, _scaffoldKey,
-                  systemHeaderBrightness: _systemHeaderBrightness)),
-          // Container(
-          //   margin: EdgeInsets.only(top: 25),
-          //   child: Row(
-          //     mainAxisAlignment: MainAxisAlignment.center,
-          //     children: <Widget>[
-          //       Text(
-          //         "Lat: ${_userLocation.latitude} Lng: ${_userLocation.longitude}",
-          //         style: TextStyle(
-          //           color: GlobalConstants.appFg,
-          //           fontFamily: 'Cormorant SC',
-          //           fontSize: 20,
-          //           shadows: <Shadow>[
-          //             Shadow(
-          //                 offset: Offset(1.0, 1.0),
-          //                 blurRadius: 3.0,
-          //                 color: Color.fromARGB(255, 0, 0, 0))
-          //           ],
-          //         ),
-          //       ),
-          //     ],
-          //   ),
-          // ),
-          if (_showAddPin == true) _myCustomPopup(),
+            // height: 0,
+            constraints: BoxConstraints(maxHeight: 80),
+            child: CustomAppBar(
+                _customAppBarTextColor, _customAppBarIconColor, _scaffoldKey,
+                systemHeaderBrightness: _systemHeaderBrightness),
+          ),
+          if (_showAddPin == true) _myCustomPopup2(context),
           Padding(
             padding: EdgeInsets.all(16.0),
             child: Align(
@@ -1180,7 +1350,7 @@ class _PoiMapState extends State<PoiMap>
   }
 
   void _loadMines(List<Mine> mines) async {
-    print(' --- _loadMines --- ');
+    //print(' --- _loadMines --- ');
     if (mines != null) {
       setState(() {
         _pois.clear();
@@ -1190,8 +1360,8 @@ class _PoiMapState extends State<PoiMap>
   }
 
   void _updateUserLocation(LtLn location) async {
-    print('---  _updateUserLocation map explore ---');
-    print(location.latitude);
+    //print('---  _updateUserLocation map explore ---');
+    //print(location.latitude);
     setState(() {
       _userLocation = location;
     });
@@ -1314,20 +1484,6 @@ class _PoiMapState extends State<PoiMap>
 
     return;
   }
-
-  // void _onMapChanged() {
-  //   setState(() {
-  //     _extractMapInfo();
-  //   });
-  // }
-
-  // void onMapCreated(MapboxMapController controller) {
-  //   mapController = controller;
-  //   mapController.addListener(_onMapChanged);
-  //   _extractMapInfo();
-  //   dayAndNight(_userLocation);
-  //   setState(() {});
-  // }
 
   void _moveCameraToUserLocation() {
     setState(() {

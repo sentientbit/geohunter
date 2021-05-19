@@ -50,13 +50,14 @@ class CustomDialog extends StatelessWidget {
   final VoidCallback callback;
 
   ///
-  CustomDialog(
-      {@required this.title,
-      @required this.description,
-      @required this.buttonText,
-      this.image,
-      this.images,
-      this.callback});
+  CustomDialog({
+    @required this.title,
+    @required this.description,
+    @required this.buttonText,
+    this.image,
+    this.images,
+    this.callback,
+  });
 
   ///
   dynamic dialogContent(BuildContext context) {
@@ -122,11 +123,15 @@ class CustomDialog extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     textDirection: TextDirection.rtl,
                     children: <Widget>[
-                      RaisedButton(
-                        shape: OutlineInputBorder(
-                          borderSide:
-                              const BorderSide(color: Colors.white, width: 1.0),
-                          borderRadius: BorderRadius.circular(10),
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.only(
+                              left: 10, right: 10, top: 10, bottom: 10),
+                          backgroundColor: GlobalConstants.appBg,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
+                          side: BorderSide(width: 1, color: Colors.white),
                         ),
                         onPressed: () {
                           Navigator.of(context).pop();
@@ -134,9 +139,6 @@ class CustomDialog extends StatelessWidget {
                             callback();
                           }
                         },
-                        padding: EdgeInsets.only(
-                            top: 10.0, left: 10.0, bottom: 10.0, right: 10.0),
-                        color: Colors.black,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: <Widget>[
@@ -144,10 +146,11 @@ class CustomDialog extends StatelessWidget {
                             Text(
                               " $buttonText",
                               style: TextStyle(
-                                  color: Color(0xffe6a04e),
-                                  fontSize: 18,
-                                  fontFamily: 'Cormorant SC',
-                                  fontWeight: FontWeight.bold),
+                                color: Color(0xffe6a04e),
+                                fontSize: 16,
+                                fontFamily: 'Cormorant SC',
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),

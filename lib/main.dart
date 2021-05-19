@@ -37,13 +37,13 @@ import 'providers/stream_location.dart';
 import 'providers/stream_mines.dart';
 import 'providers/stream_userdata.dart';
 import 'screens/account/profile.dart';
+import 'screens/forge/forge.dart';
 import 'screens/forgot.dart';
 import 'screens/friendship/friends.dart';
 import 'screens/group/in_group.dart';
 import 'screens/group/no_group.dart';
 import 'screens/help/legend.dart';
 import 'screens/inventory/backpack.dart';
-import 'screens/forge/forge.dart';
 import 'screens/inventory/blueprints.dart';
 import 'screens/inventory/materials.dart';
 import 'screens/inventory/research.dart';
@@ -55,7 +55,6 @@ import 'screens/quests/questline.dart';
 import 'screens/register.dart';
 import 'screens/terms_and_conditions.dart';
 import 'shared/constants.dart';
-import 'widgets/custom_alert.dart';
 import 'widgets/custom_dialog.dart';
 
 /// global RouteObserver
@@ -691,127 +690,14 @@ class SplashScreenState extends State<SplashScreen> {
         }
 
         if (_isOnline) {
-          //print(' --- before _populateMines ---');
           _mines = await _populateMines(secureStorage, currentLocation);
 
           if (_mines.isNotEmpty) {
-            final _user = await _apiProvider.getStoredUser();
-
-            // Try only the closest mine
-            var mine = _mines[0];
-
-            // IT means that user never mined here
-            // so we make it that you can mine it
-            var timeFromLastMine = _user.details.miningSpeed + 1;
-
-            if (mine.lastVisited != null) {
-              final now =
-                  DateTime.parse(DateTime.now().toUtc().toIso8601String())
-                      .toLocal();
-
-              timeFromLastMine =
-                  now.difference(DateTime.parse(mine.lastVisited)).inSeconds;
-            }
-
-            //print('--- _mines.isNotEmpty ---');
-            //print(mine.properties.ico);
-            //print(timeFromLastMine);
-            //print(mine.distanceToPoint);
-            //print(digDistance);
-
-            try {
-              if (mine.distanceToPoint <= digDistance &&
-                  timeFromLastMine > _user.details.miningSpeed) {
-                final mineResponse = await _apiProvider.get(
-                  '/mine?mine_id=${mine.id}',
-                );
-
-                //print('---mineResponse---');
-                //log.d(mineResponse);
-
-                if (mineResponse["success"] == true) {
-                  if (mine.properties.ico == '1') {
-                    Flame.audio.play(
-                        'sfx/chopWood_${(math.Random.secure().nextInt(5) + 1).toString()}.ogg');
-                  } else if (mine.properties.ico == '2') {
-                    Flame.audio.play(
-                        'sfx/miningPick_${(math.Random.secure().nextInt(4) + 1).toString()}.ogg');
-                  }
-                  //ignore: omit_local_variable_types
-                  List<Image> imagesArr = [];
-
-                  if (mineResponse["items"].isNotEmpty) {
-                    for (dynamic value in mineResponse["items"]) {
-                      if (value.containsKey("img") && value["img"] != "") {
-                        //mine.addItem(value);
-                        imagesArr.add(
-                            Image.asset("assets/images/items/${value['img']}"));
-                        //} else { log.d(value);
-                      }
-                    }
-                  }
-
-                  for (dynamic value in mineResponse["materials"]) {
-                    if (value.containsKey("img") && value["img"] != "") {
-                      //mine.addMaterial(value);
-                      imagesArr.add(Image.asset(
-                          "assets/images/materials/${value['img']}"));
-                      //} else { log.d(value);
-                    }
-                  }
-
-                  for (dynamic value in mineResponse["blueprints"]) {
-                    if (value.containsKey("img") && value["img"] != "") {
-                      imagesArr.add(Image.asset(
-                          "assets/images/blueprints/${value['img']}"));
-                      //} else { log.d(value);
-                    }
-                  }
-
-                  // Show this mine as already mined
-                  _mines[0].properties.ico = "0";
-                  mine.properties.ico = "0";
-
-                  Timer(
-                    Duration(seconds: 1),
-                    () {
-                      //ignore: omit_local_variable_types
-                      String mining = AppLocalizations.of(context)
-                          .translate('you_found_point');
-                      showDialog(
-                        context: context,
-                        builder: (context) => CustomDialog(
-                            title: AppLocalizations.of(context)
-                                .translate('congrats'),
-                            description:
-                                // ignore: lines_longer_than_80_chars
-                                "$mining ${mine?.id}, ${mine?.properties?.comment}",
-                            buttonText: "Okay",
-                            images: imagesArr),
-                      );
-                    },
-                  );
-                }
-              }
-            } on DioError catch (err) {
-              //log.e(err);
-              Timer(
-                Duration(seconds: 1),
-                () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => CustomDialog(
-                      title: 'Error',
-                      description:
-                          // ignore: lines_longer_than_80_chars
-                          '${err.response?.data}',
-                      buttonText: "Okay",
-                    ),
-                  );
-                },
-              );
-            }
-
+            //final _user = await _apiProvider.getStoredUser();
+            //_user.details.miningSpeed
+            //_mines[0].lastVisited
+            //now = DateTime.parse(DateTime.now().toUtc().toIso8601String()).toLocal();
+            //timeFromLastMine = now.difference(DateTime.parse(mine.lastVisited)).inSeconds;
             _minesStream.updateMinesList(_mines);
           }
         }
@@ -823,14 +709,82 @@ class SplashScreenState extends State<SplashScreen> {
     showDialog<void>(
       context: context,
       builder: (context) {
-        return CustomAlert(
-          title: "Please allow GPS sensor",
-          description: "We need your permission",
-          firstButtonText: 'Yes, allow it!',
-          secondButtonText: 'No',
-          callback: () {
-            _checkGps();
-          },
+        return AlertDialog(
+          title: Text(
+            "Please allow GPS sensor",
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Cormorant SC',
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            "GeoHunter needs your permission to your GPS location while using the App. Allow it?",
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Open Sans',
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          backgroundColor: Color.fromRGBO(0, 0, 0, 0.9),
+          actions: [
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.all(16),
+                backgroundColor: GlobalConstants.appBg,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                side: BorderSide(width: 1, color: Colors.white),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Icon(Icons.close, color: Color(0xffe6a04e)),
+                  Text(
+                    " No",
+                    style: TextStyle(
+                        color: Color(0xffe6a04e),
+                        fontSize: 18,
+                        fontFamily: 'Cormorant SC',
+                        fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.all(16),
+                backgroundColor: GlobalConstants.appBg,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                side: BorderSide(width: 1, color: Colors.white),
+              ),
+              onPressed: () {
+                _checkGps();
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Icon(Icons.done, color: Color(0xffe6a04e)),
+                  Text(
+                    " Yes",
+                    style: TextStyle(
+                        color: Color(0xffe6a04e),
+                        fontSize: 18,
+                        fontFamily: 'Cormorant SC',
+                        fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );

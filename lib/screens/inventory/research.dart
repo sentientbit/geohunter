@@ -1,6 +1,7 @@
 /// based on https://medium.com/@afegbua/this-is-the-second-part-of-the-beautiful-list-ui-and-detail-page-article-ecb43e203915
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:flutter/material.dart';
+import 'package:geohunter/fonts/rpg_awesome_icons.dart';
 //import 'package:logger/logger.dart';
 import '../../models/blueprint.dart';
 
@@ -261,7 +262,7 @@ class _ResearchState extends State<ResearchPage> {
         unselectedLabelStyle: TextStyle(fontSize: 14),
         items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.gavel, color: Colors.white),
+            icon: Icon(RPGAwesome.anvil, color: Colors.white),
             label: 'Forge',
           ),
           BottomNavigationBarItem(

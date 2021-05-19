@@ -277,7 +277,7 @@ class _QuestLinePageState extends State<QuestLinePage> {
               widgetBuilder: (BuildContext context, CurrentRemainingTime time) {
                 if (time != null) {
                   return Text(
-                    '${time.hours}:${time.min}:${time.sec}',
+                    '${time.hours}:${time.min.toString().padLeft(2, '0')}:${time.sec.toString().padLeft(2, '0')}',
                     style: TextStyle(
                       fontSize: 32,
                       color: GlobalConstants.appFg,
@@ -292,19 +292,24 @@ class _QuestLinePageState extends State<QuestLinePage> {
                       flex: 5,
                       child: Padding(
                         padding: EdgeInsets.all(0),
-                        child: RaisedButton(
-                          shape: OutlineInputBorder(
-                            borderSide: const BorderSide(
-                                color: Colors.white, width: 1.0),
-                            borderRadius: BorderRadius.circular(10),
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            padding: EdgeInsets.only(
+                                left: 10, right: 10, top: 10, bottom: 10),
+                            backgroundColor: GlobalConstants.appBg,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10.0),
+                            ),
+                            side: BorderSide(width: 1, color: Colors.white),
                           ),
                           onPressed: () {
-                            _dailyReward(_nextReward.day,
-                                _nextReward.blueprint.id, 0, 0);
+                            _dailyReward(
+                              _nextReward.day,
+                              _nextReward.blueprint.id,
+                              0,
+                              0,
+                            );
                           },
-                          padding: EdgeInsets.only(
-                              top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
-                          color: Colors.black,
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: <Widget>[
@@ -313,7 +318,7 @@ class _QuestLinePageState extends State<QuestLinePage> {
                                 " Claim",
                                 style: TextStyle(
                                   color: Color(0xffe6a04e),
-                                  fontSize: 18,
+                                  fontSize: 16,
                                   fontFamily: 'Cormorant SC',
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -331,19 +336,24 @@ class _QuestLinePageState extends State<QuestLinePage> {
                       flex: 5,
                       child: Padding(
                         padding: EdgeInsets.all(0),
-                        child: RaisedButton(
-                          shape: OutlineInputBorder(
-                            borderSide: const BorderSide(
-                                color: Colors.white, width: 1.0),
-                            borderRadius: BorderRadius.circular(10),
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            padding: EdgeInsets.only(
+                                left: 10, right: 10, top: 10, bottom: 10),
+                            backgroundColor: GlobalConstants.appBg,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10.0),
+                            ),
+                            side: BorderSide(width: 1, color: Colors.white),
                           ),
                           onPressed: () {
                             _dailyReward(
-                                _nextReward.day, 0, _nextReward.material.id, 0);
+                              _nextReward.day,
+                              0,
+                              _nextReward.material.id,
+                              0,
+                            );
                           },
-                          padding: EdgeInsets.only(
-                              top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
-                          color: Colors.black,
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: <Widget>[
@@ -352,7 +362,7 @@ class _QuestLinePageState extends State<QuestLinePage> {
                                 " Claim",
                                 style: TextStyle(
                                   color: Color(0xffe6a04e),
-                                  fontSize: 18,
+                                  fontSize: 16,
                                   fontFamily: 'Cormorant SC',
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -370,19 +380,24 @@ class _QuestLinePageState extends State<QuestLinePage> {
                       flex: 5,
                       child: Padding(
                         padding: EdgeInsets.all(0),
-                        child: RaisedButton(
-                          shape: OutlineInputBorder(
-                            borderSide: const BorderSide(
-                                color: Colors.white, width: 1.0),
-                            borderRadius: BorderRadius.circular(10),
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            padding: EdgeInsets.only(
+                                left: 10, right: 10, top: 10, bottom: 10),
+                            backgroundColor: GlobalConstants.appBg,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10.0),
+                            ),
+                            side: BorderSide(width: 1, color: Colors.white),
                           ),
                           onPressed: () {
                             _dailyReward(
-                                _nextReward.day, 0, 0, _nextReward.item.id);
+                              _nextReward.day,
+                              0,
+                              0,
+                              _nextReward.item.id,
+                            );
                           },
-                          padding: EdgeInsets.only(
-                              top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
-                          color: Colors.black,
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: <Widget>[
@@ -391,7 +406,7 @@ class _QuestLinePageState extends State<QuestLinePage> {
                                 " Claim",
                                 style: TextStyle(
                                   color: Color(0xffe6a04e),
-                                  fontSize: 18,
+                                  fontSize: 16,
                                   fontFamily: 'Cormorant SC',
                                   fontWeight: FontWeight.bold,
                                 ),

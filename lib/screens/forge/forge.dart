@@ -15,9 +15,10 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:loading_overlay/loading_overlay.dart';
 import '../../app_localizations.dart';
 
-import 'package:logger/logger.dart';
+//import 'package:logger/logger.dart';
 
 ///
+import '../../fonts/rpg_awesome_icons.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/custom_interceptors.dart';
@@ -94,9 +95,9 @@ class _ForgeState extends State<ForgePage> {
   String _admobType;
   int _admobAmount;
 
-  final Logger log = Logger(
-      printer: PrettyPrinter(
-          colors: true, printEmojis: true, printTime: true, lineLength: 80));
+  //final Logger log = Logger(
+  //    printer: PrettyPrinter(
+  //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
   ///
   final ApiProvider _apiProvider = ApiProvider();
@@ -508,7 +509,7 @@ class _ForgeState extends State<ForgePage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          Icon(Icons.gavel, color: Color(0xffe6a04e)),
+          Icon(RPGAwesome.anvil, color: Color(0xffe6a04e)),
           Text(
             " Craft",
             style: TextStyle(
@@ -523,31 +524,36 @@ class _ForgeState extends State<ForgePage> {
 
     final watchAdButton = Padding(
       padding: EdgeInsets.all(0),
-      child: RaisedButton(
-        shape: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.white, width: 1.0),
-          borderRadius: BorderRadius.circular(10),
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          padding:
+              EdgeInsets.only(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
+          backgroundColor: GlobalConstants.appBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          side: BorderSide(width: 1, color: Colors.white),
         ),
         onPressed: () {
           // Admob variant 1 :(
           _goForReward("AdReward");
           _admobAdvert.load();
         },
-        padding:
-            EdgeInsets.only(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
-        color: Colors.black,
-        child:
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
-          Icon(Icons.ondemand_video, color: Color(0xffe6a04e)),
-          Text(
-            " Watch ad",
-            style: TextStyle(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(Icons.ondemand_video, color: Color(0xffe6a04e)),
+            Text(
+              " Watch ad",
+              style: TextStyle(
                 color: Color(0xffe6a04e),
-                fontSize: 18,
+                fontSize: 16,
                 fontFamily: 'Cormorant SC',
-                fontWeight: FontWeight.bold),
-          ),
-        ]),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
 
@@ -562,28 +568,31 @@ class _ForgeState extends State<ForgePage> {
     Widget purchaseCoinsButton(int idx) {
       return Padding(
         padding: EdgeInsets.all(0),
-        child: RaisedButton(
-          shape: OutlineInputBorder(
-            borderSide: const BorderSide(color: Colors.white, width: 1.0),
-            borderRadius: BorderRadius.circular(10),
+        child: OutlinedButton(
+          style: OutlinedButton.styleFrom(
+            padding:
+                EdgeInsets.only(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
+            backgroundColor: GlobalConstants.appBg,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.0),
+            ),
+            side: BorderSide(width: 1, color: Colors.white),
           ),
           onPressed: () {
             _buyProduct(idx);
           },
-          padding:
-              EdgeInsets.only(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
-          color: Colors.black,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              Icon(Icons.shopping_cart, color: Color(0xffe6a04e)),
+              Icon(Icons.ondemand_video, color: Color(0xffe6a04e)),
               Text(
                 " ${_productPrices[idx]}",
                 style: TextStyle(
-                    color: Color(0xffe6a04e),
-                    fontSize: 18,
-                    fontFamily: 'Cormorant SC',
-                    fontWeight: FontWeight.bold),
+                  color: Color(0xffe6a04e),
+                  fontSize: 16,
+                  fontFamily: 'Cormorant SC',
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -754,7 +763,7 @@ class _ForgeState extends State<ForgePage> {
                             : _blueprintName,
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 24,
+                          fontSize: 18,
                           fontFamily: 'Cormorant SC',
                           fontWeight: FontWeight.bold,
                           shadows: <Shadow>[
@@ -817,7 +826,7 @@ class _ForgeState extends State<ForgePage> {
                         " Materials ",
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 24,
+                          fontSize: 18,
                           fontFamily: 'Cormorant SC',
                           fontWeight: FontWeight.bold,
                           shadows: <Shadow>[
@@ -887,7 +896,7 @@ class _ForgeState extends State<ForgePage> {
                         (_craftedItemName == "") ? " Item " : _craftedItemName,
                         style: TextStyle(
                           color: itemColorRarity(_craftedItemRarity),
-                          fontSize: 24,
+                          fontSize: 18,
                           fontFamily: 'Cormorant SC',
                           fontWeight: FontWeight.bold,
                           shadows: <Shadow>[
@@ -918,7 +927,7 @@ class _ForgeState extends State<ForgePage> {
         unselectedLabelStyle: TextStyle(fontSize: 14),
         items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.gavel, color: Colors.white),
+            icon: Icon(RPGAwesome.anvil, color: Colors.white),
             label: 'Forge',
           ),
           BottomNavigationBarItem(
@@ -1010,7 +1019,7 @@ class _ForgeState extends State<ForgePage> {
       if (response["success"] == true) {
         if (response["items"][0]["nr"] > 0) {
           await _clearPlacements();
-          log.d(response);
+          //log.d(response);
           setState(() {
             _craftedItemImg = response["items"][0]["img"];
             _craftedItemName = response["items"][0]["name"];

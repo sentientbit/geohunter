@@ -15,7 +15,6 @@ import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/custom_interceptors.dart';
 import '../../shared/constants.dart';
-import '../../widgets/custom_alert.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
 import '../../widgets/network_status_message.dart';
@@ -123,26 +122,31 @@ class _InGroupState extends State<InGroup> {
     // Button to save and update the guild's details
     final saveButton = Padding(
       padding: EdgeInsets.all(0),
-      child: RaisedButton(
-        shape: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.white, width: 1.0),
-          borderRadius: BorderRadius.circular(10),
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          padding: EdgeInsets.all(16),
+          backgroundColor: GlobalConstants.appBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          side: BorderSide(width: 1, color: Colors.white),
         ),
         onPressed: _saveGuildDetails,
-        padding: EdgeInsets.all(16),
-        color: Colors.black,
-        child:
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
-          Icon(Icons.check, color: Color(0xffe6a04e)),
-          Text(
-            'Save',
-            style: TextStyle(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(Icons.check, color: Color(0xffe6a04e)),
+            Text(
+              'Save',
+              style: TextStyle(
                 color: Color(0xffe6a04e),
                 fontSize: 18,
                 fontFamily: 'Cormorant SC',
-                fontWeight: FontWeight.bold),
-          ),
-        ]),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
 
@@ -258,7 +262,7 @@ class _InGroupState extends State<InGroup> {
       ),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
-      title: Text("My Guild - ${guildUid}",
+      title: Text("Guild - ${guildUid}",
           style: TextStyle(
             color: Colors.white,
             fontFamily: "Cormorant SC",
