@@ -7,13 +7,14 @@ import 'package:percent_indicator/linear_percent_indicator.dart';
 
 ///
 import '../../app_localizations.dart';
+import '../../fonts/rpg_awesome_icons.dart';
 import '../../models/research.dart';
+import '../../providers/api_provider.dart';
 import '../../providers/stream_userdata.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
-import '../../providers/api_provider.dart';
 
 ///
 class StudyDetailPage extends StatefulWidget {
@@ -243,27 +244,31 @@ class _StudyDetailState extends State<StudyDetailPage> {
 
     final researchButton = Padding(
       padding: EdgeInsets.all(0),
-      child: RaisedButton(
-        shape: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.white, width: 1.0),
-          borderRadius: BorderRadius.circular(10),
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          padding:
+              EdgeInsets.only(top: 8.0, left: 0.0, bottom: 8.0, right: 0.0),
+          backgroundColor: GlobalConstants.appBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          side: BorderSide(width: 1, color: Colors.white),
         ),
         onPressed: () => _studyResearch(context, widget.research.id),
-        padding:
-            EdgeInsets.only(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
-        color: Colors.black,
-        child:
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
-          Icon(Icons.local_library, color: Color(0xffe6a04e)),
-          Text(
-            _btnDisText,
-            style: TextStyle(
-                color: Color(0xffe6a04e),
-                fontSize: 18,
-                fontFamily: 'Cormorant SC',
-                fontWeight: FontWeight.bold),
-          ),
-        ]),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(RPGAwesome.book, color: Color(0xffe6a04e)),
+            Text(
+              " ${_btnDisText}",
+              style: TextStyle(
+                  color: Color(0xffe6a04e),
+                  fontSize: 24,
+                  fontFamily: 'Cormorant SC',
+                  fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
       ),
     );
 
@@ -378,6 +383,7 @@ class _StudyDetailState extends State<StudyDetailPage> {
                           ),
                         ],
                       ),
+                SizedBox(height: 58),
               ],
             ),
           ),

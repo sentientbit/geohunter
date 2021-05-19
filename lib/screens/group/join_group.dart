@@ -91,26 +91,34 @@ class _JoinGroupState extends State<JoinGroup> {
 
     final joinButton = Padding(
       padding: EdgeInsets.all(0),
-      child: RaisedButton(
-        shape: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.white, width: 1.0),
-          borderRadius: BorderRadius.circular(10),
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          padding: EdgeInsets.all(16),
+          backgroundColor: GlobalConstants.appBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          side: BorderSide(width: 1, color: Colors.white),
         ),
         onPressed: () => _joinGuild(context),
-        padding: EdgeInsets.all(16),
-        color: Colors.black,
-        child: Text(
-          'Join',
-          style: TextStyle(
-              color: Color(0xffe6a04e),
-              fontSize: 18,
-              fontFamily: 'Cormorant SC',
-              fontWeight: FontWeight.bold),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(Icons.close, color: Color(0xffe6a04e)),
+            Text(
+              'Join',
+              style: TextStyle(
+                  color: Color(0xffe6a04e),
+                  fontSize: 18,
+                  fontFamily: 'Cormorant SC',
+                  fontWeight: FontWeight.bold),
+            ),
+          ],
         ),
       ),
     );
 
-    final cancelButton = FlatButton(
+    final cancelButton = TextButton(
       child: Text(
         'Cancel',
         style: TextStyle(
