@@ -5,12 +5,13 @@ import 'package:percent_indicator/linear_percent_indicator.dart';
 //import 'package:logger/logger.dart';
 
 ///
+import '../../fonts/rpg_awesome_icons.dart';
 import '../../models/friends.dart';
+import '../../providers/api_provider.dart';
+import '../../screens/map_explore.dart' show PoiMap;
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
-import '../../providers/api_provider.dart';
-import '../../screens/map_explore.dart' show PoiMap;
 
 //import '../app_localizations.dart';
 
@@ -229,7 +230,7 @@ class _PalDetailState extends State<PalDetailPage> {
               ),
             ),
             Expanded(
-              flex: 6,
+              flex: 4,
               child: expBar(
                 currentExperience,
                 currentExperience,
@@ -240,7 +241,7 @@ class _PalDetailState extends State<PalDetailPage> {
             Expanded(
               flex: 2,
               child: Text(
-                ' XP',
+                ' Xp',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -262,7 +263,7 @@ class _PalDetailState extends State<PalDetailPage> {
               ),
             ),
             Expanded(
-              flex: 6,
+              flex: 4,
               child: expBar(
                 100,
                 100,
@@ -314,15 +315,21 @@ class _PalDetailState extends State<PalDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  'Raven Message',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xffe6a04e),
-                    fontSize: 24,
-                    fontFamily: 'Cormorant SC',
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Icon(RPGAwesome.raven, color: Color(0xffe6a04e)),
+                    Text(
+                      " Raven Message",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color(0xffe6a04e),
+                        fontSize: 24,
+                        fontFamily: 'Cormorant SC',
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
                 Stack(
                   children: <Widget>[

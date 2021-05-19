@@ -2,6 +2,7 @@
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:geohunter/fonts/rpg_awesome_icons.dart';
 //import 'package:logger/logger.dart';
 
 ///
@@ -174,27 +175,31 @@ class _ItemDetailState extends State<ItemDetailPage> {
 
     final disassembleButton = Padding(
       padding: EdgeInsets.all(0),
-      child: RaisedButton(
-        shape: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.white, width: 1.0),
-          borderRadius: BorderRadius.circular(10),
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          padding:
+              EdgeInsets.only(top: 8.0, left: 0.0, bottom: 8.0, right: 0.0),
+          backgroundColor: GlobalConstants.appBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          side: BorderSide(width: 1, color: Colors.white),
         ),
         onPressed: () => _deleteItem(context, widget.item.id),
-        padding:
-            EdgeInsets.only(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
-        color: Colors.black,
-        child:
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
-          Icon(Icons.delete_outline, color: Color(0xffe6a04e)),
-          Text(
-            _btnDisText,
-            style: TextStyle(
-                color: Color(0xffe6a04e),
-                fontSize: 18,
-                fontFamily: 'Cormorant SC',
-                fontWeight: FontWeight.bold),
-          ),
-        ]),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(RPGAwesome.recycle, color: Color(0xffe6a04e)),
+            Text(
+              " ${_btnDisText}",
+              style: TextStyle(
+                  color: Color(0xffe6a04e),
+                  fontSize: 24,
+                  fontFamily: 'Cormorant SC',
+                  fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
       ),
     );
 
@@ -260,6 +265,7 @@ class _ItemDetailState extends State<ItemDetailPage> {
                     fontSize: 18,
                   ),
                 ),
+                SizedBox(height: 18),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: <Widget>[
@@ -295,6 +301,7 @@ class _ItemDetailState extends State<ItemDetailPage> {
                     disassembleButton,
                   ],
                 ),
+                SizedBox(height: 18),
               ],
             ),
           ),

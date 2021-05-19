@@ -8,7 +8,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_offline/flutter_offline.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 import 'package:logger/logger.dart';
-import '../../screens/account/equipment.dart';
 
 ///
 import '../../app_localizations.dart';
@@ -17,6 +16,7 @@ import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/custom_interceptors.dart';
 import '../../providers/stream_userdata.dart';
+import '../../screens/account/equipment.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
@@ -380,27 +380,31 @@ class _ProfilePageState extends State<ProfilePage> {
       ];
     });
 
-    final updateProfileButton = RaisedButton(
-      shape: OutlineInputBorder(
-        borderSide: const BorderSide(color: Colors.white, width: 1.0),
-        borderRadius: BorderRadius.circular(10),
+    final updateProfileButton = OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        padding: EdgeInsets.all(16),
+        backgroundColor: GlobalConstants.appBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+        side: BorderSide(width: 1, color: Colors.white),
       ),
       onPressed: _updateProfile,
-      padding:
-          EdgeInsets.only(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0),
-      color: Colors.black,
-      child:
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
-        Icon(Icons.check, color: Color(0xffe6a04e)),
-        Text(
-          " ${AppLocalizations.of(context).translate('save')}",
-          style: TextStyle(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Icon(Icons.done, color: Color(0xffe6a04e)),
+          Text(
+            " ${AppLocalizations.of(context).translate('save')}",
+            style: TextStyle(
               color: Color(0xffe6a04e),
               fontSize: 18,
               fontFamily: 'Cormorant SC',
-              fontWeight: FontWeight.bold),
-        ),
-      ]),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
     );
 
     return Scaffold(
@@ -477,7 +481,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ),
                             Expanded(
-                              flex: 6,
+                              flex: 4,
                               child: expBar(
                                 currentExperience,
                                 currentExperience,
@@ -510,7 +514,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ),
                             Expanded(
-                              flex: 6,
+                              flex: 4,
                               child: expBar(
                                 100,
                                 100,
@@ -834,22 +838,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: <Widget>[updateProfileButton],
                         ),
-                        SizedBox(
-                          height: 18.0,
-                          child: Text('123'),
-                        ),
-                        SizedBox(
-                          height: 18.0,
-                          child: Text('123'),
-                        ),
-                        SizedBox(
-                          height: 18.0,
-                          child: Text('123'),
-                        ),
-                        SizedBox(
-                          height: 18.0,
-                          child: Text('123'),
-                        ),
+                        SizedBox(height: 58),
                       ],
                     ),
                   ),

@@ -38,6 +38,8 @@ class _NoGroupState extends State<NoGroup> {
   /// Curent loggedin user
   User _user;
 
+  String userGuildId = "0";
+
   ///
   int maxNrGuilds = 100;
 
@@ -187,6 +189,35 @@ class _NoGroupState extends State<NoGroup> {
           context, MaterialPageRoute(builder: (context) => CreateGroup()));
     }
 
+    final myguildButton = OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        padding: EdgeInsets.all(16),
+        backgroundColor: GlobalConstants.appBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+        side: BorderSide(width: 1, color: Colors.white),
+      ),
+      onPressed: () {
+        Navigator.of(context).pushReplacementNamed('/in-group');
+      },
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Icon(Icons.redo, color: Color(0xffe6a04e)),
+          Text(
+            " My guild",
+            style: TextStyle(
+              color: Color(0xffe6a04e),
+              fontSize: 18,
+              fontFamily: 'Cormorant SC',
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+
     final createButton = OutlinedButton(
       style: OutlinedButton.styleFrom(
         padding: EdgeInsets.all(16),
@@ -325,8 +356,8 @@ class _NoGroupState extends State<NoGroup> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: <Widget>[
-                      createButton,
-                      joinButton,
+                      (userGuildId != "0") ? myguildButton : createButton,
+                      (userGuildId != "0") ? Text("") : joinButton,
                     ],
                   ),
                 ),
@@ -434,6 +465,7 @@ class _NoGroupState extends State<NoGroup> {
 
     setState(() {
       _user = User.fromJson(tmp);
+      userGuildId = _user.details.guildId;
     });
 
     //log.d('--- user ---');

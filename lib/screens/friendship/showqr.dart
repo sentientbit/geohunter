@@ -1,14 +1,13 @@
-/// based on https://medium.com/@afegbua/this-is-the-second-part-of-the-beautiful-list-ui-and-detail-page-article-ecb43e203915
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:flutter/material.dart';
 // import 'package:logger/logger.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 ///
+import '../../providers/api_provider.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
-import '../../providers/api_provider.dart';
 
 //import '../app_localizations.dart';
 

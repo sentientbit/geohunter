@@ -36,15 +36,15 @@ class PlanetSummary extends StatelessWidget {
       ),
     );
 
-    Widget _planetValue({String value, String image}) {
-      return Container(
-        child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
-          Image.asset(image, height: 12.0),
-          Container(width: 7.0),
-          Text(value, style: Style.smallTextStyle),
-        ]),
-      );
-    }
+    // Widget _planetValue({String value, String image}) {
+    //   return Container(
+    //     child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+    //       Image.asset(image, height: 12.0),
+    //       Container(width: 7.0),
+    //       Text(value, style: Style.smallTextStyle),
+    //     ]),
+    //   );
+    // }
 
     final planetCardContent = Container(
       margin: EdgeInsets.fromLTRB(
