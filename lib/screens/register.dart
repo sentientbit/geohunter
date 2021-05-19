@@ -4,10 +4,12 @@ import 'package:dio/dio.dart';
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_offline/flutter_offline.dart';
+import 'package:geohunter/shared/constants.dart';
 
 ///
 import '../app_localizations.dart';
 import '../providers/api_provider.dart';
+import '../shared/constants.dart';
 import '../widgets/custom_dialog.dart';
 import '../widgets/network_status_message.dart';
 
@@ -59,25 +61,35 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     final registerButton = Padding(
       padding: EdgeInsets.all(0),
-      child: RaisedButton(
-        shape: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.white, width: 1.0),
-          borderRadius: BorderRadius.circular(10),
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          padding: EdgeInsets.all(16),
+          backgroundColor: GlobalConstants.appBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          side: BorderSide(width: 1, color: Colors.white),
         ),
         onPressed: _register,
-        padding: EdgeInsets.all(16),
-        color: Colors.black,
-        child: Text(
-            AppLocalizations.of(context).translate('register_submit_btn'),
-            style: TextStyle(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(Icons.shopping_cart, color: Color(0xffe6a04e)),
+            Text(
+              AppLocalizations.of(context).translate('register_submit_btn'),
+              style: TextStyle(
                 color: Color(0xffe6a04e),
-                fontSize: 18,
+                fontSize: 16,
                 fontFamily: 'Cormorant SC',
-                fontWeight: FontWeight.bold)),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
 
-    final forgotLabel = FlatButton(
+    final forgotLabel = TextButton(
       child: Text(
         AppLocalizations.of(context).translate('register_back_btn'),
         style: TextStyle(

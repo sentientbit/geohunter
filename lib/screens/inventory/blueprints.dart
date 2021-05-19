@@ -192,7 +192,7 @@ class _BlueprintListState extends State<BlueprintListPage> {
       ),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
-      title: Text("Materials", style: Style.topBar),
+      title: Text("Blueprints", style: Style.topBar),
       actions: <Widget>[
         PopupMenuButton<PopupMenuChoice>(
           onSelected: choiceAction,

@@ -72,7 +72,7 @@ class _DrawerPageState extends State<DrawerPage> {
     var username = 'Guest';
 
     ///
-    var status = 'Undefined';
+    //var status = 'Undefined';
 
     ///
     var percentage = 0.0;
@@ -93,7 +93,7 @@ class _DrawerPageState extends State<DrawerPage> {
       nextExperienceLevel = levelToExp(currentLevel + 1);
       percentage =
           (int.tryParse(_user.details.experience) ?? 0) / nextExperienceLevel;
-      status = _user.details.status;
+      //status = _user.details.status;
 
       _avatar = CachedNetworkImageProvider(
           'https://${GlobalConstants.apiHostUrl}${_user.details.picture}');

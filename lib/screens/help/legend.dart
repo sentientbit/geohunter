@@ -80,53 +80,59 @@ class LegendPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       resizeToAvoidBottomInset: false,
-      body: Stack(alignment: AlignmentDirectional.center, children: <Widget>[
-        Container(
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('assets/images/moon_light.jpg'),
-              fit: BoxFit.fill,
+      body: Stack(
+        alignment: AlignmentDirectional.center,
+        children: <Widget>[
+          Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/images/moon_light.jpg'),
+                fit: BoxFit.fill,
+              ),
             ),
           ),
-        ),
-        Column(children: <Widget>[
-          ConstrainedBox(
-              // height: 0,
-              constraints: BoxConstraints(maxHeight: 80),
-              child: CustomAppBar(Colors.white, Colors.white, _scaffoldKey)),
-          SizedBox(
-            height: 12,
-          ),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.all(8.0),
-              children: _listViewData
-                  .map((data) => ListTile(
-                        contentPadding:
-                            EdgeInsets.symmetric(vertical: 15, horizontal: 23),
-                        leading: Image.asset(
-                          'assets/images/markers/${data["icon"]}',
-                          // color: Colors.white,
-                        ),
-                        title: Text(
-                          data["title"],
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        subtitle: Text(
-                          data["subtitle"],
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ))
-                  .toList(),
-            ),
-          ),
-          Text(
-            // ignore: lines_longer_than_80_chars
-            "version: $_appVersion",
-            style: TextStyle(fontSize: 14.0, color: Colors.white),
+          Column(
+            children: <Widget>[
+              ConstrainedBox(
+                  // height: 0,
+                  constraints: BoxConstraints(maxHeight: 80),
+                  child:
+                      CustomAppBar(Colors.white, Colors.white, _scaffoldKey)),
+              SizedBox(
+                height: 12,
+              ),
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.all(8.0),
+                  children: _listViewData
+                      .map((data) => ListTile(
+                            contentPadding: EdgeInsets.symmetric(
+                                vertical: 15, horizontal: 23),
+                            leading: Image.asset(
+                              'assets/images/markers/${data["icon"]}',
+                              // color: Colors.white,
+                            ),
+                            title: Text(
+                              data["title"],
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            subtitle: Text(
+                              data["subtitle"],
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ))
+                      .toList(),
+                ),
+              ),
+              Text(
+                // ignore: lines_longer_than_80_chars
+                "version: $_appVersion",
+                style: TextStyle(fontSize: 14.0, color: Colors.white),
+              ),
+            ],
           )
-        ])
-      ]),
+        ],
+      ),
       key: _scaffoldKey,
       drawer: DrawerPage(),
     );

@@ -714,10 +714,14 @@ class _PlacesState extends State<PlacesPage> {
 
     final watchAdButton = Padding(
       padding: EdgeInsets.all(0),
-      child: RaisedButton(
-        shape: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.white, width: 1.0),
-          borderRadius: BorderRadius.circular(10),
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          padding: EdgeInsets.only(left: 0, right: 0, top: 10, bottom: 10),
+          backgroundColor: GlobalConstants.appBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          side: BorderSide(width: 1, color: Colors.white),
         ),
         onPressed: () {
           // Admob variant 1 :(
@@ -731,51 +735,54 @@ class _PlacesState extends State<PlacesPage> {
           // _rewardedReady = false;
           // _rewardedAd = null;
         },
-        padding:
-            EdgeInsets.only(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
-        color: Colors.black,
-        child:
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
-          Icon(Icons.ondemand_video, color: Color(0xffe6a04e)),
-          Text(
-            " Watch ad",
-            style: TextStyle(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(Icons.ondemand_video, color: Color(0xffe6a04e)),
+            Text(
+              " Watch ad",
+              style: TextStyle(
                 color: Color(0xffe6a04e),
-                fontSize: 18,
+                fontSize: 16,
                 fontFamily: 'Cormorant SC',
-                fontWeight: FontWeight.bold),
-          ),
-        ]),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
 
     Widget purchaseCoinsButton(int idx) {
       return Padding(
         padding: EdgeInsets.all(0),
-        child: RaisedButton(
-          shape: OutlineInputBorder(
-            borderSide: const BorderSide(color: Colors.white, width: 1.0),
-            borderRadius: BorderRadius.circular(10),
+        child: OutlinedButton(
+          style: OutlinedButton.styleFrom(
+            padding: EdgeInsets.only(left: 0, right: 0, top: 10, bottom: 10),
+            backgroundColor: GlobalConstants.appBg,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.0),
+            ),
+            side: BorderSide(width: 1, color: Colors.white),
           ),
           onPressed: () {
             _buyProduct(_iapProducts[idx]);
           },
-          padding:
-              EdgeInsets.only(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
-          color: Colors.black,
           child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Icon(Icons.shopping_cart, color: Color(0xffe6a04e)),
-                Text(
-                  " ${_productPrices[idx]}",
-                  style: TextStyle(
-                      color: Color(0xffe6a04e),
-                      fontSize: 18,
-                      fontFamily: 'Cormorant SC',
-                      fontWeight: FontWeight.bold),
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Icon(Icons.shopping_cart, color: Color(0xffe6a04e)),
+              Text(
+                " ${_productPrices[idx]}",
+                style: TextStyle(
+                  color: Color(0xffe6a04e),
+                  fontSize: 16,
+                  fontFamily: 'Cormorant SC',
+                  fontWeight: FontWeight.bold,
                 ),
-              ]),
+              ),
+            ],
+          ),
         ),
       );
     }

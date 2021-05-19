@@ -81,11 +81,15 @@ class _TermsAndPrivacyPageState extends State<TermsAndPrivacyPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: <Widget>[
-                  RaisedButton(
-                    shape: OutlineInputBorder(
-                      borderSide:
-                          const BorderSide(color: Colors.white, width: 1.0),
-                      borderRadius: BorderRadius.circular(10),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.only(
+                          left: 10, right: 10, top: 10, bottom: 10),
+                      backgroundColor: GlobalConstants.appBg,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      side: BorderSide(width: 1, color: Colors.white),
                     ),
                     onPressed: () {
                       setState(() {
@@ -93,9 +97,6 @@ class _TermsAndPrivacyPageState extends State<TermsAndPrivacyPage> {
                         _showTerms = true;
                       });
                     },
-                    padding: EdgeInsets.only(
-                        top: 10.0, left: 10.0, bottom: 10.0, right: 10.0),
-                    color: Colors.black,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
@@ -103,19 +104,24 @@ class _TermsAndPrivacyPageState extends State<TermsAndPrivacyPage> {
                         Text(
                           " Terms",
                           style: TextStyle(
-                              color: Color(0xffe6a04e),
-                              fontSize: 18,
-                              fontFamily: 'Cormorant SC',
-                              fontWeight: FontWeight.bold),
+                            color: Color(0xffe6a04e),
+                            fontSize: 18,
+                            fontFamily: 'Cormorant SC',
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  RaisedButton(
-                    shape: OutlineInputBorder(
-                      borderSide:
-                          const BorderSide(color: Colors.white, width: 1.0),
-                      borderRadius: BorderRadius.circular(10),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.only(
+                          left: 10, right: 10, top: 10, bottom: 10),
+                      backgroundColor: GlobalConstants.appBg,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      side: BorderSide(width: 1, color: Colors.white),
                     ),
                     onPressed: () {
                       setState(() {
@@ -123,9 +129,6 @@ class _TermsAndPrivacyPageState extends State<TermsAndPrivacyPage> {
                         _showTerms = false;
                       });
                     },
-                    padding: EdgeInsets.only(
-                        top: 10.0, left: 10.0, bottom: 10.0, right: 10.0),
-                    color: Colors.black,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
@@ -133,10 +136,11 @@ class _TermsAndPrivacyPageState extends State<TermsAndPrivacyPage> {
                         Text(
                           " Privacy",
                           style: TextStyle(
-                              color: Color(0xffe6a04e),
-                              fontSize: 18,
-                              fontFamily: 'Cormorant SC',
-                              fontWeight: FontWeight.bold),
+                            color: Color(0xffe6a04e),
+                            fontSize: 18,
+                            fontFamily: 'Cormorant SC',
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),

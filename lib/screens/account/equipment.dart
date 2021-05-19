@@ -174,33 +174,6 @@ class _EquipmentState extends State<EquipmentPage> {
       ],
     );
 
-    final oldUnequipButton = RaisedButton(
-      shape: OutlineInputBorder(
-        borderSide: const BorderSide(color: Colors.white, width: 1.0),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      onPressed: () {
-        _unequipItem(context, widget.placement);
-      },
-      padding:
-          EdgeInsets.only(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0),
-      color: Colors.black,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Icon(Icons.cached, color: Color(0xffe6a04e)),
-          Text(
-            " Unequip",
-            style: TextStyle(
-                color: Color(0xffe6a04e),
-                fontSize: 18,
-                fontFamily: 'Cormorant SC',
-                fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-
     final unequipButton = OutlinedButton(
       style: OutlinedButton.styleFrom(
         padding: EdgeInsets.all(16),
