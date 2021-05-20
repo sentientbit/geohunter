@@ -1,6 +1,6 @@
-/// Guild object
+///
 class Guild {
-  /// OR Guild
+  ///
   int id = 0;
 
   ///

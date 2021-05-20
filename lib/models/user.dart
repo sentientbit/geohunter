@@ -1,27 +1,32 @@
 ///
-import 'package:flutter/material.dart';
-
-///
 class User {
   /// Unique User Id
-  final String uid;
+  String uid = "";
 
   ///
-  final String jwt;
+  String jwt = "";
 
   ///
-  final UserData details;
+  UserData details = UserData.blank();
 
   /// constructor
   User({
-    @required this.uid,
-    @required this.details,
-    @required this.jwt,
+    this.uid,
+    this.details,
+    this.jwt,
   });
 
   ///
-  // ignore: prefer_constructors_over_static_methods
-  static User fromJson(Map<String, dynamic> json) {
+  factory User.blank() {
+    return User(
+      uid: "",
+      jwt: "",
+      details: UserData.blank(),
+    );
+  }
+
+  ///
+  factory User.fromJson(Map<String, dynamic> json) {
     var details = UserData.fromJson(json["user"]);
     return User(
       uid: details.id,
@@ -56,7 +61,8 @@ class User {
         "experience": details.experience,
         "level": details.level,
         "percentage": details.percentage,
-        "coins": details.coins
+        "coins": details.coins,
+        "xp": details.xp,
       },
       "jwt": jwt
     };
@@ -66,13 +72,13 @@ class User {
 ///
 class UserGuild {
   ///
-  String guildId;
+  String guildId = "";
 
   ///
-  int permissions;
+  int permissions = 0;
 
   /// Guild Unique Id
-  String guid;
+  String guid = "";
 
   ///
   UserGuild({
@@ -127,13 +133,13 @@ class UserData {
   String picture;
 
   ///
-  String sex;
+  String sex = "0";
 
   ///
   String language;
 
   ///
-  String locationPrivacy;
+  String locationPrivacy = "0";
 
   ///
   String status;
@@ -151,21 +157,42 @@ class UserData {
   int percentage;
 
   /// Total amount of funds
-  double coins;
+  double coins = 0.0;
 
   ///
-  int miningSpeed;
+  int miningSpeed = 0;
 
   ///
-  int unnaprovedMembers;
+  int unnaprovedMembers = 0;
+
+  ///
+  int xp = 0;
 
   /// constructor
   UserData({
-    this.username = '',
+    this.username = "",
+    this.sex = "0",
+    this.locationPrivacy = "0",
     this.coins = 0.0,
     this.miningSpeed = 0,
-    this.guildId,
+    this.guildId = "",
+    this.unnaprovedMembers = 0,
+    this.xp = 0,
   });
+
+  ///
+  factory UserData.blank() {
+    return UserData(
+      username: "",
+      sex: "0",
+      locationPrivacy: "0",
+      coins: 0.0,
+      miningSpeed: 0,
+      guildId: "",
+      unnaprovedMembers: 0,
+      xp: 0,
+    );
+  }
 
   ///
   UserData.fromJson(dynamic json) {
@@ -191,6 +218,7 @@ class UserData {
     unnaprovedMembers = (json["unapproved_members"] != null)
         ? int.parse(json["unapproved_members"].toString())
         : 0;
+    xp = json["xp"];
   }
 
   ///
@@ -199,5 +227,8 @@ class UserData {
         'percentage': percentage,
         'level': level,
         'miningSpeed': miningSpeed,
+        'coins': coins,
+        'unnaprovedMembers': unnaprovedMembers,
+        'xp': xp,
       };
 }

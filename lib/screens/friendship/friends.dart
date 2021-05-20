@@ -92,12 +92,12 @@ class _FriendsPageState extends State<FriendsPage> {
           }
           friends.add(
             Friend(
-              id: elem["id"],
+              id: (int.tryParse(elem["id"].toString()) ?? 0),
               sex: elem["sex"],
               username: elem["username"],
               status: elem["status"],
               locationPrivacy: privacy,
-              xp: elem["xp"],
+              xp: (int.tryParse(elem["xp"].toString()) ?? 0),
               thumbnail: elem["thumbnail"],
               isReq: elem["is_req"].toString(),
               lat: lat,
@@ -114,7 +114,7 @@ class _FriendsPageState extends State<FriendsPage> {
       if (err.response != null) {
         print(err.response.data["message"]);
       } else {
-        print(err.request);
+        print(err.response.statusCode);
         print(err.message);
       }
     }

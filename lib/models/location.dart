@@ -7,10 +7,10 @@ class PinLocation {
   int mineId = 0;
 
   ///
-  final double latitude;
+  double lat = 51.5;
 
   ///
-  final double longitude;
+  double lng = 0.0;
 
   ///
   String desc;
@@ -19,5 +19,5 @@ class PinLocation {
   List<File> images = [];
 
   ///
-  PinLocation({this.mineId, this.latitude, this.longitude, this.desc});
+  PinLocation({this.mineId, this.lat, this.lng, this.desc});
 }

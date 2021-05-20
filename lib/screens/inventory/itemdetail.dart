@@ -111,7 +111,6 @@ class _ItemDetailState extends State<ItemDetailPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Image(
-          //image: NetworkImage('https://${GlobalConstants.apiHostUrl}/img/items/${widget.item.img}'),
           image: AssetImage('assets/images/items/${widget.item.img}'),
           height: 180.0,
           width: 180.0,

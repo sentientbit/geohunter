@@ -47,16 +47,16 @@ class Quest {
 ///
 class Options {
   ///
-  String id;
+  String id = "";
 
   ///
-  String option;
+  String option = "";
 
   ///
   Reward reward;
 
   ///
-  int chosen;
+  int chosen = 0;
 
   ///
   Condition condition;
@@ -78,7 +78,7 @@ class Options {
 ///
 class Reward {
   ///
-  String xp;
+  String xp = "";
 
   ///
   Reward.fromJson(dynamic json) {
@@ -89,13 +89,13 @@ class Reward {
 ///
 class Status {
   ///
-  String isStarted;
+  String isStarted = "";
 
   ///
-  String isCompleted;
+  String isCompleted = "";
 
   ///
-  String isFailed;
+  String isFailed = "";
 
   ///
   Status.fromJson(dynamic json) {
@@ -108,7 +108,7 @@ class Status {
 ///
 class Condition {
   ///
-  String iff;
+  String iff = "";
 
   ///
   Condition.fromJson(dynamic json) {

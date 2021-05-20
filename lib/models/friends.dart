@@ -1,37 +1,37 @@
 ///
 class Friend {
   ///
-  final String id;
+  int id = 0;
 
   ///
-  final String sex;
+  String sex = "0";
 
   ///
-  final String username;
+  String username = "";
 
   ///
-  final String status;
+  String status = "";
 
   ///
-  final String xp;
+  int xp = 0;
 
   ///
-  final int locationPrivacy;
+  int locationPrivacy = 0;
 
   ///
-  final String thumbnail;
+  String thumbnail = "";
 
   /// is friendship requested
-  final String isReq;
+  String isReq = "";
 
   /// Latitude
-  final double lat;
+  double lat = 51.5;
 
   /// Longitude
-  final double lng;
+  double lng = 0.0;
 
   ///
-  const Friend({
+  Friend({
     this.id,
     this.sex,
     this.username,
@@ -43,4 +43,20 @@ class Friend {
     this.lat,
     this.lng,
   });
+
+  ///
+  factory Friend.blank() {
+    return Friend(
+      id: 0,
+      sex: "0",
+      username: "",
+      status: "",
+      xp: 0,
+      locationPrivacy: 0,
+      thumbnail: "",
+      isReq: "",
+      lat: 51.5,
+      lng: 0.0,
+    );
+  }
 }

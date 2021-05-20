@@ -7,16 +7,36 @@ class Materialmodel {
   int id = 0;
 
   ///
-  String name = '';
+  String name = "";
 
   ///
-  String img = '';
+  String img = "";
 
   /// Total nr of materials in player posession
   int nr = 0;
 
   /// Nr of materials needed for an operation
   int needed = 0;
+
+  ///
+  Materialmodel({
+    this.id,
+    this.name,
+    this.img,
+    this.nr,
+    this.needed,
+  });
+
+  ///
+  factory Materialmodel.blank() {
+    return Materialmodel(
+      id: 0,
+      name: "",
+      img: "",
+      nr: 0,
+      needed: 0,
+    );
+  }
 
   ///
   Materialmodel.fromJson(dynamic json) {
