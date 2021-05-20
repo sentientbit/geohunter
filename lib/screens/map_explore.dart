@@ -5,7 +5,6 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
@@ -14,10 +13,9 @@ import 'package:geohunter/fonts/rpg_awesome_icons.dart';
 import 'package:get_it/get_it.dart';
 import 'package:latlong/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
-//import 'package:mapbox_gl/mapbox_gl.dart';
-//import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:image_picker/image_picker.dart';
+//import 'package:user_location/user_location.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:logger/logger.dart';
@@ -38,29 +36,7 @@ import '../widgets/drawer.dart';
 ///
 GetIt getIt = GetIt.instance;
 
-///
-class Debouncer {
-  ///
-  final int milliseconds;
-
-  ///
-  VoidCallback action;
-  Timer _timer;
-
-  ///
-  Debouncer({this.milliseconds});
-
-  ///
-  void run(VoidCallback action) {
-    if (_timer != null) {
-      _timer.cancel();
-    }
-
-    _timer = Timer(Duration(milliseconds: milliseconds), action);
-  }
-}
-
-final _debouncer = Debouncer(milliseconds: 500);
+final _debouncer2 = Debouncer(milliseconds: 500);
 
 ///
 class PoiMap extends StatefulWidget {
@@ -95,6 +71,10 @@ class _PoiMapState extends State<PoiMap>
   String _mapStyleAubergine = '';
 
   MapController mapController = MapController();
+
+  /// user_location
+  //UserLocationOptions userLocationOptions;
+  List<Marker> markers = [];
   //MapboxMapController mapController;
   //GoogleMapController mapController;
   //BitmapDescriptor myIcon;
@@ -120,15 +100,15 @@ class _PoiMapState extends State<PoiMap>
   /// Make sure back button is pressed twice
   bool ifPop = false;
 
-  bool _infoWindowVisible = false;
-
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   final _textFieldController = TextEditingController();
+
+  ///
   bool _isOnline = true;
   bool _commentIsEmpty = false;
-  bool _showAddPin = false;
+  bool _infoWindowVisible = false;
   bool _recenterBtnPressed = false;
   bool _showRecenterBtn = false;
 
@@ -137,6 +117,7 @@ class _PoiMapState extends State<PoiMap>
   Color _customAppBarIconColor = Colors.black;
   Brightness _systemHeaderBrightness = Brightness.light;
   final _pois = [];
+  final _players = [];
 
   final _apiProvider = ApiProvider();
   //int _screenRebuilded = 1;
@@ -157,7 +138,7 @@ class _PoiMapState extends State<PoiMap>
   // Map<MarkerId, Marker> markers = <MarkerId, Marker>{};
 
   Future _loadPois(LtLn location) async {
-    //print("--- Loading pois ---");
+    print("--- Loading pois ---");
     if (location.latitude == 51.5 && location.longitude == 0) {
       return;
     }
@@ -185,11 +166,11 @@ class _PoiMapState extends State<PoiMap>
           radianToDeg(math.asin(d / earthRadius) /
               math.cos(
                   degToRadian(_displayWindowCenter.latitude))); /* min lng */
-      await _storage.write(key: 'swLng', value: swLng.toString());
-      await _storage.write(key: 'swLat', value: swLat.toString());
-      await _storage.write(key: 'neLng', value: neLng.toString());
-      await _storage.write(key: 'neLat', value: neLat.toString());
-      await _storage.write(key: 'mapZoom', value: _mapZoom.toString());
+      // await _storage.write(key: 'swLng', value: swLng.toString());
+      // await _storage.write(key: 'swLat', value: swLat.toString());
+      // await _storage.write(key: 'neLng', value: neLng.toString());
+      // await _storage.write(key: 'neLat', value: neLat.toString());
+      // await _storage.write(key: 'mapZoom', value: _mapZoom.toString());
 
       url =
           '/radar?cntr_lng=${location.longitude.toString()}&cntr_lat=${location.latitude.toString()}&zoom=$_mapZoom&sw_lng=${swLng.toString()}&sw_lat=${swLat.toString()}&ne_lng=${neLng.toString()}&ne_lat=${neLat.toString()}';
@@ -205,7 +186,7 @@ class _PoiMapState extends State<PoiMap>
       try {
         response = await _apiProvider.get(url);
       } on DioError catch (err) {
-        if (err.type == DioErrorType.CONNECT_TIMEOUT) {
+        if (err.type == DioErrorType.connectTimeout) {
           return;
         } else if (err.response == null) {
           return;
@@ -219,6 +200,7 @@ class _PoiMapState extends State<PoiMap>
 
       if (response.containsKey("success")) {
         if (response["success"] == true) {
+          //add the mines to the map
           if (response.containsKey("geojson")) {
             if (response["geojson"]["features"] != null) {
               for (dynamic elem in response["geojson"]["features"]) {
@@ -227,8 +209,9 @@ class _PoiMapState extends State<PoiMap>
               }
             }
           }
+          // add the players to the map
           if (response.containsKey("players")) {
-            if (response["geojson"]["players"] != null) {
+            if (response["players"]["features"] != null) {
               for (dynamic elem in response["players"]["features"]) {
                 final mine = Mine(elem, 2, location: _userLocation);
                 players.add(mine);
@@ -238,10 +221,58 @@ class _PoiMapState extends State<PoiMap>
         }
       }
 
+      var _locationMarker = Marker(
+        height: 20.0,
+        width: 20.0,
+        point: LatLng(_userLocation.latitude, _userLocation.longitude),
+        builder: (context) {
+          return Stack(
+            alignment: AlignmentDirectional.center,
+            children: <Widget>[
+              Stack(
+                children: [
+                  Align(
+                    alignment: Alignment.center,
+                    child: Container(
+                      height: 20,
+                      width: 20,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.blue[300].withOpacity(0.7),
+                      ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.center,
+                    child: Container(
+                      height: 10,
+                      width: 10,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.blueAccent,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      );
+
+      markers.clear();
+      markers.add(_locationMarker);
+
+      // If the widget was removed from the tree while the asynchronous platform
+      // message was in flight, we want to discard the reply rather than calling
+      // setState to update our non-existent appearance.
+      if (!mounted) return;
+
       setState(() {
         _pois.clear();
         _pois.addAll(features.toList());
-        _pois.addAll(players.toList());
+        _players.clear();
+        _players.addAll(players.toList());
       });
     }
   }
@@ -551,7 +582,7 @@ class _PoiMapState extends State<PoiMap>
       _mineUid = _user.details.id;
     }
     setState(() {
-      _showAddPin = true;
+      _infoWindowVisible = true;
     });
   }
 
@@ -619,7 +650,7 @@ class _PoiMapState extends State<PoiMap>
                 .toString();
         selectPoint(-1, 0, _userLocation, "");
         setState(() {
-          _showAddPin = false;
+          _infoWindowVisible = false;
           _textFieldController.text = "";
           _images.clear();
         });
@@ -634,9 +665,7 @@ class _PoiMapState extends State<PoiMap>
               context: context,
               builder: (context) => CustomDialog(
                 title: AppLocalizations.of(context).translate('congrats'),
-                description:
-                    // ignore: lines_longer_than_80_chars
-                    "$mining $mineId, $mineComment",
+                description: "$mining $mineId, $mineComment",
                 buttonText: "Okay",
                 images: imagesArr,
               ),
@@ -653,9 +682,7 @@ class _PoiMapState extends State<PoiMap>
             context: context,
             builder: (context) => CustomDialog(
               title: 'Error',
-              description:
-                  // ignore: lines_longer_than_80_chars
-                  '${err.response?.data}',
+              description: '${err.response?.data}',
               buttonText: "Okay",
             ),
           );
@@ -664,7 +691,7 @@ class _PoiMapState extends State<PoiMap>
     }
   }
 
-  ///
+  /// the CTA of the Popup
   Widget _actionWidget(BuildContext context) {
     var info = "n/a";
     var now = DateTime.parse(
@@ -782,7 +809,7 @@ class _PoiMapState extends State<PoiMap>
     }
   }
 
-  Widget _myCustomPopup2(BuildContext context) {
+  Widget _myCustomPopup(BuildContext context) {
     return Dialog(
       backgroundColor: GlobalConstants.appBg,
       shape: RoundedRectangleBorder(
@@ -996,7 +1023,7 @@ class _PoiMapState extends State<PoiMap>
                         onPressed: () {
                           selectPoint(-1, 0, _userLocation, "");
                           setState(() {
-                            _showAddPin = false;
+                            _infoWindowVisible = false;
                             _textFieldController.text = "";
                             _images.clear();
                           });
@@ -1045,7 +1072,7 @@ class _PoiMapState extends State<PoiMap>
                           } else {
                             setState(() {
                               _commentIsEmpty = false;
-                              _showAddPin = false;
+                              _infoWindowVisible = false;
                             });
                             _savePin();
                             return;
@@ -1080,66 +1107,118 @@ class _PoiMapState extends State<PoiMap>
     );
   }
 
+  Widget betterPoint(BuildContext context, int idx, Mine mine, int icoVar) {
+    var highlight = Color(0xaa212121);
+    if (icoVar == 1) {
+      highlight = Color(0xaa471c00);
+    } else if (icoVar == 2) {
+      highlight = Color(0xaa132900);
+    } else if (icoVar == 3) {
+      highlight = Color(0xaa62000a);
+    } else if (icoVar == 4) {
+      highlight = Color(0xaa003b4f);
+    } else if (icoVar == 5) {
+      highlight = Color(0xaa420021);
+    } else if (icoVar == 6) {
+      highlight = Color(0xaa762f15);
+    } else if (icoVar == 7) {
+      highlight = Color(0xaa5c085c);
+    } else if (icoVar == 8) {
+      highlight = Color(0xaa322600);
+    }
+
+    return GestureDetector(
+      onTap: () {
+        _onClickMarker(idx, mine);
+        _onAddPinButtonPressed();
+      },
+      child: Container(
+        //alignment: Alignment.bottomCenter,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: highlight, shape: BoxShape.circle),
+        child: Image.asset(
+          "assets/images/markers/${icoVar.toString()}.png",
+          width: 100,
+          height: 133,
+        ),
+      ),
+    );
+  }
+
+  // The marker generation function
+  Marker _createMarker(context, int idx, Mine mine) {
+    var icoVar = int.parse(mine.properties.ico);
+    final now =
+        DateTime.parse(DateTime.now().toUtc().toIso8601String()).toLocal();
+    if (mine.lastVisited != "" && mine.lastVisited != null) {
+      icoVar = now.difference(DateTime.parse(mine.lastVisited)).inSeconds < 3600
+          ? 0
+          : int.parse(mine.properties.ico);
+    }
+
+    return Marker(
+      point: LatLng(mine.geometry.coordinates[1], mine.geometry.coordinates[0]),
+      builder: (context) => betterPoint(context, idx, mine, icoVar),
+    );
+  }
+
+  Widget betterPlayer(BuildContext context, int idx, Mine mine, int icoVar) {
+    var highlight = Color(0xaa212121);
+    if (icoVar == 1) {
+      highlight = Color(0xaa6b3511);
+    } else if (icoVar == 2) {
+      highlight = Color(0xaa224700);
+    } else if (icoVar == 3) {
+      highlight = Color(0xaa680e17);
+    } else if (icoVar == 4) {
+      highlight = Color(0xaa16556b);
+    } else if (icoVar == 5) {
+      highlight = Color(0xaa761c49);
+    } else if (icoVar == 6) {
+      highlight = Color(0xaa762f15);
+    } else if (icoVar == 7) {
+      highlight = Color(0xaa5c085c);
+    } else if (icoVar == 8) {
+      highlight = Color(0xaa574200);
+    }
+
+    return GestureDetector(
+      onTap: () {},
+      child: Container(
+        //alignment: Alignment.bottomCenter,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: highlight, shape: BoxShape.circle),
+        child: Image.asset(
+          "assets/images/markers/${icoVar.toString()}.png",
+          width: 100,
+          height: 133,
+        ),
+      ),
+    );
+  }
+
+  // The marker generation function
+  Marker _createPlayer(context, int idx, Mine mine) {
+    var icoVar = int.parse(mine.properties.ico);
+    final now =
+        DateTime.parse(DateTime.now().toUtc().toIso8601String()).toLocal();
+    if (mine.lastVisited != "" && mine.lastVisited != null) {
+      icoVar = now.difference(DateTime.parse(mine.lastVisited)).inSeconds < 3600
+          ? 0
+          : int.parse(mine.properties.ico);
+    }
+
+    return Marker(
+      point: LatLng(mine.geometry.coordinates[1], mine.geometry.coordinates[0]),
+      builder: (context) => betterPlayer(context, idx, mine, icoVar),
+    );
+  }
+
   ///
   Widget build(BuildContext context) {
     // Determining the screen width & height
     //var szHeight = MediaQuery.of(context).size.height;
     //var szWidth = MediaQuery.of(context).size.width;
-
-    // The marker generation function
-    Marker _createMarker(context, int idx, Mine mine) {
-      var icoVar = int.parse(mine.properties.ico);
-      final now =
-          DateTime.parse(DateTime.now().toUtc().toIso8601String()).toLocal();
-      if (mine.lastVisited != "" && mine.lastVisited != null) {
-        icoVar =
-            now.difference(DateTime.parse(mine.lastVisited)).inSeconds < 3600
-                ? 0
-                : int.parse(mine.properties.ico);
-      }
-
-      return Marker(
-        point:
-            LatLng(mine.geometry.coordinates[1], mine.geometry.coordinates[0]),
-        builder: (BuildContext ctx) {
-          return GestureDetector(
-            onTap: () {
-              _onClickMarker(idx, mine);
-              _onAddPinButtonPressed();
-            },
-            child: Stack(
-              children: <Widget>[
-                Opacity(
-                  opacity: _infoWindowVisible ? 1.0 : 0.0,
-                  child: Container(
-                    alignment: Alignment.bottomCenter,
-                    width: 279.0,
-                    height: 256.0,
-                    decoration: BoxDecoration(
-                      image: DecorationImage(
-                          image: AssetImage("assets/images/ic_info_window.png"),
-                          fit: BoxFit.cover),
-                    ),
-                    child: Text('1234'),
-                  ),
-                ),
-                Opacity(
-                  child: Container(
-                    alignment: Alignment.bottomCenter,
-                    child: Image.asset(
-                      "assets/images/markers/${icoVar.toString()}.png",
-                      width: 200,
-                      height: 266,
-                    ),
-                  ),
-                  opacity: _infoWindowVisible ? 0.0 : 1.0,
-                ),
-              ],
-            ),
-          );
-        },
-      );
-    }
 
     _createMap() {
       return TileLayerOptions(
@@ -1157,26 +1236,30 @@ class _PoiMapState extends State<PoiMap>
         center: _centerOfMap(),
         zoom: _mapZoom,
         maxZoom: 18.0,
+        plugins: [
+          //user_location
+          //UserLocationPlugin(),
+        ],
         onPositionChanged: (mapPosition, boolValue) => {
-          _debouncer.run(
+          _debouncer2.run(
             () => {
               if (_recenterBtnPressed)
                 {
                   setState(() {
                     _showRecenterBtn = false;
                     _recenterBtnPressed = false;
+                    _displayWindowCenter = mapPosition.center;
+                    _mapZoom = mapPosition.zoom;
                   })
                 }
               else
                 {
                   setState(() {
                     _showRecenterBtn = true;
+                    _displayWindowCenter = mapPosition.center;
+                    _mapZoom = mapPosition.zoom;
                   })
                 },
-              setState(() {
-                _displayWindowCenter = mapPosition.center;
-                _mapZoom = mapPosition.zoom;
-              }),
               _loadPois(_userLocation)
             },
           )
@@ -1184,6 +1267,16 @@ class _PoiMapState extends State<PoiMap>
       ),
       layers: [
         _createMap(),
+        //user_location
+        //userLocationOptions,
+        MarkerLayerOptions(markers: markers),
+        MarkerLayerOptions(
+          markers: List<Marker>.of(
+            _players.asMap().entries.map(
+                  (entry) => _createPlayer(context, entry.key, entry.value),
+                ),
+          ),
+        ),
         MarkerLayerOptions(
           markers: List<Marker>.of(
             _pois.asMap().entries.map(
@@ -1194,6 +1287,16 @@ class _PoiMapState extends State<PoiMap>
       ],
       mapController: mapController,
     );
+
+    //user_location
+    // userLocationOptions = UserLocationOptions(
+    //   context: context,
+    //   mapController: mapController,
+    //   markers: markers,
+    //   updateMapLocationOnPositionChange: false,
+    //   showMoveToCurrentLocationFloatingActionButton: false,
+    //   zoomToCurrentLocationOnLoad: true,
+    // );
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -1208,7 +1311,7 @@ class _PoiMapState extends State<PoiMap>
                 _customAppBarTextColor, _customAppBarIconColor, _scaffoldKey,
                 systemHeaderBrightness: _systemHeaderBrightness),
           ),
-          if (_showAddPin == true) _myCustomPopup2(context),
+          if (_infoWindowVisible == true) _myCustomPopup(context),
           Padding(
             padding: EdgeInsets.all(16.0),
             child: Align(
@@ -1286,8 +1389,8 @@ class _PoiMapState extends State<PoiMap>
     if (_thumbnails.length > 0) {
       for (var thumb in _thumbnails) {
         list.add(
-          CachedNetworkImage(
-              imageUrl: "https://${GlobalConstants.apiHostUrl}$thumb"),
+          Image.network("https://${GlobalConstants.apiHostUrl}$thumb"),
+          //NetworkImage("https://${GlobalConstants.apiHostUrl}$thumb"),
         );
         list.add(SizedBox(width: 10));
       }
@@ -1350,7 +1453,7 @@ class _PoiMapState extends State<PoiMap>
   }
 
   void _loadMines(List<Mine> mines) async {
-    //print(' --- _loadMines --- ');
+    print(' --- _loadMines from Stream --- ');
     if (mines != null) {
       setState(() {
         _pois.clear();
@@ -1360,8 +1463,6 @@ class _PoiMapState extends State<PoiMap>
   }
 
   void _updateUserLocation(LtLn location) async {
-    //print('---  _updateUserLocation map explore ---');
-    //print(location.latitude);
     setState(() {
       _userLocation = location;
     });
@@ -1375,8 +1476,8 @@ class _PoiMapState extends State<PoiMap>
   void _savePin() async {
     var pin = PinLocation(
       mineId: _mineId,
-      latitude: _userLocation.latitude,
-      longitude: _userLocation.longitude,
+      lat: _userLocation.latitude,
+      lng: _userLocation.longitude,
       desc: _textFieldController.text,
     );
 
@@ -1391,10 +1492,6 @@ class _PoiMapState extends State<PoiMap>
         }
         _pinsToBeAdded.clear();
       }
-
-      //print('before _modifyPin');
-      //print(_mineUid);
-      //print(_user.details.id);
 
       // Save the current pin also
       if (_mineUid == _user.details.id) {
@@ -1447,8 +1544,8 @@ class _PoiMapState extends State<PoiMap>
     try {
       response = await _apiProvider.save(pin.mineId, '/mine', {
         "mine_id": pin.mineId,
-        "lat": pin.latitude,
-        "lng": pin.longitude,
+        "lat": pin.lat,
+        "lng": pin.lng,
         "desc": pin.desc
       });
     } on DioError catch (err) {
@@ -1506,8 +1603,6 @@ class _PoiMapState extends State<PoiMap>
         LatLng(latitude, longitude),
         _mapZoom,
       );
-      // ignore: lines_longer_than_80_chars
-      //mapController.animateCamera(CameraUpdate.newCameraPosition(CameraPosition(target: LatLng(latitude, longitude),tilt: 50.0,bearing: 0.0,zoom: _mapZoom)));
     }
   }
 

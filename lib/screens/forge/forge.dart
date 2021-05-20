@@ -120,13 +120,13 @@ class _ForgeState extends State<ForgePage> {
       adUnitId: AdManager.rewardedAdUnitId,
       listener: (event, args) {
         if (event == AdmobAdEvent.loaded) {
-          print('--- AdmobReward loaded');
+          //print('--- AdmobReward loaded');
           _admobAdvert.show();
           setState(() {
             _isRewarded = false;
           });
         } else if (event == AdmobAdEvent.closed) {
-          print('--- AdmobReward closed');
+          //print('--- AdmobReward closed');
           _admobAdvert.dispose();
           if (_isRewarded) {
             _serverReward(null);
@@ -147,7 +147,7 @@ class _ForgeState extends State<ForgePage> {
             _isLoading = false;
           });
         } else if (event == AdmobAdEvent.rewarded) {
-          print('--- AdmobReward rewarded');
+          //print('--- AdmobReward rewarded');
           _admobType = "Reward";
           _isRewarded = true;
           setState(() {
@@ -155,7 +155,7 @@ class _ForgeState extends State<ForgePage> {
             _isLoading = false;
           });
         } else if (event == AdmobAdEvent.failedToLoad) {
-          print('--- AdmobReward failed');
+          //print('--- AdmobReward failed');
           _isRewarded = false;
           showDialog(
             context: context,
@@ -1028,11 +1028,13 @@ class _ForgeState extends State<ForgePage> {
         }
 
         if (response.containsKey("coins")) {
+          //update global data
           _userdata.updateUserData(
             "",
             double.tryParse(response["coins"].toString()) ?? 0.0,
             0,
             response["guild"]["id"],
+            response["xp"],
           );
         }
       }
@@ -1082,6 +1084,7 @@ class _ForgeState extends State<ForgePage> {
           double.tryParse(response["coins"].toString()) ?? 0.0,
           0,
           response["guild"]["id"],
+          response["xp"],
         );
 
         /// Retain the current total funds

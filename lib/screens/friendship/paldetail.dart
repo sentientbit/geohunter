@@ -54,7 +54,7 @@ class _PalDetailState extends State<PalDetailPage> {
   void initState() {
     _controller.text = '';
     super.initState();
-    currentExperience = int.tryParse(widget.friend.xp) ?? 0;
+    currentExperience = widget.friend.xp;
     currentLevel = expToLevel(currentExperience);
     nextExperienceLevel = levelToExp(currentLevel + 1);
     BackButtonInterceptor.add(myInterceptor);
@@ -189,7 +189,7 @@ class _PalDetailState extends State<PalDetailPage> {
         color: Colors.black,
       ),
       child: Text(
-        "Lvl ${expToLevel(int.tryParse(widget.friend.xp) ?? 0)}",
+        "Lvl ${expToLevel(widget.friend.xp)}",
         style: TextStyle(
           color: GlobalConstants.appFg,
           fontSize: 18.0,

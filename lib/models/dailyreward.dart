@@ -11,22 +11,22 @@ class DailyReward {
   int blueprintId = 0;
 
   ///
-  Blueprint blueprint;
+  Blueprint blueprint = Blueprint.blank();
 
   ///
   int materialId = 0;
 
   ///
-  Materialmodel material;
+  Materialmodel material = Materialmodel.blank();
 
   ///
   int itemId = 0;
 
   ///
-  Item item;
+  Item item = Item.blank();
 
   ///
-  String date = '';
+  String date = "";
 
   ///
   DailyReward({
@@ -34,9 +34,25 @@ class DailyReward {
     this.blueprintId,
     this.blueprint,
     this.materialId,
+    this.material,
     this.itemId,
+    this.item,
     this.date,
   });
+
+  ///
+  factory DailyReward.blank() {
+    return DailyReward(
+      day: 0,
+      blueprintId: 0,
+      blueprint: Blueprint.blank(),
+      materialId: 0,
+      material: Materialmodel.blank(),
+      itemId: 0,
+      item: Item.blank(),
+      date: "",
+    );
+  }
 
   ///
   DailyReward.fromJson(dynamic json) {

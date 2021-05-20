@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 ///
@@ -33,7 +32,7 @@ class FriendsSummary extends StatelessWidget {
           height: 92,
           width: 92,
           child: CircleAvatar(
-            backgroundImage: CachedNetworkImageProvider(
+            backgroundImage: NetworkImage(
                 'https://${GlobalConstants.apiHostUrl}${friend.thumbnail}'),
           ),
         ),
@@ -87,7 +86,7 @@ class FriendsSummary extends StatelessWidget {
                 color: Colors.white,
               ),
               Text(
-                '  Level ${expToLevel(int.tryParse(friend.xp) ?? 0)}',
+                '  Level ${expToLevel(friend.xp)}',
                 style: Style.averageTextStyle,
               ),
             ],

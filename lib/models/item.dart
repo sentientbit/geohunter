@@ -13,7 +13,7 @@ class Item {
   int dropChance = 0;
 
   /// The name of the item
-  String name = '';
+  String name = "";
 
   ///
   int blueprintId = 0;
@@ -41,6 +41,20 @@ class Item {
     this.rarity,
     this.nr,
   });
+
+  ///
+  factory Item.blank() {
+    return Item(
+      id: 0,
+      dropChance: 0,
+      name: "",
+      blueprintId: 0,
+      img: "",
+      level: 0,
+      rarity: 0,
+      nr: 0,
+    );
+  }
 
   ///
   Item.fromJson(dynamic json) {

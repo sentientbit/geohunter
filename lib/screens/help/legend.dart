@@ -125,7 +125,6 @@ class LegendPage extends StatelessWidget {
                 ),
               ),
               Text(
-                // ignore: lines_longer_than_80_chars
                 "version: $_appVersion",
                 style: TextStyle(fontSize: 14.0, color: Colors.white),
               ),

@@ -147,7 +147,6 @@ class _StudyDetailState extends State<StudyDetailPage> {
       children: <Widget>[
         (widget.research.nrInvested > 0)
             ? Image(
-                //image: NetworkImage('https://${GlobalConstants.apiHostUrl}/img/items/${widget.item.img}'),
                 image:
                     AssetImage('assets/images/research/${widget.research.img}'),
                 height: 180.0,
@@ -458,6 +457,7 @@ class _StudyDetailState extends State<StudyDetailPage> {
           double.tryParse(response["coins"].toString()) ?? 0.0,
           0,
           response["guild"]["id"],
+          response["xp"],
         );
       }
       showDialog(

@@ -19,7 +19,7 @@ class Mine {
   Properties properties;
 
   ///
-  String lastVisited;
+  String lastVisited = "";
 
   ///
   double distanceToPoint = 0.0;
@@ -70,7 +70,7 @@ class Mine {
 ///
 class Geometry {
   ///
-  String type;
+  String type = "";
 
   ///
   List<double> coordinates = [0, 0];
@@ -86,22 +86,22 @@ class Geometry {
 ///
 class Properties {
   ///
-  String title;
+  String title = "";
 
   ///
-  String comment;
+  String comment = "";
 
   ///
-  String status;
+  String status = "";
 
   ///
-  String ico;
+  String ico = "0";
 
   ///
   List<String> thumbnails = [];
 
   /// The User who created this point
-  String uid;
+  String uid = "";
 
   ///
   Properties.fromJson(dynamic input) {
