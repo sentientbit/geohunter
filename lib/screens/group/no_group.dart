@@ -439,12 +439,12 @@ class _NoGroupState extends State<NoGroup> {
       setState(() {
         _guilds.addAll(guilds.toList());
       });
-    } on DioError catch (err) {
-      if (err.response != null) {
-        print(err.response.data["message"]);
+    } on DioError catch (e) {
+      if (e.response != null) {
+        print(e.response.data["message"]);
       } else {
-        print(err.request);
-        print(err.message);
+        print(e.response.statusCode);
+        print(e.message);
       }
     }
   }

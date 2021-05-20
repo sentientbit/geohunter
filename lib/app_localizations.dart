@@ -4,12 +4,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// AppLicalization
+///
 class AppLocalizations {
-  /// AppLicalization
+  ///
   final Locale locale;
 
-  /// AppLicalization
+  ///
   AppLocalizations(this.locale);
 
   // Helper method to keep the code in the widgets concise
@@ -22,7 +22,7 @@ class AppLocalizations {
   static const LocalizationsDelegate<AppLocalizations> delegate =
       _AppLocalizationsDelegate();
 
-  Map<String, String> _localizedStrings;
+  Map<String, String> _localizedStrings = <String, String>{};
 
   ///
   Future<bool> load() async {

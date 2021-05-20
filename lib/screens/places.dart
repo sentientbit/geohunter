@@ -254,13 +254,13 @@ class _PlacesState extends State<PlacesPage> {
       adUnitId: AdManager.rewardedAdUnitId,
       listener: (event, args) {
         if (event == AdmobAdEvent.loaded) {
-          print('--- AdmobReward loaded');
+          //print('--- AdmobReward loaded');
           _admobAdvert.show();
           setState(() {
             _isRewarded = false;
           });
         } else if (event == AdmobAdEvent.closed) {
-          print('--- AdmobReward closed');
+          //print('--- AdmobReward closed');
           _admobAdvert.dispose();
           if (_isRewarded) {
             _serverReward(null);
@@ -281,7 +281,7 @@ class _PlacesState extends State<PlacesPage> {
             _isLoading = false;
           });
         } else if (event == AdmobAdEvent.rewarded) {
-          print('--- AdmobReward rewarded');
+          //print('--- AdmobReward rewarded');
           _admobType = "Reward";
           _isRewarded = true;
           setState(() {
@@ -289,7 +289,7 @@ class _PlacesState extends State<PlacesPage> {
             _isLoading = false;
           });
         } else if (event == AdmobAdEvent.failedToLoad) {
-          print('--- AdmobReward failed');
+          //print('--- AdmobReward failed');
           _isRewarded = false;
           showDialog(
             context: context,
@@ -1182,9 +1182,7 @@ class _PlacesState extends State<PlacesPage> {
         context: context,
         builder: (context) => CustomDialog(
           title: AppLocalizations.of(context).translate('congrats'),
-          description:
-              // ignore: lines_longer_than_80_chars
-              'You mined succesfully Point ${mine.id}',
+          description: 'You mined succesfully Point ${mine.id}',
           buttonText: "Okay",
           image: AssetImage('assets/achievements/first_wood.png'),
           images: imagesArr,
@@ -1330,7 +1328,6 @@ class _PlacesState extends State<PlacesPage> {
         return {
           "status": false,
           "payload": Text(
-            // ignore: lines_longer_than_80_chars
             "Not validated yet",
             style: TextStyle(color: Colors.orange),
           )
@@ -1343,7 +1340,6 @@ class _PlacesState extends State<PlacesPage> {
         return {
           "status": false,
           "payload": Text(
-            // ignore: lines_longer_than_80_chars
             "Next claim in ${(3600 - timeDiff).toString()}s",
             style: TextStyle(color: Colors.orange),
           )
@@ -1369,9 +1365,8 @@ class _PlacesState extends State<PlacesPage> {
   }
 
   void _updateUserLocation(LtLn ltln) async {
-    print(
-        // ignore: lines_longer_than_80_chars
-        '---  _updateUserLocation places ${ltln.latitude.toString()} ${ltln.longitude.toString()} ---');
+    //ltln.latitude.toString()
+    //ltln.longitude.toString()
     setState(() {
       _userLocation = ltln;
     });

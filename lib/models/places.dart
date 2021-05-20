@@ -1,25 +1,25 @@
 ///
 class Place {
   ///
-  final String id;
+  String id = "";
 
   ///
-  final String lat;
+  String lat = "";
 
   ///
-  final String lng;
+  String lng = "";
 
   ///
-  final String ico;
+  String ico = "";
 
   ///
-  final String lastVisited;
+  String lastVisited = "";
 
   ///
-  final String desc;
+  String desc = "";
 
   ///
-  const Place({
+  Place({
     this.id,
     this.lat,
     this.lng,

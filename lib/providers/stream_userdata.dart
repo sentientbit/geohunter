@@ -11,6 +11,7 @@ class StreamUserData {
       coins: 0.0,
       miningSpeed: 0,
       guildId: "0",
+      xp: 0,
     ),
   );
 
@@ -22,13 +23,14 @@ class StreamUserData {
 
   ///
   void updateUserData(
-      String username, double coins, int miningSpeed, String guildId) {
+      String username, double coins, int miningSpeed, String guildId, int xp) {
     _userdata.add(
       UserData(
         username: username,
         coins: coins,
         miningSpeed: miningSpeed,
         guildId: guildId,
+        xp: xp,
       ),
     );
   }

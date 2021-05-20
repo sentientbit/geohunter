@@ -1,7 +1,6 @@
 ///
 import 'dart:async';
 import 'dart:io';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
 import 'package:flutter/material.dart';
@@ -38,12 +37,9 @@ class _DrawerPageState extends State<DrawerPage> {
   //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
   /// Curent loggedin user
-  User _user;
+  User _user = User.blank();
 
   final _storage = FlutterSecureStorage();
-
-  /// Safe holding for coins
-  double _currentCoins = 0.0;
 
   final ApiProvider _apiProvider = ApiProvider();
   ImageProvider _avatar = AssetImage("assets/images/avatars/default01.jpg");
@@ -52,10 +48,11 @@ class _DrawerPageState extends State<DrawerPage> {
 
   void loadUser() async {
     final tmp = await _apiProvider.getStoredUser();
-
+    _user = tmp;
     setState(() {
       _user = tmp;
-      _currentCoins = tmp.details.coins;
+      _user.details.coins = tmp.details.coins;
+      _user.details.xp = tmp.details.xp;
       _loadingAvatar = false;
     });
   }
@@ -88,14 +85,13 @@ class _DrawerPageState extends State<DrawerPage> {
 
     if (_user != null && _user.details != null) {
       username = _user.details.username;
-      currentExperience = int.tryParse(_user.details.experience) ?? 0;
+      currentExperience = _user.details.xp;
       currentLevel = expToLevel(currentExperience);
       nextExperienceLevel = levelToExp(currentLevel + 1);
-      percentage =
-          (int.tryParse(_user.details.experience) ?? 0) / nextExperienceLevel;
+      percentage = currentExperience / nextExperienceLevel;
       //status = _user.details.status;
 
-      _avatar = CachedNetworkImageProvider(
+      _avatar = NetworkImage(
           'https://${GlobalConstants.apiHostUrl}${_user.details.picture}');
     }
 
@@ -211,7 +207,7 @@ class _DrawerPageState extends State<DrawerPage> {
                                       size: 20,
                                     ),
                                     Text(
-                                      " $_currentCoins",
+                                      " ${_user.details.coins}",
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 14.0,
@@ -328,15 +324,14 @@ class _DrawerPageState extends State<DrawerPage> {
                     SizedBox(
                       width: 20,
                     ),
-                    if (_user != null)
-                      if (_user.details.unnaprovedMembers > 0)
-                        Chip(
-                          backgroundColor: Colors.red,
-                          label: Text(
-                            _user.details.unnaprovedMembers.toString(),
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        )
+                    if (_user.details.unnaprovedMembers > 0)
+                      Chip(
+                        backgroundColor: Colors.red,
+                        label: Text(
+                          _user.details.unnaprovedMembers.toString(),
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      )
                   ]),
                   onTap: () async {
                     if (_user.details.unnaprovedMembers > 0) {
@@ -436,7 +431,7 @@ class _DrawerPageState extends State<DrawerPage> {
     await CustomInterceptors.setStoredCookies(
         GlobalConstants.apiHostUrl, _user.toMap());
     setState(() {
-      _avatar = CachedNetworkImageProvider(response["thumbnail"]);
+      _avatar = NetworkImage(response["thumbnail"]);
       _loadingAvatar = false;
     });
     return;
