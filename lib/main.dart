@@ -1,7 +1,7 @@
+// ignore_for_file: omit_local_variable_types
 library crashy;
 
 import 'dart:async';
-import 'dart:io';
 import 'dart:math' as math;
 
 // Admob variant 1 :(
@@ -10,7 +10,7 @@ import 'package:admob_flutter/admob_flutter.dart';
 //import 'package:firebase_admob/firebase_admob.dart';
 // Admob variant 3 :(
 //import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:device_info/device_info.dart';
+//import 'package:device_info/device_info.dart';
 import 'package:dio/dio.dart';
 import 'package:double_back_to_close_app/double_back_to_close_app.dart';
 import 'package:flame/flame.dart';
@@ -75,9 +75,8 @@ enum GroupStatus {
 ///
 GroupStatus _groupStatus = GroupStatus.unknown;
 
-/// Sentry.io client used to send crash reports (or more generally "events").
 final sentry.SentryClient _sentry =
-    sentry.SentryClient(dsn: GlobalConstants.sentryDsn);
+    sentry.SentryClient(sentry.SentryOptions(dsn: GlobalConstants.sentryDsn));
 
 /// assert debug mode
 bool get isInDebugMode {
@@ -86,10 +85,7 @@ bool get isInDebugMode {
   return inDebugMode;
 }
 
-/// Reports [error] along with its [stackTrace] to Sentry.io.
 Future<Null> _reportError(dynamic error, dynamic stackTrace) async {
-  print('Caught error: $error');
-
   // Errors thrown in development mode are unlikely to be interesting. You can
   // check if you are running in dev mode using an assertion and omit sending
   // the report.
@@ -100,17 +96,11 @@ Future<Null> _reportError(dynamic error, dynamic stackTrace) async {
     print('In dev mode. Not sending report to Sentry.io.');
     return;
   }
-
-  final response = await _sentry.captureException(
-    exception: error,
+  final sentryId = await _sentry.captureException(
+    error,
     stackTrace: stackTrace,
   );
-
-  if (response.isSuccessful) {
-    print('Success! Event ID: ${response.eventId}');
-  } else {
-    print('Failed to report to Sentry.io: ${response.error}');
-  }
+  print('Capture exception result : SentryId : $sentryId');
 }
 
 Future<Null> main() async {
@@ -180,7 +170,9 @@ Future<Null> main() async {
         localeResolutionCallback: (locale, supportedLocales) {
           // Check if the current device locale is supported
           for (var supportedLocale in supportedLocales) {
-            if (supportedLocale.languageCode == locale.languageCode &&
+            if (locale != null &&
+                locale.countryCode != null &&
+                supportedLocale.languageCode == locale.languageCode &&
                 supportedLocale.countryCode == locale.countryCode) {
               return supportedLocale;
             }
@@ -251,7 +243,11 @@ class SplashScreenState extends State<SplashScreen> {
   /// Secure Storage for User Data
   final _storage = FlutterSecureStorage();
 
+  ///
   StreamSubscription<Position> _positionStream;
+
+  ///
+  LocationPermission gpsPermission = LocationPermission.denied;
 
   ///
   bool isPositionStreaming = false;
@@ -300,46 +296,35 @@ class SplashScreenState extends State<SplashScreen> {
   _setVersion() async {
     final packageInfo = await PackageInfo.fromPlatform();
     _appVersion = packageInfo.version;
-    // String appName = packageInfo.appName;
-    // String packageName = packageInfo.packageName;
-    // String version = packageInfo.version;
-    // String buildNumber = packageInfo.buildNumber;
-    //ignore: omit_local_variable_types
-    String uniqueId;
-    //ignore: omit_local_variable_types
-    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-    if (Platform.isAndroid) {
-      //ignore: omit_local_variable_types
-      AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-      uniqueId = androidInfo.model;
-      uniqueId += androidInfo.isPhysicalDevice ? ',true,' : ',false,';
-      uniqueId += androidInfo.androidId;
-    } else {
-      //ignore: omit_local_variable_types
-      IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
-      // unique ID on iOS
-      uniqueId = iosInfo.model;
-      uniqueId += iosInfo.isPhysicalDevice ? ',true,' : ',false,';
-      uniqueId += iosInfo.identifierForVendor;
-    }
-    print("unique id: $uniqueId : ${hashStringMurmur(uniqueId)}");
+
+    // String uniqueId;
+    // DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    // if (Platform.isAndroid) {
+    //   AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+    //   uniqueId = androidInfo.model;
+    //   uniqueId += androidInfo.isPhysicalDevice ? ',true,' : ',false,';
+    //   uniqueId += androidInfo.androidId;
+    // } else {
+    //   IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
+    //   uniqueId = iosInfo.model;
+    //   uniqueId += iosInfo.isPhysicalDevice ? ',true,' : ',false,';
+    //   uniqueId += iosInfo.identifierForVendor;
+    // }
+    // print("unique id: $uniqueId : ${hashStringMurmur(uniqueId)}");
   }
 
   /// SystemChannels.platform.invokeMethod('SystemNavigator.pop');
   /// AppSettings.openLocationSettings();
   _checkGps() async {
-    print('--- check Gps ${isPositionStreaming.toString()} ---');
-    //ignore: omit_local_variable_types
-    LocationPermission permission = await Geolocator.checkPermission();
+    isPositionStreaming = await Geolocator.isLocationServiceEnabled();
+    gpsPermission = await Geolocator.checkPermission();
     //log.d(permission);
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      //ignore: omit_local_variable_types
-      LocationPermission permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        //ignore: omit_local_variable_types
-        LocationPermission permission = await Geolocator.requestPermission();
+    if (gpsPermission == LocationPermission.denied ||
+        gpsPermission == LocationPermission.deniedForever) {
+      gpsPermission = await Geolocator.requestPermission();
+      if (gpsPermission == LocationPermission.denied ||
+          gpsPermission == LocationPermission.deniedForever) {
+        gpsPermission = await Geolocator.requestPermission();
       } else {
         isPositionStreaming = true;
       }
@@ -386,7 +371,7 @@ class SplashScreenState extends State<SplashScreen> {
       }
 
       _groupStatus =
-          (int.tryParse(cookies["user"]["guild"]["id"].toString()) > 0)
+          ((int.tryParse(cookies["user"]["guild"]["id"].toString()) ?? 0) > 0)
               ? GroupStatus.inGroup
               : GroupStatus.notInGroup;
 
@@ -395,6 +380,7 @@ class SplashScreenState extends State<SplashScreen> {
         double.tryParse(cookies["user"]["coins"].toString()) ?? 0.0,
         0,
         cookies["user"]["guild"]["id"],
+        cookies["user"]["xp"],
       );
 
       _userDataStreamSubscription = _userdata.stream$.listen(_updateUserData);
@@ -423,10 +409,9 @@ class SplashScreenState extends State<SplashScreen> {
   Future<Timer> _streamLocation() async {
     _positionStream =
         Geolocator.getPositionStream(distanceFilter: 1).listen((position) {
-      print('_streamLocation');
-      print(position == null
-          ? 'Unknown'
-          : "${position.latitude.toString()} ${position.longitude.toString()}");
+      //print('_streamLocation');
+      //position.latitude.toString()
+      //position.longitude.toString()
       if (position != null) {
         _location.updateLocation(LtLn(position.latitude, position.longitude));
       }
@@ -530,11 +515,12 @@ class SplashScreenState extends State<SplashScreen> {
               child: Stack(
                 children: <Widget>[
                   Container(
-                      decoration: BoxDecoration(
-                    image: DecorationImage(
-                        image: AssetImage('assets/images/compass_map.jpg'),
-                        fit: BoxFit.cover),
-                  )),
+                    decoration: BoxDecoration(
+                      image: DecorationImage(
+                          image: AssetImage('assets/images/compass_map.jpg'),
+                          fit: BoxFit.cover),
+                    ),
+                  ),
                   Center(
                     child: ListView(
                       physics: NeverScrollableScrollPhysics(),
@@ -588,7 +574,6 @@ class SplashScreenState extends State<SplashScreen> {
                             ),
                           ),
                           Text(
-                            // ignore: lines_longer_than_80_chars
                             "version: $_appVersion",
                             style:
                                 TextStyle(fontSize: 14.0, color: Colors.white),
@@ -608,13 +593,18 @@ class SplashScreenState extends State<SplashScreen> {
 
   // Populate list of mines closer to the user
   Future _populateMines(
-      Map<String, String> secureStorage, LtLn currentLocation) async {
-    //ignore: omit_local_variable_types
+    double neLat,
+    double swLat,
+    double neLng,
+    double swLng,
+    int mapZoom,
+    LtLn currentLocation,
+  ) async {
     List<Mine> _mines = [];
     dynamic response;
     try {
       response = await _apiProvider.get(
-          '/radar?cntr_lng=${currentLocation.longitude}&cntr_lat=${currentLocation.latitude}2&zoom=${secureStorage["mapZoom"]}&sw_lng=${secureStorage["swLng"]}&sw_lat=${secureStorage["swLat"]}&ne_lng=${secureStorage["neLng"]}&ne_lat=${secureStorage["neLat"]}');
+          '/radar?cntr_lng=${currentLocation.longitude}&cntr_lat=${currentLocation.latitude}2&zoom=$mapZoom&sw_lng=$swLng&sw_lat=$swLat&ne_lng=$neLng&ne_lat=$neLat');
     } on DioError catch (err) {
       print(err?.response?.data);
       return _mines;
@@ -653,54 +643,51 @@ class SplashScreenState extends State<SplashScreen> {
           return;
         }
 
-        var secureStorage = await _storage.readAll();
+        // var neLat = 0.0;
+        // var swLat = 0.0;
+        // var neLng = 0.0;
+        // var swLng = 0.0;
+        // int zoom = 16;
 
         // Only browse through local points (zoom:16)
-        //ignore: omit_local_variable_types
-        List<Mine> _mines = [];
-        var d = 39136000 *
-            math.cos(degToRadian(currentLocation.longitude)) /
-            math.pow(2, 16 /*zoom*/);
-        if (d > 10000000) {
-          d = 10000000;
-          /* cap to 10km */
-        }
+        // List<Mine> _mines = [];
+        // var d = 39136000 *
+        //     math.cos(degToRadian(currentLocation.longitude)) /
+        //     math.pow(2, zoom);
+        // if (d > 10000000) {
+        //   d = 10000000; /* cap to 10km */
+        // }
 
-        // Define a polygon in which we search
-        if (secureStorage["swLng"] == null) {
-          final neLat = currentLocation.latitude +
-              radianToDeg(d / earthRadius); /* max lat */
-          final swLat = currentLocation.latitude -
-              radianToDeg(d / earthRadius); /* min lat */
+        // neLat = currentLocation.latitude + radianToDeg(d / earthRadius);
+        // swLat = currentLocation.latitude - radianToDeg(d / earthRadius);
+        // neLng = currentLocation.longitude +
+        //     radianToDeg(math.asin(d / earthRadius) /
+        //         math.cos(degToRadian(currentLocation.latitude)));
+        // swLng = currentLocation.longitude -
+        //     radianToDeg(math.asin(d / earthRadius) /
+        //         math.cos(degToRadian(currentLocation.latitude)));
 
-          final neLng = currentLocation.longitude +
-              radianToDeg(math.asin(d / earthRadius) /
-                  math.cos(
-                      degToRadian(currentLocation.latitude))); /* max lng */
-          final swLng = currentLocation.longitude -
-              radianToDeg(math.asin(d / earthRadius) /
-                  math.cos(
-                      degToRadian(currentLocation.latitude))); /* min lng */
-          await _storage.write(key: 'swLng', value: swLng.toString());
-          await _storage.write(key: 'swLat', value: swLat.toString());
-          await _storage.write(key: 'neLng', value: neLng.toString());
-          await _storage.write(key: 'neLat', value: neLat.toString());
-          await _storage.write(key: 'mapZoom', value: /*zoom*/ "16");
-          secureStorage = await _storage.readAll();
-        }
+        // if (_isOnline) {
+        //   _mines = await _populateMines(
+        //     neLat,
+        //     swLat,
+        //     neLng,
+        //     swLng,
+        //     zoom,
+        //     currentLocation,
+        //   );
 
-        if (_isOnline) {
-          _mines = await _populateMines(secureStorage, currentLocation);
-
-          if (_mines.isNotEmpty) {
-            //final _user = await _apiProvider.getStoredUser();
-            //_user.details.miningSpeed
-            //_mines[0].lastVisited
-            //now = DateTime.parse(DateTime.now().toUtc().toIso8601String()).toLocal();
-            //timeFromLastMine = now.difference(DateTime.parse(mine.lastVisited)).inSeconds;
-            _minesStream.updateMinesList(_mines);
-          }
-        }
+        //   print('after _populateMines');
+        //   print(_mines.length);
+        //   //final _user = await _apiProvider.getStoredUser();
+        //   //_user.details.miningSpeed
+        //   //_mines[0].lastVisited
+        //   //now = DateTime.parse(DateTime.now().toUtc().toIso8601String()).toLocal();
+        //   //timeFromLastMine = now.difference(DateTime.parse(mine.lastVisited)).inSeconds;
+        //   if (_mines.isNotEmpty) {
+        //     _minesStream.updateMinesList(_mines);
+        //   }
+        // }
       },
     );
   }
@@ -792,12 +779,10 @@ class SplashScreenState extends State<SplashScreen> {
 
   /// A function to be called when the UserData stream gets updated
   void _updateUserData(UserData ud) async {
-    //print('Drawer received _updateUserData');
-    //print(ud.coins);
-    //ignore: omit_local_variable_types
     User user = await _apiProvider.getStoredUser();
     if (user.details != null) {
       user.details.coins = ud.coins;
+      user.details.xp = ud.xp;
       CustomInterceptors.setStoredCookies(
           GlobalConstants.apiHostUrl, user.toMap());
     }

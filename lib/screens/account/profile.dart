@@ -1,7 +1,6 @@
 ///
 import 'dart:ui';
 import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
@@ -74,7 +73,9 @@ class _ProfilePageState extends State<ProfilePage> {
           colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
   /// Curent loggedin user
-  User _user;
+  User _user = User.blank();
+
+  ///
   List<DropdownMenuItem<String>> _locationPrivacies;
   List<DropdownMenuItem<String>> _sexes;
   List<DropdownMenuItem<String>> _languages;
@@ -159,7 +160,7 @@ class _ProfilePageState extends State<ProfilePage> {
               _user.details.locationPrivacy = value;
             });
           },
-          value: _user != null ? _user.details.locationPrivacy.toString() : "0",
+          value: _user.details.locationPrivacy,
         ),
       );
 
@@ -186,11 +187,9 @@ class _ProfilePageState extends State<ProfilePage> {
               _user.details.language = value;
             });
           },
-          value: _user != null
-              ? (isValidLanguage(_user.details.language)
-                  ? _user.details.language
-                  : "en")
-              : "en",
+          value: (isValidLanguage(_user.details.language)
+              ? _user.details.language
+              : "en"),
         ),
       );
 
@@ -913,18 +912,28 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  ///
   void _getUserDetails() async {
     final user = await ApiProvider().getStoredUser();
+
+    /// populate initial data
+    _user = user;
     setState(() {
-      // log.d("Taking user data stored $userDatastored");
-      _user = user;
+      /// update local data from global data
+      _user.details.coins = _userdata.currentUserData.coins;
+      _user.details.xp = _userdata.currentUserData.xp;
+      //_user.details.username = _userdata.currentUserData.username;
+      //_user.details.sex = _userdata.currentUserData.sex;
+      //_user.details.status = _userdata.currentUserData.status;
+
+      /// update controller data
+      _usernameController.text = _user.details.username;
       _currentSex = _user.details.sex;
-      _usernameController.text = user.details.username;
-      _statusTextController.text = user.details.status;
-      currentExperience = int.tryParse(_user.details.experience) ?? 0;
+      _statusTextController.text = _user.details.status;
+      currentExperience = _user.details.xp;
       currentLevel = expToLevel(currentExperience);
       nextExperienceLevel = levelToExp(currentLevel + 1);
-      _avatar = CachedNetworkImageProvider(
+      _avatar = NetworkImage(
           'https://${GlobalConstants.apiHostUrl}${_user.details.picture}');
     });
   }
@@ -976,14 +985,19 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     if (response.containsKey("coins")) {
-      _userdata.updateUserData(
-        "",
-        double.tryParse(response["coins"].toString()) ?? 0.0,
-        0,
-        response["guild"]["id"],
-      );
+      // update local data
       _user.details.coins =
           double.tryParse(response["coins"].toString()) ?? 0.0;
+      _user.details.xp = response["xp"];
+
+      // update global data
+      _userdata.updateUserData(
+        "",
+        _user.details.coins,
+        0,
+        response["guild"]["id"],
+        _user.details.xp,
+      );
     }
 
     return;

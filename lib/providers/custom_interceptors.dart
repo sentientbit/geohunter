@@ -7,32 +7,43 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../shared/constants.dart';
 
 ///
-class CustomInterceptors extends InterceptorsWrapper {
+class CustomInterceptors extends Interceptor {
+  ///
+  final _cache = <Uri, Response>{};
+
   /// to be used as prefix for all cookies
   static String prefix = 'c0K1e';
 
   @override
-  Future onRequest(RequestOptions options) async {
+  void onRequest(
+      RequestOptions options, RequestInterceptorHandler handler) async {
+    // var response = _cache[options.uri];
+    // if (options.extra['refresh'] == true) {
+    //   print('${options.uri}: force refresh, ignore cache! \n');
+    //   return handler.next(options);
+    // } else if (response != null) {
+    //   print('cache hit: ${options.uri} \n');
+    //   return handler.resolve(response);
+    // }
     final userDatastored = await getStoredCookies(GlobalConstants.apiHostUrl);
     if (options.path != "/login") {
       options.headers["authorization"] = "Bearer ${userDatastored["jwt"]}";
     }
-    print("REQUEST[${options?.method}] => PATH: ${options?.path}");
-    return super.onRequest(options);
+    //print("Req[${options?.method}] => PATH: ${options?.path}");
+    super.onRequest(options, handler);
   }
 
   @override
-  Future onResponse(Response response) {
-    print(
-        // ignore: lines_longer_than_80_chars
-        "RESPONSE[${response?.statusCode}] => PATH: ${response?.request?.path}");
-    return super.onResponse(response);
+  void onResponse(Response response, ResponseInterceptorHandler handler) {
+    //_cache[response.requestOptions.uri] = response;
+    //print("Res[${response?.statusCode}] => PATH: ${response?.requestOptions?.path}");
+    super.onResponse(response, handler);
   }
 
   @override
-  Future onError(DioError err) {
-    print("ERROR[${err?.response?.statusCode}] => PATH: ${err?.request?.path}");
-    return super.onError(err);
+  void onError(DioError err, ErrorInterceptorHandler handler) {
+    //print("ERROR[${err?.response?.statusCode}] => PATH: ${err.requestOptions.path}");
+    super.onError(err, handler);
   }
 
   ///

@@ -94,7 +94,6 @@ class _InventoryState extends State<InventoryPage> {
 
   Widget _makeListTile(BuildContext context, int index) {
     var netImg = Image(
-      //image: NetworkImage('https://${GlobalConstants.apiHostUrl}/img/items/${_items[index].img}'),
       image: AssetImage('assets/images/items/${_items[index].img}'),
       height: 76.0,
       width: 76.0,

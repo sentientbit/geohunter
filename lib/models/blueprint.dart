@@ -7,13 +7,31 @@ class Blueprint {
   int id = 0;
 
   ///
-  String name = '';
+  String name = "";
 
   ///
-  String img = '';
+  String img = "";
 
   /// Nr of blueprints available to the player
   int nr = 0;
+
+  ///
+  Blueprint({
+    this.id,
+    this.name,
+    this.img,
+    this.nr,
+  });
+
+  ///
+  factory Blueprint.blank() {
+    return Blueprint(
+      id: 0,
+      name: "",
+      img: "",
+      nr: 0,
+    );
+  }
 
   ///
   Blueprint.fromJson(dynamic json) {

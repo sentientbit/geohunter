@@ -1,4 +1,5 @@
 ///
+import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
 import 'dart:io';
@@ -39,7 +40,7 @@ class GlobalConstants {
   static const String appNamespace = "com.apsoni.geocraft";
 
   ///
-  static const String appVersion = "1.1.68";
+  static const String appVersion = "1.1.69";
 
   ///
 
@@ -59,12 +60,12 @@ class GlobalConstants {
   ///
   static Color appFg = Colors.white;
 
+  ///
   static String mapboxToken =
-      // ignore: lines_longer_than_80_chars
       'pk.eyJ1IjoiY290ZWJyYXNzZXJpZSIsImEiOiJjanZodnNtdnAwN2RtNDlsanIzYWxpemsxIn0.bL2E8yYPw5KzpKpX86dVHQ' /*c0-t3-c0-u4*/;
 
+  ///
   static String sentryDsn =
-      // ignore: lines_longer_than_80_chars
       "https://4caa412558e04add9193383f14862045@o414270.ingest.sentry.io/5306128";
 
   ///
@@ -174,6 +175,9 @@ class SunCalcResult {
 
 /// Based on https://github.com/shanus/flutter_suncalc
 class SunCalc {
+  ///
+  DateTime moonLanding = DateTime.utc(1969, 7, 20, 20, 18, 04);
+
   ///
   static const j2000 = 2451545;
 
@@ -289,7 +293,8 @@ class SunCalc {
     var jset = SunCalc.getSetJ(-0.833 * oneRad, lw, phi, dec, n, M, L);
 
     if (jset.isNaN) {
-      return SunCalcResult(null, null, noonDateTime);
+      return SunCalcResult(DateTime.utc(1969, 7, 20, 20, 18, 04),
+          DateTime.utc(1969, 7, 20, 20, 18, 04), noonDateTime);
     }
 
     var jrise = jnoon - (jset - jnoon);
@@ -380,7 +385,7 @@ class Murmur32 {
   ///
   int c2 = 0x1b873593.toUnsigned(32);
 
-  int _seed;
+  int _seed = 0;
 
   ///
   Murmur32(int seed) {
@@ -392,10 +397,10 @@ class Murmur32 {
   int get seed => _seed;
 
   ///
-  int h1;
+  int h1 = 0;
 
   ///
-  int length;
+  int length = 0;
 
   void _reset() {
     h1 = seed;
@@ -534,6 +539,46 @@ class AdManager {
     } else {
       throw UnsupportedError("Unsupported platform");
     }
+  }
+}
+
+///
+class Debouncer {
+  ///
+  final int milliseconds;
+
+  ///
+  VoidCallback action;
+  Timer _timer;
+  Timer _timer1;
+  Timer _timer2;
+
+  ///
+  Debouncer({this.milliseconds});
+
+  ///
+  void run(VoidCallback action) {
+    if (_timer != null) {
+      _timer.cancel();
+    }
+
+    _timer = Timer(Duration(milliseconds: milliseconds), action);
+  }
+
+  void run1s(VoidCallback action) {
+    if (_timer1 != null) {
+      _timer1.cancel();
+    }
+
+    _timer1 = Timer(Duration(milliseconds: 1000), action);
+  }
+
+  void run2s(VoidCallback action) {
+    if (_timer2 != null) {
+      _timer2.cancel();
+    }
+
+    _timer2 = Timer(Duration(milliseconds: 2000), action);
   }
 }
 

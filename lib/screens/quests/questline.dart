@@ -16,10 +16,10 @@ import 'package:loading_overlay/loading_overlay.dart';
 ///
 import '../../app_localizations.dart';
 import '../../models/dailyreward.dart';
-import '../../text_style.dart';
 import '../../models/quest.dart';
 import '../../providers/api_provider.dart';
 import '../../shared/constants.dart';
+import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
 import '../../widgets/network_status_message.dart';
@@ -91,6 +91,27 @@ class _QuestLinePageState extends State<QuestLinePage> {
       }
     }
     return true;
+  }
+
+  Widget countDownTimer(CurrentRemainingTime time) {
+    var hours = int.tryParse(time.hours.toString()) ?? 0;
+    // ignore: omit_local_variable_types
+    String hoursString = (hours > 0) ? "${hours.toString()}:" : "00:";
+    var minutes = int.tryParse(time.min.toString()) ?? 0;
+    // ignore: omit_local_variable_types
+    String minutesString =
+        (minutes > 0) ? "${minutes.toString().padLeft(2, '0')}:" : "00:";
+    var seconds = int.tryParse(time.sec.toString()) ?? 0;
+    // ignore: omit_local_variable_types
+    String secondsString =
+        (seconds > 0) ? "${seconds.toString().padLeft(2, '0')}" : "00";
+    return Text(
+      "$hoursString$minutesString$secondsString",
+      style: TextStyle(
+        fontSize: 32,
+        color: GlobalConstants.appFg,
+      ),
+    );
   }
 
   Widget _makeNextReward(BuildContext context) {
@@ -276,13 +297,7 @@ class _QuestLinePageState extends State<QuestLinePage> {
                   (86400 - _elapsedSeconds) * 1000,
               widgetBuilder: (BuildContext context, CurrentRemainingTime time) {
                 if (time != null) {
-                  return Text(
-                    '${time.hours}:${time.min.toString().padLeft(2, '0')}:${time.sec.toString().padLeft(2, '0')}',
-                    style: TextStyle(
-                      fontSize: 32,
-                      color: GlobalConstants.appFg,
-                    ),
-                  );
+                  return countDownTimer(time);
                 }
 
                 return Row(

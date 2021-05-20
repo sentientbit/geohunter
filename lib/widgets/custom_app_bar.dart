@@ -24,14 +24,17 @@ class CustomAppBar extends StatelessWidget {
   final Icon icon;
 
   ///
-  const CustomAppBar(this.textColor, this.iconColor, this.scaffoldKey,
-      {Key key,
-      this.systemHeaderBrightness = Brightness.dark,
-      this.icon = const Icon(
-        Icons.menu,
-        // size: 32,
-      )})
-      : super(key: key);
+  const CustomAppBar(
+    this.textColor,
+    this.iconColor,
+    this.scaffoldKey, {
+    Key key,
+    this.systemHeaderBrightness = Brightness.dark,
+    this.icon = const Icon(
+      Icons.menu,
+      // size: 32,
+    ),
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

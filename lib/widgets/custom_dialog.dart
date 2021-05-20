@@ -38,7 +38,13 @@ class ItemsGrid extends StatelessWidget {
 ///
 class CustomDialog extends StatelessWidget {
   ///
-  final String title, description, buttonText;
+  String title = "";
+
+  ///
+  String description = "";
+
+  ///
+  String buttonText = "";
 
   ///
   final ImageProvider image;

@@ -8,9 +8,8 @@
 # Note: not everything suggested in the guide has a rule associated with it.
 
 analyzer:
-  exclude:
-    - lib/google_maps_flutter*
-    - lib/google_maps_flutter**
+  errors:
+    lines_longer_than_80_chars: ignore
 
 linter:
   rules:
