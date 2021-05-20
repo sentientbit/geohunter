@@ -109,9 +109,22 @@ class _RegisterPageState extends State<RegisterPage> {
       },
     );
 
+    final topBar = AppBar(
+      backgroundColor: Colors.transparent,
+      actions: <Widget>[
+        IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+      ],
+    );
+
     return Scaffold(
       backgroundColor: Colors.white,
       resizeToAvoidBottomInset: false,
+      //appBar: topBar,
       body: OfflineBuilder(
         connectivityBuilder: (
           context,
@@ -145,7 +158,6 @@ class _RegisterPageState extends State<RegisterPage> {
           Center(
             child: ListView(
               shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
               padding: EdgeInsets.only(left: 24.0, right: 24.0),
               children: <Widget>[
                 Text(
@@ -432,7 +444,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     : Text(''),
                 registerButton,
                 SizedBox(width: 105),
-                forgotLabel
+                forgotLabel,
+                SizedBox(height: 100),
               ],
             ),
           ),
