@@ -223,61 +223,61 @@ class _ProfilePageState extends State<ProfilePage> {
     return true;
   }
 
-  Widget itemLogo(int index, Item eqp) {
+  Widget itemLogo(double szWidth, int index, Item eqp) {
     var rarity = 0;
     if (eqp != null) {
       rarity = int.tryParse(eqp.rarity.toString()) ?? 0;
     }
-    return Ink(
-      decoration: (eqp != null)
-          ? BoxDecoration(
-              borderRadius: BorderRadius.all(Radius.circular(8.0)),
-              border: Border.all(
-                color: Item.color(rarity),
-                width: 1,
-                style: BorderStyle.solid,
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EquipmentPage(placement: index, item: eqp),
+          ),
+        );
+      },
+      child: Container(
+        height: (szWidth - 60) / 3,
+        decoration: (eqp != null)
+            ? BoxDecoration(
+                borderRadius: BorderRadius.all(Radius.circular(8.0)),
+                border: Border.all(
+                  color: Item.color(rarity),
+                  width: 1,
+                  style: BorderStyle.solid,
+                ),
+                // gradient: LinearGradient(
+                //   begin: Alignment.topCenter,
+                //   end: Alignment.bottomCenter,
+                //   colors: [Item.gradientTop(rarity), Item.gradientBottom(rarity)],
+                // ),
+                gradient: RadialGradient(
+                  radius: 0.5,
+                  colors: [
+                    Item.gradientTop(rarity), // yellow sun
+                    Item.gradientBottom(rarity), // blue sky
+                  ],
+                  stops: [0.4, 1.0],
+                ),
+                image: DecorationImage(
+                  image: ExactAssetImage("assets/images/items/${eqp.img}"),
+                  fit: BoxFit.cover,
+                ),
+              )
+            : BoxDecoration(
+                borderRadius: BorderRadius.all(Radius.circular(8.0)),
+                border: Border.all(
+                  color: Color(0xff444444),
+                  width: 1,
+                  style: BorderStyle.solid,
+                ),
+                image: DecorationImage(
+                  image: ExactAssetImage(
+                      "assets/images/placeholders/${index.toString()}.png"),
+                  fit: BoxFit.cover,
+                ),
               ),
-              // gradient: LinearGradient(
-              //   begin: Alignment.topCenter,
-              //   end: Alignment.bottomCenter,
-              //   colors: [Item.gradientTop(rarity), Item.gradientBottom(rarity)],
-              // ),
-              gradient: RadialGradient(
-                radius: 0.5,
-                colors: [
-                  Item.gradientTop(rarity), // yellow sun
-                  Item.gradientBottom(rarity), // blue sky
-                ],
-                stops: [0.4, 1.0],
-              ),
-              image: DecorationImage(
-                image: ExactAssetImage("assets/images/items/${eqp.img}"),
-                fit: BoxFit.cover,
-              ),
-            )
-          : BoxDecoration(
-              borderRadius: BorderRadius.all(Radius.circular(8.0)),
-              border: Border.all(
-                color: Color(0xff444444),
-                width: 1,
-                style: BorderStyle.solid,
-              ),
-              image: DecorationImage(
-                image: ExactAssetImage(
-                    "assets/images/placeholders/${index.toString()}.png"),
-                fit: BoxFit.cover,
-              ),
-            ),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => EquipmentPage(placement: index, item: eqp),
-            ),
-          );
-        },
-        splashColor: Colors.brown.withOpacity(0.5),
       ),
     );
   }
@@ -552,43 +552,119 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                         ),
                         SizedBox(height: 18),
-                        SizedBox(
-                          width: szWidth,
-                          height: (szWidth - 50) / 3 * 4,
-                          child: Stack(
-                            children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  image: DecorationImage(
-                                    image: (_currentSex == "1")
-                                        ? AssetImage(
-                                            'assets/images/male_silhouette.png')
-                                        : AssetImage(
-                                            'assets/images/female_silhouette.png'),
-                                    fit: BoxFit.contain,
-                                  ),
+                        Stack(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                image: DecorationImage(
+                                  image: (_currentSex == "1")
+                                      ? AssetImage(
+                                          'assets/images/male_silhouette.png')
+                                      : AssetImage(
+                                          'assets/images/female_silhouette.png'),
+                                  fit: BoxFit.contain,
                                 ),
                               ),
-                              Scaffold(
-                                backgroundColor: Color.fromRGBO(0, 0, 0, 0.7),
-                                body: GridView(
-                                  padding: EdgeInsets.all(10.0),
-                                  physics: NeverScrollableScrollPhysics(),
-                                  gridDelegate:
-                                      SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 3,
-                                    mainAxisSpacing: 10.0,
-                                    crossAxisSpacing: 10.0,
+                            ),
+                            Container(
+                              color: Color(0x991c1411),
+                              child: Column(
+                                children: <Widget>[
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: <Widget>[
+                                      Expanded(
+                                        flex: 10,
+                                        child: itemLogo(
+                                            szWidth, 0, _equipments[0]),
+                                      ),
+                                      Spacer(flex: 1),
+                                      Expanded(
+                                        flex: 10,
+                                        child: itemLogo(
+                                            szWidth, 1, _equipments[1]),
+                                      ),
+                                      Spacer(flex: 1),
+                                      Expanded(
+                                        flex: 10,
+                                        child: itemLogo(
+                                            szWidth, 2, _equipments[2]),
+                                      ),
+                                    ],
                                   ),
-                                  children: _equipments.asMap().entries.map(
-                                    (entry) {
-                                      return itemLogo(entry.key, entry.value);
-                                    },
-                                  ).toList(),
-                                ),
-                              )
-                            ],
-                          ),
+                                  SizedBox(height: 10),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: <Widget>[
+                                      Expanded(
+                                        flex: 10,
+                                        child: itemLogo(
+                                            szWidth, 3, _equipments[3]),
+                                      ),
+                                      Spacer(flex: 1),
+                                      Expanded(
+                                        flex: 10,
+                                        child: itemLogo(
+                                            szWidth, 4, _equipments[4]),
+                                      ),
+                                      Spacer(flex: 1),
+                                      Expanded(
+                                        flex: 10,
+                                        child: itemLogo(
+                                            szWidth, 5, _equipments[5]),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 10),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: <Widget>[
+                                      Expanded(
+                                        flex: 10,
+                                        child: itemLogo(
+                                            szWidth, 6, _equipments[6]),
+                                      ),
+                                      Spacer(flex: 1),
+                                      Expanded(
+                                        flex: 10,
+                                        child: itemLogo(
+                                            szWidth, 7, _equipments[7]),
+                                      ),
+                                      Spacer(flex: 1),
+                                      Expanded(
+                                        flex: 10,
+                                        child: itemLogo(
+                                            szWidth, 8, _equipments[8]),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 10),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: <Widget>[
+                                      Expanded(
+                                        flex: 10,
+                                        child: itemLogo(
+                                            szWidth, 9, _equipments[9]),
+                                      ),
+                                      Spacer(flex: 1),
+                                      Expanded(
+                                        flex: 10,
+                                        child: itemLogo(
+                                            szWidth, 10, _equipments[10]),
+                                      ),
+                                      Spacer(flex: 1),
+                                      Expanded(
+                                        flex: 10,
+                                        child: itemLogo(
+                                            szWidth, 11, _equipments[11]),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                         SizedBox(height: 18),
                         Text(

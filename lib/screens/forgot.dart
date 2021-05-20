@@ -188,103 +188,88 @@ class _ForgotPageState extends State<ForgotPage> {
             child: Container(
               height: deviceSize.height,
               width: deviceSize.width,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
+              child: ListView(
+                //physics: NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                padding: EdgeInsets.only(top: 90, left: 24.0, right: 24.0),
                 children: <Widget>[
-                  Flexible(
-                    // flex: deviceSize.width > 600 ? 2 : 1,
-                    child: Center(
-                      child: ListView(
-                        physics: NeverScrollableScrollPhysics(),
-                        shrinkWrap: true,
-                        padding: EdgeInsets.only(left: 24.0, right: 24.0),
-                        children: <Widget>[
-                          Text(
-                            AppLocalizations.of(context)
-                                .translate('recover_title_label'),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontFamily: 'Cormorant SC',
+                  Text(
+                    AppLocalizations.of(context)
+                        .translate('recover_title_label'),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontFamily: 'Cormorant SC',
+                      fontWeight: FontWeight.bold,
+                      shadows: <Shadow>[
+                        Shadow(
+                            offset: Offset(1.0, 1.0),
+                            blurRadius: 3.0,
+                            color: Color.fromARGB(255, 0, 0, 0))
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 24.0),
+                  Text(
+                    AppLocalizations.of(context)
+                        .translate('recover_subtitle_label'),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontFamily: 'Open Sans',
+                        fontWeight: FontWeight.bold,
+                        shadows: <Shadow>[
+                          Shadow(
+                              offset: Offset(1.0, 1.0),
+                              blurRadius: 3.0,
+                              color: Color.fromARGB(255, 0, 0, 0))
+                        ]),
+                  ),
+                  SizedBox(
+                    height: 40.0,
+                  ),
+                  Card(
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(10))),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        SizedBox(
+                          width: 20,
+                        ),
+                        Expanded(
+                          child: TextField(
+                            controller: _emailController,
+                            decoration: InputDecoration(
+                                border: InputBorder.none, hintText: "Email"),
+                            onSubmitted: (text) {},
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+                  _showEmailError
+                      ? Text(
+                          _emailControllerMessage,
+                          style: TextStyle(
+                              color: Colors.red,
+                              fontSize: 16,
+                              fontFamily: 'Open Sans',
                               fontWeight: FontWeight.bold,
                               shadows: <Shadow>[
                                 Shadow(
                                     offset: Offset(1.0, 1.0),
                                     blurRadius: 3.0,
                                     color: Color.fromARGB(255, 0, 0, 0))
-                              ],
-                            ),
-                          ),
-                          SizedBox(height: 24.0),
-                          Text(
-                            AppLocalizations.of(context)
-                                .translate('recover_subtitle_label'),
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontFamily: 'Open Sans',
-                                fontWeight: FontWeight.bold,
-                                shadows: <Shadow>[
-                                  Shadow(
-                                      offset: Offset(1.0, 1.0),
-                                      blurRadius: 3.0,
-                                      color: Color.fromARGB(255, 0, 0, 0))
-                                ]),
-                          ),
-                          SizedBox(
-                            height: 40.0,
-                          ),
-                          Card(
-                            elevation: 8,
-                            shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10))),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: <Widget>[
-                                SizedBox(
-                                  width: 20,
-                                ),
-                                Expanded(
-                                  child: TextField(
-                                    controller: _emailController,
-                                    decoration: InputDecoration(
-                                        border: InputBorder.none,
-                                        labelText: AppLocalizations.of(context)
-                                            .translate(
-                                                'recover_email_input_label'),
-                                        hintText: "Email"),
-                                    onSubmitted: (text) {},
-                                  ),
-                                )
-                              ],
-                            ),
-                          ),
-                          _showEmailError
-                              ? Text(
-                                  _emailControllerMessage,
-                                  style: TextStyle(
-                                      color: Colors.red,
-                                      fontSize: 16,
-                                      fontFamily: 'Open Sans',
-                                      fontWeight: FontWeight.bold,
-                                      shadows: <Shadow>[
-                                        Shadow(
-                                            offset: Offset(1.0, 1.0),
-                                            blurRadius: 3.0,
-                                            color: Color.fromARGB(255, 0, 0, 0))
-                                      ]),
-                                )
-                              : Text(''),
-                          SizedBox(height: 24.0),
-                          resetPassword,
-                          SizedBox(width: 105),
-                          goBack
-                        ],
-                      ),
-                    ),
-                  ),
+                              ]),
+                        )
+                      : Text(''),
+                  SizedBox(height: 24.0),
+                  resetPassword,
+                  SizedBox(width: 105),
+                  goBack,
+                  SizedBox(height: 100),
                 ],
               ),
             ),
