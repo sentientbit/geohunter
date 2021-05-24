@@ -70,7 +70,7 @@ class CustomInterceptors extends Interceptor {
   ///
   static Future clearStoredCookies(String hostname) async {
     final hostnameHash = hashStringMurmur(hostname);
-    await CustomInterceptors.storageSet('$prefix-$hostnameHash', "");
+    await CustomInterceptors.clearSet('$prefix-$hostnameHash');
   }
 
   ///
@@ -83,6 +83,12 @@ class CustomInterceptors extends Interceptor {
   static Future storageSet(String key, String value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(key, value);
+  }
+
+  ///
+  static Future clearSet(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(key);
   }
 
   ///
