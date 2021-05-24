@@ -172,7 +172,7 @@ class _FriendsPageState extends State<FriendsPage> {
       });
     } on DioError catch (err) {
       if (err.response != null) {
-        print(err.response.data["message"]);
+        print(err.response?.data["message"]);
       } else {
         print(err.response.statusCode);
         print(err.message);
@@ -384,7 +384,7 @@ class _FriendsPageState extends State<FriendsPage> {
           context: context,
           builder: (context) => CustomDialog(
             title: "Error",
-            description: err.response.data["message"],
+            description: err.response?.data["message"],
             buttonText: "Okay",
           ),
         );

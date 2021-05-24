@@ -20,7 +20,7 @@ import 'package:geolocator/geolocator.dart';
 //import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 //import 'package:latlong/latlong.dart';
-import 'package:package_info/package_info.dart';
+//import 'package:package_info/package_info.dart';
 import 'package:sentry/sentry.dart' as sentry;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_offline/flutter_offline.dart';
@@ -263,7 +263,6 @@ class SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _setVersion();
     _checkGps();
 
     //https://jap.alekhin.io/scoring-storage-sound-tutorial-flame-flutter-part-4
@@ -283,12 +282,14 @@ class SplashScreenState extends State<SplashScreen> {
       'sfx/click_5.ogg',
       'sfx/doorClose_1.ogg',
       'sfx/doorClose_2.ogg',
+      'sfx/doorClose_3.ogg',
       'sfx/doorOpen_1.ogg',
       'sfx/doorOpen_2.ogg',
       'sfx/miningPick_1.ogg',
       'sfx/miningPick_2.ogg',
       'sfx/miningPick_3.ogg',
-      'sfx/miningPick_4.ogg'
+      'sfx/miningPick_4.ogg',
+      'sfx/raven_1.ogg'
     ]);
   }
 
@@ -312,26 +313,6 @@ class SplashScreenState extends State<SplashScreen> {
 
     //   _userDataStreamSubscription?.resume();
     // });
-  }
-
-  _setVersion() async {
-    final packageInfo = await PackageInfo.fromPlatform();
-    _appVersion = packageInfo.version;
-
-    // String uniqueId;
-    // DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-    // if (Platform.isAndroid) {
-    //   AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-    //   uniqueId = androidInfo.model;
-    //   uniqueId += androidInfo.isPhysicalDevice ? ',true,' : ',false,';
-    //   uniqueId += androidInfo.androidId;
-    // } else {
-    //   IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
-    //   uniqueId = iosInfo.model;
-    //   uniqueId += iosInfo.isPhysicalDevice ? ',true,' : ',false,';
-    //   uniqueId += iosInfo.identifierForVendor;
-    // }
-    // print("unique id: $uniqueId : ${hashStringMurmur(uniqueId)}");
   }
 
   /// SystemChannels.platform.invokeMethod('SystemNavigator.pop');

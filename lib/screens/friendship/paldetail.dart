@@ -192,7 +192,7 @@ class _PalDetailState extends State<PalDetailPage> {
         side: BorderSide(width: 1, color: Colors.white),
       ),
       onPressed: () async {
-        await sendMessage(currentFriend.id, _controller.text);
+        await sendMessage(currentFriend.id);
       },
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -605,20 +605,26 @@ class _PalDetailState extends State<PalDetailPage> {
         context: context,
         builder: (context) => CustomDialog(
           title: "Error",
-          description: err.response.data["message"],
+          description: err.response?.data["message"],
           buttonText: "Okay",
         ),
       );
     }
   }
 
-  void sendMessage(int friendId, String message) async {
+  void sendMessage(int friendId) async {
+    if (_controller.text.isEmpty) {
+      setState(() {
+        sentMessage = "Please enter a message";
+      });
+      return;
+    }
     try {
       final response = await _apiProvider.post(
         '/message',
         {
           "friend_id": friendId.toString(),
-          "message": message,
+          "message": _controller.text,
         },
       );
 
@@ -627,8 +633,9 @@ class _PalDetailState extends State<PalDetailPage> {
           setState(() {
             _controller.text = "";
             buttonIcon = Icons.done;
-            sentMessage =
-                (message.length > 0) ? message : "Send up to 140 chars";
+            sentMessage = (_controller.text.length > 0)
+                ? _controller.text
+                : "Send up to 140 chars";
           });
           // Poor man's polling: one time after 10 seconds
           poorManTimer = Timer(Duration(milliseconds: 10000), () {
@@ -641,7 +648,7 @@ class _PalDetailState extends State<PalDetailPage> {
         context: context,
         builder: (context) => CustomDialog(
           title: "Error",
-          description: err.response.data["message"],
+          description: err.response?.data["message"],
           buttonText: "Okay",
         ),
       );
