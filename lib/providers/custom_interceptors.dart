@@ -29,20 +29,20 @@ class CustomInterceptors extends Interceptor {
     if (options.path != "/login") {
       options.headers["authorization"] = "Bearer ${userDatastored["jwt"]}";
     }
-    //print("Req[${options?.method}] => PATH: ${options?.path}");
+    print("[${options?.method}] ${options?.path}");
     super.onRequest(options, handler);
   }
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
     //_cache[response.requestOptions.uri] = response;
-    //print("Res[${response?.statusCode}] => PATH: ${response?.requestOptions?.path}");
+    print("[${response?.statusCode}] ${response?.requestOptions?.path}");
     super.onResponse(response, handler);
   }
 
   @override
   void onError(DioError err, ErrorInterceptorHandler handler) {
-    //print("ERROR[${err?.response?.statusCode}] => PATH: ${err.requestOptions.path}");
+    print("[${err?.response?.statusCode}] ${err.requestOptions.path}");
     super.onError(err, handler);
   }
 
@@ -70,7 +70,7 @@ class CustomInterceptors extends Interceptor {
   ///
   static Future clearStoredCookies(String hostname) async {
     final hostnameHash = hashStringMurmur(hostname);
-    await CustomInterceptors.storageSet('$prefix-$hostnameHash', null);
+    await CustomInterceptors.storageSet('$prefix-$hostnameHash', "");
   }
 
   ///

@@ -396,7 +396,7 @@ class _ItemDetailState extends State<ItemDetailPage> {
           images: imagesArr,
           callback: () {
             Navigator.of(context).pop();
-            Navigator.of(context).pushNamed('/inventory');
+            Navigator.of(context).pushReplacementNamed('/inventory');
           },
         ),
       );

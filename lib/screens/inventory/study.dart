@@ -453,11 +453,11 @@ class _StudyDetailState extends State<StudyDetailPage> {
     if (response["success"] == true) {
       if (response.containsKey("coins")) {
         _userdata.updateUserData(
-          "",
           double.tryParse(response["coins"].toString()) ?? 0.0,
           0,
           response["guild"]["id"],
           response["xp"],
+          response["unread"],
         );
       }
       showDialog(

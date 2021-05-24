@@ -8,10 +8,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:flutter_offline/flutter_offline.dart';
 
+//import 'package:logger/logger.dart';
+
 ///
 import '../../app_localizations.dart';
 import '../../models/friends.dart';
+import '../../models/user.dart';
 import '../../providers/api_provider.dart';
+import '../../providers/stream_userdata.dart';
 import '../../screens/friendship/showqr.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
@@ -38,6 +42,16 @@ class FriendsPage extends StatefulWidget {
 }
 
 class _FriendsPageState extends State<FriendsPage> {
+  //final Logger log = Logger(
+  //    printer: PrettyPrinter(
+  //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
+
+  ///
+  final _userdata = getIt.get<StreamUserData>();
+
+  /// Curent loggedin user
+  User _user = User.blank();
+
   /// Make sure back button is pressed twice
   bool ifPop = false;
 
@@ -49,6 +63,8 @@ class _FriendsPageState extends State<FriendsPage> {
   final _apiProvider = ApiProvider();
 
   String _scanBarcode = '';
+
+  Map<int, dynamic> ravens = {};
 
   Future<void> scanQR() async {
     String barcodeScanRes;
@@ -70,10 +86,36 @@ class _FriendsPageState extends State<FriendsPage> {
     });
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _loadFriends();
+    BackButtonInterceptor.add(myInterceptor,
+        name: widget.name, context: context);
+  }
+
+  @override
+  void dispose() {
+    BackButtonInterceptor.remove(myInterceptor);
+    super.dispose();
+  }
+
+  // ignore: avoid_positional_boolean_parameters
+  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
+    if (stopDefaultButtonEvent) return false;
+    if (ifPop) {
+      return false;
+    } else {
+      setState(() => ifPop = true);
+      if (_scaffoldKey != null) {
+        Navigator.of(context).pop();
+        Navigator.of(context).pushNamed(GlobalConstants.backButtonPage);
+      }
+    }
+    return true;
+  }
+
   Future _loadFriends() async {
-    setState(() {
-      _isLoading = true;
-    });
     _friends.clear();
     try {
       final response = await _apiProvider.get('/friends');
@@ -105,6 +147,24 @@ class _FriendsPageState extends State<FriendsPage> {
             ),
           );
         }
+        if (response.containsKey("coins")) {
+          // update local data
+          _user.details.coins =
+              double.tryParse(response["coins"].toString()) ?? 0.0;
+          _user.details.xp = response["xp"];
+          _user.details.unread = response["unread"];
+          // log.d(_user.details.unread);
+          ravens = _user.details.unread.asMap();
+
+          // update global data
+          _userdata.updateUserData(
+            _user.details.coins,
+            0,
+            response["guild"]["id"],
+            _user.details.xp,
+            _user.details.unread,
+          );
+        }
       }
       setState(() {
         _friends.addAll(friends.toList());
@@ -117,36 +177,10 @@ class _FriendsPageState extends State<FriendsPage> {
         print(err.response.statusCode);
         print(err.message);
       }
+      setState(() {
+        _isLoading = false;
+      });
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadFriends();
-    BackButtonInterceptor.add(myInterceptor,
-        name: widget.name, context: context);
-  }
-
-  @override
-  void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
-    super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    if (stopDefaultButtonEvent) return false;
-    if (ifPop) {
-      return false;
-    } else {
-      setState(() => ifPop = true);
-      if (_scaffoldKey != null) {
-        Navigator.of(context).pop();
-        Navigator.of(context).pushNamed(GlobalConstants.backButtonPage);
-      }
-    }
-    return true;
   }
 
   void choiceAction(PopupMenuChoice choice) {
@@ -300,8 +334,11 @@ class _FriendsPageState extends State<FriendsPage> {
                                       const EdgeInsets.symmetric(vertical: 1.0),
                                   sliver: SliverList(
                                     delegate: SliverChildBuilderDelegate(
-                                      (context, index) =>
-                                          FriendsSummary(_friends[index]),
+                                      (context, index) => FriendsSummary(
+                                        _friends[index],
+                                        ravens
+                                            .containsValue(_friends[index].id),
+                                      ),
                                       childCount: _friends.length,
                                     ),
                                   ),

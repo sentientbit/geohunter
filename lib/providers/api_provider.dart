@@ -2,6 +2,8 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 
+// import 'package:logger/logger.dart';
+
 ///
 import '../models/user.dart';
 import '../providers/custom_interceptors.dart';
@@ -9,11 +11,15 @@ import '../shared/constants.dart';
 
 /// API Provider
 class ApiProvider {
+  // final Logger log = Logger(
+  //     printer: PrettyPrinter(
+  //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
+
   /// or new Dio with a BaseOptions instance.
   static Dio api = Dio(BaseOptions(
     baseUrl: "https://${GlobalConstants.apiHostUrl}/api",
-    connectTimeout: 9000,
-    receiveTimeout: 8000,
+    connectTimeout: 10000,
+    receiveTimeout: 9000,
   ));
 
   ///
@@ -94,13 +100,11 @@ class ApiProvider {
   ///
   Future<User> getStoredUser() async {
     //ignore: omit_local_variable_types
-    User tmp = User(
-      uid: '',
-      details: UserData(username: '', coins: 0.0, miningSpeed: 0),
-      jwt: '',
-    );
+    User tmp = User.blank();
     final userDatastored =
         await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
+    // print('--- log. getStoredUser() ---');
+    // log.d(userDatastored);
     try {
       if (userDatastored["user"] != null) {
         tmp = User.fromJson(userDatastored);

@@ -5,9 +5,10 @@ import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-// import 'package:logger/logger.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:image_picker/image_picker.dart';
+
+// import 'package:logger/logger.dart';
 
 ///
 import '../app_localizations.dart';
@@ -48,11 +49,16 @@ class _DrawerPageState extends State<DrawerPage> {
 
   void loadUser() async {
     final tmp = await _apiProvider.getStoredUser();
+    // log.d(tmp.details.unread);
+    if (tmp.details.unread == null) {
+      tmp.details.unread = [];
+    }
     _user = tmp;
     setState(() {
       _user = tmp;
       _user.details.coins = tmp.details.coins;
       _user.details.xp = tmp.details.xp;
+      _user.details.unread = tmp.details.unread;
       _loadingAvatar = false;
     });
   }
@@ -61,6 +67,24 @@ class _DrawerPageState extends State<DrawerPage> {
   void initState() {
     super.initState();
     loadUser();
+  }
+
+  ///
+  Widget numberOfUnreadMessages() {
+    // log.d(_user.details.unread);
+    if (_user == null) {
+      return Text("");
+    }
+    if (_user.details.unread.length > 0) {
+      return Chip(
+        backgroundColor: Colors.red,
+        label: Text(
+          _user.details.unread.length.toString(),
+          style: TextStyle(color: Colors.white),
+        ),
+      );
+    }
+    return Text("");
   }
 
   ///
@@ -298,9 +322,18 @@ class _DrawerPageState extends State<DrawerPage> {
                 ),
                 ListTile(
                   leading: Icon(Icons.group, color: GlobalConstants.appFg),
-                  title: Text(
-                      AppLocalizations.of(context).translate('drawer_friends'),
-                      style: Style.menuTextStyle),
+                  title: Row(
+                    children: <Widget>[
+                      Text(
+                          AppLocalizations.of(context)
+                              .translate('drawer_friends'),
+                          style: Style.menuTextStyle),
+                      SizedBox(
+                        width: 20,
+                      ),
+                      numberOfUnreadMessages(),
+                    ],
+                  ),
                   onTap: () {
                     // Update the state of the app
                     // ...
@@ -316,23 +349,10 @@ class _DrawerPageState extends State<DrawerPage> {
                 ),
                 ListTile(
                   leading: Icon(Icons.security, color: GlobalConstants.appFg),
-                  title: Row(children: <Widget>[
-                    Text(
-                        AppLocalizations.of(context)
-                            .translate('guild_drawer_label'),
-                        style: Style.menuTextStyle),
-                    SizedBox(
-                      width: 20,
-                    ),
-                    if (_user.details.unnaprovedMembers > 0)
-                      Chip(
-                        backgroundColor: Colors.red,
-                        label: Text(
-                          _user.details.unnaprovedMembers.toString(),
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      )
-                  ]),
+                  title: Text(
+                      AppLocalizations.of(context)
+                          .translate('guild_drawer_label'),
+                      style: Style.menuTextStyle),
                   onTap: () async {
                     if (_user.details.unnaprovedMembers > 0) {
                       _user.details.unnaprovedMembers = 0;
