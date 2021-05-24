@@ -1,7 +1,10 @@
+import 'dart:convert' as convert;
+import 'package:flutter/services.dart' show rootBundle;
+
 ///
 class Secret {
   ///
-  final String enqKey;
+  String enqKey = "";
 
   ///
   Secret({this.enqKey = ""});
@@ -9,5 +12,22 @@ class Secret {
   ///
   factory Secret.fromJson(Map<String, dynamic> jsonMap) {
     return Secret(enqKey: jsonMap["enq_key"]);
+  }
+}
+
+///
+class SecretLoader {
+  ///
+  String secretPath = "";
+
+  ///
+  SecretLoader({this.secretPath = ""});
+
+  ///
+  Future<Secret> load() {
+    return rootBundle.loadStructuredData<Secret>(secretPath, (jsonStr) async {
+      final secret = Secret.fromJson(convert.json.decode(jsonStr));
+      return secret;
+    });
   }
 }

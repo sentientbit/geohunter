@@ -407,27 +407,7 @@ class _JoinGroupState extends State<JoinGroup> {
 
   /// 5556665 should pass
   bool isValidGuid(String guid) {
-    if (guid.length != 7) {
-      return false;
-    }
-
-    var bits = List(6);
-    bits[0] = int.parse(guid[0]) * 4;
-    bits[1] = int.parse(guid[1]) * 6;
-    bits[2] = int.parse(guid[2]) * 7;
-    bits[3] = int.parse(guid[3]) * 9;
-    bits[4] = int.parse(guid[4]) * 2;
-    bits[5] = int.parse(guid[5]) * 5;
-
-    var sum = bits[0] + bits[1] + bits[2] + bits[3] + bits[4] + bits[5];
-    var ck = sum % 11;
-    if (ck == 10) {
-      ck = 1;
-    }
-    if (ck != int.parse(guid[6])) {
-      return false;
-    }
-    return true;
+    return guildIdOfflineValidation(guid);
   }
 
   void _joinGuild(BuildContext context) async {

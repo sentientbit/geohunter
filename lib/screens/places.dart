@@ -1,6 +1,5 @@
 ///
 import 'dart:async';
-import 'dart:convert' as convert;
 import 'dart:io';
 import 'dart:ui';
 // Admob variant 1 :(
@@ -12,7 +11,6 @@ import 'package:admob_flutter/admob_flutter.dart';
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
 //import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:loading_overlay/loading_overlay.dart';
 // import 'package:logger/logger.dart';
@@ -53,23 +51,6 @@ enum PopupMenuChoice {
 
   ///
   showCoinSheet
-}
-
-///
-class SecretLoader {
-  ///
-  final String secretPath;
-
-  ///
-  SecretLoader({this.secretPath});
-
-  ///
-  Future<Secret> load() {
-    return rootBundle.loadStructuredData<Secret>(secretPath, (jsonStr) async {
-      final secret = Secret.fromJson(convert.json.decode(jsonStr));
-      return secret;
-    });
-  }
 }
 
 class BodyWidget extends StatelessWidget {
@@ -389,7 +370,7 @@ class _PlacesState extends State<PlacesPage> {
       });
     }
 
-    await _loadPlaces();
+    await loadPlaces();
   }
 
   /// Return purchase of specific product ID
@@ -450,22 +431,22 @@ class _PlacesState extends State<PlacesPage> {
       setState(() {
         _mineTypeFilter = 0;
       });
-      _loadPlaces();
+      loadPlaces();
     } else if (choice == PopupMenuChoice.filterMetal) {
       setState(() {
         _mineTypeFilter = 1;
       });
-      _loadPlaces();
+      loadPlaces();
     } else if (choice == PopupMenuChoice.filterWood) {
       setState(() {
         _mineTypeFilter = 2;
       });
-      _loadPlaces();
+      loadPlaces();
     } else if (choice == PopupMenuChoice.filterLeather) {
       setState(() {
         _mineTypeFilter = 3;
       });
-      _loadPlaces();
+      loadPlaces();
     } else if (choice == PopupMenuChoice.showCoinSheet) {
       setState(() {
         _showCoinSheet = !_showCoinSheet;
@@ -1020,8 +1001,8 @@ class _PlacesState extends State<PlacesPage> {
     );
   }
 
-  Future _loadPlaces() async {
-    //print(' --- _loadPlaces ---');
+  Future loadPlaces() async {
+    //print(' --- log. loadPlaces() ---');
     //print(_userLocation.latitude);
     //print(_userLocation.longitude);
     String url;
@@ -1137,20 +1118,21 @@ class _PlacesState extends State<PlacesPage> {
 
   Future _remoteMine() async {
     //ignore: omit_local_variable_types
-    List<Image> imagesArr = List();
+    List<Image> imagesArr = [];
     _getReward(mine.id, _admobType, _admobAmount).then((mineResponse) {
       if (mineResponse == null || mineResponse["success"] != true) {
         // Already showed message, just return
         return;
       }
 
+      // Image.network("https://${GlobalConstants.apiHostUrl}/img/items/${value['img']}"),
       if (mineResponse["items"].isNotEmpty) {
         for (dynamic value in mineResponse["items"]) {
           if (value.containsKey("img") && value["img"] != "") {
             mine.addItem(value);
-            imagesArr.add(Image.network(
-                "https://${GlobalConstants.apiHostUrl}/img/items/${value['img']}"));
-            //} else { log.d(value);
+            imagesArr.add(
+              Image.asset("assets/images/items/${value['img']}"),
+            );
           }
         }
       }
@@ -1158,17 +1140,18 @@ class _PlacesState extends State<PlacesPage> {
       for (dynamic value in mineResponse["materials"]) {
         if (value.containsKey("img") && value["img"] != "") {
           mine.addMaterial(value);
-          imagesArr.add(Image.asset("assets/images/materials/${value['img']}"));
-          //} else { log.d(value);
+          imagesArr.add(
+            Image.asset("assets/images/materials/${value['img']}"),
+          );
         }
       }
 
       for (dynamic value in mineResponse["blueprints"]) {
         if (value.containsKey("img") && value["img"] != "") {
           mine.addBlueprint(value);
-          imagesArr
-              .add(Image.asset("assets/images/blueprints/${value['img']}"));
-          //} else { log.d(value);
+          imagesArr.add(
+            Image.asset("assets/images/blueprints/${value['img']}"),
+          );
         }
       }
 
@@ -1187,7 +1170,7 @@ class _PlacesState extends State<PlacesPage> {
           image: AssetImage('assets/achievements/first_wood.png'),
           images: imagesArr,
           callback: () {
-            _loadPlaces();
+            loadPlaces();
           },
         ),
       );
@@ -1217,7 +1200,6 @@ class _PlacesState extends State<PlacesPage> {
     final encryptedpay = encrypter.encrypt(plainText, iv: iv);
     final enc = encryptedpay.base64;
     //log.d(plainText);
-    //print("encrypted AES256");
     //print(ivstr);
     //print(enc);
 
