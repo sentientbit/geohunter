@@ -291,9 +291,7 @@ class _EquipmentState extends State<EquipmentPage> {
     final response = await _apiProvider.post('/equipment/$itemId', {});
     if (response.containsKey("success")) {
       if (response["success"] == true) {
-        setState(() {
-          _items.clear();
-        });
+        _items.clear();
         Navigator.pop(context);
         Navigator.pop(context);
         Navigator.of(context).pushNamed('/profile');
@@ -308,9 +306,7 @@ class _EquipmentState extends State<EquipmentPage> {
     //print(response['message']);
     if (response.containsKey("success")) {
       if (response["success"] == true) {
-        setState(() {
-          _items.clear();
-        });
+        _items.clear();
         Navigator.pop(context);
         Navigator.pop(context);
         Navigator.of(context).pushNamed('/profile');

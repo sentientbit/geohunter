@@ -1,5 +1,11 @@
+// import 'package:logger/logger.dart';
+
 ///
 class User {
+  // final Logger log = Logger(
+  //     printer: PrettyPrinter(
+  //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
+
   /// Unique User Id
   String uid = "";
 
@@ -44,6 +50,8 @@ class User {
 
   ///
   Map<String, dynamic> toMap() {
+    // print('--- log. toMap() ---');
+    // log.d(details);
     return {
       "user": {
         "user_id": details.id,
@@ -63,6 +71,7 @@ class User {
         "percentage": details.percentage,
         "coins": details.coins,
         "xp": details.xp,
+        "unread": details.unread,
       },
       "jwt": jwt
     };
@@ -121,16 +130,16 @@ class UserData {
   String username;
 
   ///
-  String guildId;
+  String guildId = "";
 
   ///
-  double lat;
+  double lat = 51.5;
 
   ///
-  double lng;
+  double lng = 0.0;
 
   ///
-  String picture;
+  String picture = "";
 
   ///
   String sex = "0";
@@ -142,7 +151,7 @@ class UserData {
   String locationPrivacy = "0";
 
   ///
-  String status;
+  String status = "";
 
   ///
   List<String> currentQuests;
@@ -168,6 +177,9 @@ class UserData {
   ///
   int xp = 0;
 
+  ///
+  List<dynamic> unread = [];
+
   /// constructor
   UserData({
     this.username = "",
@@ -178,6 +190,7 @@ class UserData {
     this.guildId = "",
     this.unnaprovedMembers = 0,
     this.xp = 0,
+    this.unread,
   });
 
   ///
@@ -191,6 +204,7 @@ class UserData {
       guildId: "",
       unnaprovedMembers: 0,
       xp: 0,
+      unread: [],
     );
   }
 
@@ -219,6 +233,7 @@ class UserData {
         ? int.parse(json["unapproved_members"].toString())
         : 0;
     xp = json["xp"];
+    unread = json["unread"];
   }
 
   ///
@@ -230,5 +245,6 @@ class UserData {
         'coins': coins,
         'unnaprovedMembers': unnaprovedMembers,
         'xp': xp,
+        'unread': unread,
       };
 }

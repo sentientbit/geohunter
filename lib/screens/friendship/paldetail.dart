@@ -1,16 +1,23 @@
 /// based on https://medium.com/@afegbua/this-is-the-second-part-of-the-beautiful-list-ui-and-detail-page-article-ecb43e203915
+import 'dart:async';
 import 'package:back_button_interceptor/back_button_interceptor.dart';
+import 'package:dio/dio.dart';
+import 'package:flame/flame.dart';
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
+
 //import 'package:logger/logger.dart';
 
 ///
 import '../../fonts/rpg_awesome_icons.dart';
 import '../../models/friends.dart';
+import '../../models/user.dart';
 import '../../providers/api_provider.dart';
+import '../../providers/stream_userdata.dart';
 import '../../screens/map_explore.dart' show PoiMap;
 import '../../shared/constants.dart';
 import '../../text_style.dart';
+import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
 
 //import '../app_localizations.dart';
@@ -38,6 +45,11 @@ class _PalDetailState extends State<PalDetailPage> {
   ///
   final ApiProvider _apiProvider = ApiProvider();
 
+  final _userdata = getIt.get<StreamUserData>();
+
+  /// Curent loggedin user
+  User _user = User.blank();
+
   ///
   int currentLevel = 0;
 
@@ -45,7 +57,25 @@ class _PalDetailState extends State<PalDetailPage> {
   int nextExperienceLevel = 1;
 
   ///
-  int currentExperience = 0;
+  String receivedMessage = "";
+
+  ///
+  String sentMessage = "";
+
+  ///
+  bool isNewMessage = false;
+
+  ///
+  bool friendReceived = false;
+
+  ///
+  Friend currentFriend = Friend.blank();
+
+  ///
+  IconData buttonIcon = Icons.done;
+
+  ///
+  Timer poorManTimer;
 
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -54,15 +84,17 @@ class _PalDetailState extends State<PalDetailPage> {
   void initState() {
     _controller.text = '';
     super.initState();
-    currentExperience = widget.friend.xp;
-    currentLevel = expToLevel(currentExperience);
+    currentFriend = widget.friend;
+    currentLevel = expToLevel(currentFriend.xp);
     nextExperienceLevel = levelToExp(currentLevel + 1);
     BackButtonInterceptor.add(myInterceptor);
+    getMessages(currentFriend.id);
   }
 
   @override
   void dispose() {
     BackButtonInterceptor.remove(myInterceptor);
+    poorManTimer?.cancel();
     super.dispose();
   }
 
@@ -72,8 +104,8 @@ class _PalDetailState extends State<PalDetailPage> {
     return true;
   }
 
-  Widget privacyWidget(Friend friend) {
-    if ((friend.locationPrivacy & 1) == 1) {
+  Widget privacyWidget() {
+    if ((currentFriend.locationPrivacy & 1) == 1) {
       return GestureDetector(
         onTap: () {
           Navigator.of(context).pop();
@@ -82,8 +114,8 @@ class _PalDetailState extends State<PalDetailPage> {
             MaterialPageRoute(
               builder: (context) => PoiMap(
                 goToRemoteLocation: true,
-                latitude: friend.lat,
-                longitude: friend.lng,
+                latitude: currentFriend.lat,
+                longitude: currentFriend.lng,
               ),
             ),
           );
@@ -125,13 +157,12 @@ class _PalDetailState extends State<PalDetailPage> {
   }
 
   Widget expBar(
-    int xp,
     int currentExperience,
     int nextExperienceLevel,
     Color color,
   ) {
     // ignore: omit_local_variable_types
-    double percentage = xp / nextExperienceLevel;
+    double percentage = currentExperience / nextExperienceLevel;
     return SizedBox(
       height: 40,
       width: 180,
@@ -139,7 +170,7 @@ class _PalDetailState extends State<PalDetailPage> {
         lineHeight: 14.0,
         percent: percentage,
         center: Text(
-          "${currentExperience.toString()} / ${nextExperienceLevel.toString()}",
+          "$currentExperience / $nextExperienceLevel",
           style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.bold),
         ),
         linearStrokeCap: LinearStrokeCap.roundAll,
@@ -149,8 +180,43 @@ class _PalDetailState extends State<PalDetailPage> {
     );
   }
 
+  Widget sendButton(BuildContext context) {
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        padding:
+            EdgeInsets.only(top: 10.0, bottom: 10.0, left: 2.0, right: 2.0),
+        backgroundColor: GlobalConstants.appBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+        side: BorderSide(width: 1, color: Colors.white),
+      ),
+      onPressed: () async {
+        await sendMessage(currentFriend.id, _controller.text);
+      },
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Icon(buttonIcon, color: Color(0xffe6a04e)),
+          Text(
+            "",
+            style: TextStyle(
+                color: Color(0xffe6a04e),
+                fontSize: 18,
+                fontFamily: 'Cormorant SC',
+                fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget build(BuildContext context) {
     var szWidth = MediaQuery.of(context).size.width;
+
+    if (isNewMessage) {
+      Flame.audio.play('sfx/raven_1.ogg');
+    }
 
     //ignore: omit_local_variable_types
     double halfScreenSize =
@@ -170,7 +236,7 @@ class _PalDetailState extends State<PalDetailPage> {
       ),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
-      title: Text(widget.friend.username, style: Style.topBar),
+      title: Text(currentFriend.username, style: Style.topBar),
       actions: <Widget>[
         IconButton(
           icon: Icon(Icons.arrow_back),
@@ -189,7 +255,7 @@ class _PalDetailState extends State<PalDetailPage> {
         color: Colors.black,
       ),
       child: Text(
-        "Lvl ${expToLevel(widget.friend.xp)}",
+        "Lvl ${expToLevel(currentFriend.xp)}",
         style: TextStyle(
           color: GlobalConstants.appFg,
           fontSize: 18.0,
@@ -210,11 +276,11 @@ class _PalDetailState extends State<PalDetailPage> {
             CircleAvatar(
               radius: szWidth / 5,
               backgroundImage: NetworkImage(
-                  'https://${GlobalConstants.apiHostUrl}${widget.friend.thumbnail}'),
+                  'https://${GlobalConstants.apiHostUrl}${currentFriend.thumbnail}'),
               backgroundColor: Colors.transparent,
             ),
             SizedBox(width: 16),
-            privacyWidget(widget.friend),
+            privacyWidget(),
           ],
         ),
         SizedBox(height: 20.0),
@@ -232,8 +298,7 @@ class _PalDetailState extends State<PalDetailPage> {
             Expanded(
               flex: 4,
               child: expBar(
-                currentExperience,
-                currentExperience,
+                currentFriend.xp,
                 nextExperienceLevel,
                 Colors.orange,
               ),
@@ -265,7 +330,6 @@ class _PalDetailState extends State<PalDetailPage> {
             Expanded(
               flex: 4,
               child: expBar(
-                100,
                 100,
                 100,
                 Colors.red,
@@ -306,7 +370,8 @@ class _PalDetailState extends State<PalDetailPage> {
     final bottomContent = Stack(
       children: <Widget>[
         Container(
-          padding: EdgeInsets.all(40.0),
+          padding:
+              EdgeInsets.only(left: 40.0, right: 40.0, top: 20.0, bottom: 20.0),
           //width: MediaQuery.of(context).size.width,
           decoration: BoxDecoration(
             color: Color(0xaa000000),
@@ -316,9 +381,17 @@ class _PalDetailState extends State<PalDetailPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: isNewMessage
+                      ? MainAxisAlignment.center
+                      : MainAxisAlignment.center,
                   children: <Widget>[
-                    Icon(RPGAwesome.raven, color: Color(0xffe6a04e)),
+                    if (isNewMessage)
+                      Image.asset(
+                        "assets/images/raven.png",
+                        width: 80,
+                        height: 80,
+                      ),
+                    //Icon(RPGAwesome.raven, color: Colors.red),
                     Text(
                       " Raven Message",
                       textAlign: TextAlign.center,
@@ -329,6 +402,7 @@ class _PalDetailState extends State<PalDetailPage> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    SizedBox(height: 80),
                   ],
                 ),
                 Stack(
@@ -345,34 +419,60 @@ class _PalDetailState extends State<PalDetailPage> {
                         ),
                       ),
                     ),
-                    Padding(
-                      padding: EdgeInsets.only(
-                        left: 50.0,
-                        right: 50.0,
-                        top: 21.0,
-                      ),
-                      child: Text(
-                        "The kracken tall blond women axe kea axes scandinavia Leif Erikson horns. Lack the table terror Leif Erikson ikea terror ocean boats viking.",
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 18,
-                          fontFamily: 'Cormorant SC',
-                          fontWeight: FontWeight.bold,
+                    Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          left: 50.0,
+                          right: 50.0,
+                          top: 21.0,
+                        ),
+                        child: Text(
+                          receivedMessage,
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 18,
+                            fontFamily: 'Cormorant SC',
+                            fontWeight: FontWeight.w900,
+                            shadows: <Shadow>[
+                              Shadow(
+                                offset: Offset(1.0, 1.0),
+                                blurRadius: 1.0,
+                                color: Color.fromRGBO(0, 0, 0, 210),
+                              )
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ],
                 ),
+                SizedBox(height: 18),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: <Widget>[
                     Expanded(
-                      flex: 10,
+                      flex: 6,
                       child: TextFormField(
                         autofocus: false,
                         controller: _controller,
+                        onChanged: (value) async {
+                          if (value.length > 0) {
+                            setState(() {
+                              buttonIcon = Icons.send;
+                            });
+                          } else if (friendReceived == true) {
+                            setState(() {
+                              buttonIcon = Icons.done_all;
+                            });
+                          } else {
+                            setState(() {
+                              buttonIcon = Icons.done;
+                            });
+                          }
+                        },
                         decoration: InputDecoration(
-                          hintText: 'Send up to 140 chars',
+                          hintText: sentMessage,
                           hintStyle: TextStyle(
                             fontSize: 18,
                             color: Colors.grey,
@@ -386,11 +486,7 @@ class _PalDetailState extends State<PalDetailPage> {
                     ),
                     Expanded(
                       flex: 2,
-                      child: Icon(
-                        Icons.flight_takeoff,
-                        size: 32,
-                        color: Colors.white,
-                      ),
+                      child: sendButton(context),
                     ),
                   ],
                 ),
@@ -462,5 +558,93 @@ class _PalDetailState extends State<PalDetailPage> {
       key: _scaffoldKey,
       drawer: DrawerPage(),
     );
+  }
+
+  void getMessages(int friendId) async {
+    var ravenSound = false;
+    try {
+      final response = await _apiProvider.get('/message/$friendId');
+
+      if (response.containsKey("success")) {
+        if (response["success"] == true) {
+          // update local data
+          _user.details.coins =
+              double.tryParse(response["coins"].toString()) ?? 0.0;
+          _user.details.xp = response["xp"];
+          _user.details.unread = response["unread"];
+
+          // update global data
+          _userdata.updateUserData(
+            _user.details.coins,
+            0,
+            response["guild"]["id"],
+            _user.details.xp,
+            _user.details.unread,
+          );
+          ravenSound =
+              (response["received_ack"] == 0 && response["received"].length > 0)
+                  ? true
+                  : false;
+
+          //log.d(response);
+          setState(() {
+            receivedMessage = response["received"];
+            sentMessage = (response["sent"].length > 0)
+                ? response["sent"]
+                : "Send up to 140 chars";
+            isNewMessage = ravenSound;
+            if (response["seen_friend"] > 0) {
+              friendReceived = true;
+              buttonIcon = Icons.done_all;
+            }
+          });
+        }
+      }
+    } on DioError catch (err) {
+      showDialog(
+        context: context,
+        builder: (context) => CustomDialog(
+          title: "Error",
+          description: err.response.data["message"],
+          buttonText: "Okay",
+        ),
+      );
+    }
+  }
+
+  void sendMessage(int friendId, String message) async {
+    try {
+      final response = await _apiProvider.post(
+        '/message',
+        {
+          "friend_id": friendId.toString(),
+          "message": message,
+        },
+      );
+
+      if (response.containsKey("success")) {
+        if (response["success"] == true) {
+          setState(() {
+            _controller.text = "";
+            buttonIcon = Icons.done;
+            sentMessage =
+                (message.length > 0) ? message : "Send up to 140 chars";
+          });
+          // Poor man's polling: one time after 10 seconds
+          poorManTimer = Timer(Duration(milliseconds: 10000), () {
+            getMessages(friendId);
+          });
+        }
+      }
+    } on DioError catch (err) {
+      showDialog(
+        context: context,
+        builder: (context) => CustomDialog(
+          title: "Error",
+          description: err.response.data["message"],
+          buttonText: "Okay",
+        ),
+      );
+    }
   }
 }

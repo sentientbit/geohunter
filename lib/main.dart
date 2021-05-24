@@ -19,7 +19,7 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 //import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
-import 'package:latlong/latlong.dart';
+//import 'package:latlong/latlong.dart';
 import 'package:package_info/package_info.dart';
 import 'package:sentry/sentry.dart' as sentry;
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -225,9 +225,9 @@ final _apiProvider = ApiProvider();
 
 /// Our initial State
 class SplashScreenState extends State<SplashScreen> {
-  //final Logger log = Logger(
-  //    printer: PrettyPrinter(
-  //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
+  // final Logger log = Logger(
+  //     printer: PrettyPrinter(
+  //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
   final _location = getIt.get<StreamLocation>();
   final _minesStream = getIt.get<StreamMines>();
@@ -262,6 +262,7 @@ class SplashScreenState extends State<SplashScreen> {
 
   @override
   void initState() {
+    super.initState();
     _setVersion();
     _checkGps();
 
@@ -289,8 +290,28 @@ class SplashScreenState extends State<SplashScreen> {
       'sfx/miningPick_3.ogg',
       'sfx/miningPick_4.ogg'
     ]);
+  }
 
-    super.initState();
+  ///
+  void enableUserDataStream() {
+    _userDataStreamSubscription = _userdata.stream$.listen(_updateUserData);
+
+    // _userDataStreamSubscription = _userdata.stream$.listen(null);
+    // // ignore: avoid_types_on_closure_parameters
+    // _userDataStreamSubscription?.onData((UserData newBytes) async {
+    //   print('_userDataStreamSubscription');
+    //   _userDataStreamSubscription?.pause();
+    //   User user = await _apiProvider.getStoredUser();
+    //   print('--- enableUserDataStream() ---');
+    //   log.d(user.details.unread);
+    //   log.d(newBytes.unread);
+    //   user.details.coins = newBytes.coins;
+    //   user.details.xp = newBytes.xp;
+    //   CustomInterceptors.setStoredCookies(
+    //       GlobalConstants.apiHostUrl, user.toMap());
+
+    //   _userDataStreamSubscription?.resume();
+    // });
   }
 
   _setVersion() async {
@@ -335,6 +356,9 @@ class SplashScreenState extends State<SplashScreen> {
     if (isPositionStreaming == true) {
       await _streamLocation();
     }
+    Timer(Duration(milliseconds: 500), _tryAutoLogin);
+    Timer(Duration(milliseconds: 1000), _loadMines);
+    Timer(Duration(milliseconds: 1500), enableUserDataStream);
   }
 
   _tryAutoLogin() async {
@@ -345,7 +369,7 @@ class SplashScreenState extends State<SplashScreen> {
       final cookies =
           await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
 
-      //log.i('---cookies---');
+      //log.i('--- cookies ---');
       //log.i(cookies);
 
       if (cookies.isEmpty || !cookies.containsKey('jwt')) {
@@ -357,10 +381,11 @@ class SplashScreenState extends State<SplashScreen> {
       Map jwtdata = parseJwt(cookies["jwt"]);
       final expirationDate = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true)
           .add(Duration(seconds: jwtdata['exp'].toInt()));
-      //log.i(jwtdata);
+      // log.i(jwtdata);
       //log.i(expirationDate);
       var now = DateTime.now().toUtc();
-      //log.i(now);
+      // log.i(now);
+      // log.d(now.isAfter(expirationDate));
       if (now.isAfter(expirationDate)) {
         print('session expired');
         Flame.audio.play('sfx/doorClose_3.ogg');
@@ -376,14 +401,12 @@ class SplashScreenState extends State<SplashScreen> {
               : GroupStatus.notInGroup;
 
       _userdata.updateUserData(
-        "",
         double.tryParse(cookies["user"]["coins"].toString()) ?? 0.0,
         0,
         cookies["user"]["guild"]["id"],
         cookies["user"]["xp"],
+        cookies["user"]["unread"],
       );
-
-      _userDataStreamSubscription = _userdata.stream$.listen(_updateUserData);
 
       //final tmp = await _apiProvider.get('/profile');
       //final quest = Quest.fromJson(cookies["user"]["current_quests"][0]);
@@ -406,7 +429,8 @@ class SplashScreenState extends State<SplashScreen> {
     }
   }
 
-  Future<Timer> _streamLocation() async {
+  ///
+  void _streamLocation() async {
     _positionStream =
         Geolocator.getPositionStream(distanceFilter: 1).listen((position) {
       //print('_streamLocation');
@@ -416,8 +440,6 @@ class SplashScreenState extends State<SplashScreen> {
         _location.updateLocation(LtLn(position.latitude, position.longitude));
       }
     });
-    Timer(Duration(milliseconds: 1000), _loadMines);
-    return Timer(Duration(milliseconds: 500), _tryAutoLogin);
   }
 
   Widget build(BuildContext context) {
@@ -783,6 +805,7 @@ class SplashScreenState extends State<SplashScreen> {
     if (user.details != null) {
       user.details.coins = ud.coins;
       user.details.xp = ud.xp;
+      user.details.unread = ud.unread;
       CustomInterceptors.setStoredCookies(
           GlobalConstants.apiHostUrl, user.toMap());
     }
