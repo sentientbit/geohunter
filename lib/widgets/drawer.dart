@@ -387,14 +387,7 @@ class _DrawerPageState extends State<DrawerPage> {
                     title: Text(
                         AppLocalizations.of(context).translate('drawer_logout'),
                         style: Style.menuTextStyle),
-                    onTap: () async => {
-                          // Logout
-                          await CustomInterceptors.deleteStoredCookies(
-                              GlobalConstants.apiHostUrl),
-                          await _storage.delete(key: 'api_key'),
-                          Navigator.of(context).pop(),
-                          Navigator.of(context).pushReplacementNamed('/login')
-                        }),
+                    onTap: () async => {await logout()}),
                 SizedBox(
                   height: 24,
                 ),
@@ -455,5 +448,13 @@ class _DrawerPageState extends State<DrawerPage> {
       _loadingAvatar = false;
     });
     return;
+  }
+
+  ///
+  Future logout() async {
+    await CustomInterceptors.deleteStoredCookies(GlobalConstants.apiHostUrl);
+    await _storage.delete(key: 'api_key');
+    Navigator.of(context).pop();
+    Navigator.of(context).pushReplacementNamed('/login');
   }
 }

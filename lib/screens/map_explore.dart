@@ -1510,7 +1510,7 @@ class _PoiMapState extends State<PoiMap>
                 context: context,
                 builder: (context) => CustomDialog(
                   title: 'Error',
-                  description: err.response.data['message'],
+                  description: err.response?.data['message'],
                   buttonText: "Okay",
                 ),
               );
