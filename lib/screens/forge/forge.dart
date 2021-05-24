@@ -1030,11 +1030,11 @@ class _ForgeState extends State<ForgePage> {
         if (response.containsKey("coins")) {
           //update global data
           _userdata.updateUserData(
-            "",
             double.tryParse(response["coins"].toString()) ?? 0.0,
             0,
             response["guild"]["id"],
             response["xp"],
+            response["unread"],
           );
         }
       }
@@ -1080,11 +1080,11 @@ class _ForgeState extends State<ForgePage> {
         }
 
         _userdata.updateUserData(
-          "",
           double.tryParse(response["coins"].toString()) ?? 0.0,
           0,
           response["guild"]["id"],
           response["xp"],
+          response["unread"],
         );
 
         /// Retain the current total funds

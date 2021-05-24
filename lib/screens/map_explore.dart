@@ -36,7 +36,7 @@ import '../widgets/drawer.dart';
 ///
 GetIt getIt = GetIt.instance;
 
-final _debouncer2 = Debouncer(milliseconds: 500);
+final _debouncer = Debouncer(milliseconds: 500);
 
 ///
 class PoiMap extends StatefulWidget {
@@ -138,7 +138,7 @@ class _PoiMapState extends State<PoiMap>
   // Map<MarkerId, Marker> markers = <MarkerId, Marker>{};
 
   Future _loadPois(LtLn location) async {
-    print("--- Loading pois ---");
+    // print("--- log. Loading pois ---");
     if (location.latitude == 51.5 && location.longitude == 0) {
       return;
     }
@@ -222,8 +222,8 @@ class _PoiMapState extends State<PoiMap>
       }
 
       var _locationMarker = Marker(
-        height: 20.0,
-        width: 20.0,
+        height: 60.0,
+        width: 60.0,
         point: LatLng(_userLocation.latitude, _userLocation.longitude),
         builder: (context) {
           return Stack(
@@ -234,11 +234,11 @@ class _PoiMapState extends State<PoiMap>
                   Align(
                     alignment: Alignment.center,
                     child: Container(
-                      height: 20,
-                      width: 20,
+                      height: 60,
+                      width: 60,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.blue[300].withOpacity(0.7),
+                        color: Colors.blue[300].withOpacity(0.5),
                       ),
                     ),
                   ),
@@ -470,7 +470,7 @@ class _PoiMapState extends State<PoiMap>
   void dayAndNight(LtLn location) async {
     var datenow = DateTime.now();
 
-    //datenow = DateTime.parse("2020-05-30 13:18:04Z"); print('--- dayAndNight ---'); print(datenow);
+    //datenow = DateTime.parse("2020-05-30 13:18:04Z"); print('--- log. dayAndNight ---'); print(datenow);
 
     final astroResult =
         SunCalc.getTimes(datenow, location.latitude, location.longitude);
@@ -1241,7 +1241,7 @@ class _PoiMapState extends State<PoiMap>
           //UserLocationPlugin(),
         ],
         onPositionChanged: (mapPosition, boolValue) => {
-          _debouncer2.run(
+          _debouncer.run(
             () => {
               if (_recenterBtnPressed)
                 {

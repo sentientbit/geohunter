@@ -534,8 +534,6 @@ class _RegisterPageState extends State<RegisterPage> {
       // Navigator.of(context).pushNamed('/poi-map');
       // log.d(body);
     } on DioError catch (err) {
-      print('$err');
-
       showDialog<void>(
         context: context,
         builder: (context) {

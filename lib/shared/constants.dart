@@ -40,7 +40,7 @@ class GlobalConstants {
   static const String appNamespace = "com.apsoni.geocraft";
 
   ///
-  static const String appVersion = "1.1.69";
+  static const String appVersion = "1.1.70";
 
   ///
 
@@ -319,14 +319,14 @@ class SunCalc {
 
 /// Convert Experience into Player Level
 /// log($exp / 10 + 1, 2)
-num expToLevel(num exp) {
+int expToLevel(int exp) {
   var lvl = math.log((exp / 10) + 1) / math.ln2;
   return lvl.floor();
 }
 
 /// Convert Player Level into Experience
 /// $exp = 10 * (pow(2, $lvl) - 1);
-num levelToExp(num lvl) {
+int levelToExp(int lvl) {
   var exp = math.pow(2, lvl) - 1;
   return 10 * exp;
 }
@@ -360,9 +360,11 @@ String hashStringMurmur(String input) {
 
 ///
 Map<String, dynamic> parseJwt(String token) {
+  // ignore: omit_local_variable_types
+  Map<String, dynamic> blankPayload = {"usr": "", "iat": 0, "exp": 0};
   final parts = token.split('.');
   if (parts.length != 3) {
-    throw Exception('invalid token');
+    return blankPayload;
   }
 
   // ignore: omit_local_variable_types
@@ -371,7 +373,7 @@ Map<String, dynamic> parseJwt(String token) {
 
   final payloadMap = json.decode(payload);
   if (payloadMap is! Map<String, dynamic>) {
-    throw Exception('invalid payload');
+    return blankPayload;
   }
 
   return payloadMap;
@@ -545,13 +547,11 @@ class AdManager {
 ///
 class Debouncer {
   ///
-  final int milliseconds;
+  int milliseconds = 500;
 
   ///
-  VoidCallback action;
+  VoidCallback action = () {};
   Timer _timer;
-  Timer _timer1;
-  Timer _timer2;
 
   ///
   Debouncer({this.milliseconds});
@@ -563,22 +563,6 @@ class Debouncer {
     }
 
     _timer = Timer(Duration(milliseconds: milliseconds), action);
-  }
-
-  void run1s(VoidCallback action) {
-    if (_timer1 != null) {
-      _timer1.cancel();
-    }
-
-    _timer1 = Timer(Duration(milliseconds: 1000), action);
-  }
-
-  void run2s(VoidCallback action) {
-    if (_timer2 != null) {
-      _timer2.cancel();
-    }
-
-    _timer2 = Timer(Duration(milliseconds: 2000), action);
   }
 }
 
@@ -599,4 +583,27 @@ Color colorRarity(int rarity) {
   }
   // Commons
   return Color(0xffcccccc);
+}
+
+/// 5556665 should pass
+bool guildIdOfflineValidation(String guid) {
+  if (guid.length != 7) {
+    return false;
+  }
+
+  var sum = int.parse(guid[0]) * 4;
+  sum += int.parse(guid[1]) * 6;
+  sum += int.parse(guid[2]) * 7;
+  sum += int.parse(guid[3]) * 9;
+  sum += int.parse(guid[4]) * 2;
+  sum += int.parse(guid[5]) * 5;
+
+  var ck = sum % 11;
+  if (ck == 10) {
+    ck = 1;
+  }
+  if (ck != int.parse(guid[6])) {
+    return false;
+  }
+  return true;
 }

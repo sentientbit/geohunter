@@ -5,7 +5,6 @@ import 'dart:ui';
 
 import 'package:dio/dio.dart';
 import 'package:flame/flame.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
 
@@ -23,23 +22,6 @@ import '../providers/custom_interceptors.dart';
 import '../shared/constants.dart';
 import '../widgets/custom_dialog.dart';
 import '../widgets/network_status_message.dart';
-
-///
-class SecretLoader {
-  ///
-  final String secretPath;
-
-  ///
-  SecretLoader({this.secretPath});
-
-  ///
-  Future<Secret> load() {
-    return rootBundle.loadStructuredData<Secret>(secretPath, (jsonStr) async {
-      final secret = Secret.fromJson(convert.json.decode(jsonStr));
-      return secret;
-    });
-  }
-}
 
 ///
 class LoginPage extends StatefulWidget {
@@ -68,8 +50,6 @@ class _LoginPageState extends State<LoginPage> {
 
   final _apiProvider = ApiProvider();
   final _storage = FlutterSecureStorage();
-
-  String _appVersion = GlobalConstants.appVersion;
 
   // final _googleSignIn = GoogleSignIn(
   //   scopes: [
@@ -153,12 +133,12 @@ class _LoginPageState extends State<LoginPage> {
     await CustomInterceptors.setStoredCookies(GlobalConstants.apiHostUrl, tmp);
 
     // then get all the info
-    bool isOk = await _getUserDetails();
+    bool isOk = await getUserDetails();
     return isOk;
   }
 
-  Future _getUserDetails() async {
-    //print('_getUserDetails');
+  Future getUserDetails() async {
+    //print('--- log. getUserDetails ---');
     final response = await _apiProvider.get('/profile');
     try {
       final tmp =
@@ -656,7 +636,7 @@ class _LoginPageState extends State<LoginPage> {
                             mainAxisSize: MainAxisSize.max,
                             children: <Widget>[
                               Text(
-                                "version: $_appVersion",
+                                "version: ${GlobalConstants.appVersion}",
                                 style: TextStyle(
                                     fontSize: 14.0, color: Colors.white),
                               ),

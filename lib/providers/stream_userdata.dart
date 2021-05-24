@@ -7,7 +7,6 @@ class StreamUserData {
   ///
   final _userdata = BehaviorSubject<UserData>.seeded(
     UserData(
-      username: "",
       coins: 0.0,
       miningSpeed: 0,
       guildId: "0",
@@ -23,14 +22,19 @@ class StreamUserData {
 
   ///
   void updateUserData(
-      String username, double coins, int miningSpeed, String guildId, int xp) {
+    double coins,
+    int miningSpeed,
+    String guildId,
+    int xp,
+    List<dynamic> unread,
+  ) {
     _userdata.add(
       UserData(
-        username: username,
         coins: coins,
         miningSpeed: miningSpeed,
         guildId: guildId,
         xp: xp,
+        unread: unread,
       ),
     );
   }
