@@ -28,7 +28,11 @@ class StudyDetailPage extends StatefulWidget {
   List<dynamic> blueprints;
 
   ///
-  StudyDetailPage({Key key, this.research, this.blueprints}) : super(key: key);
+  StudyDetailPage({
+    Key? key,
+    required this.research,
+    required this.blueprints,
+  }) : super(key: key);
 
   @override
   _StudyDetailState createState() => _StudyDetailState();
@@ -126,7 +130,7 @@ class _StudyDetailState extends State<StudyDetailPage> {
           // size: 32,
         ),
         onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState.openDrawer()
+            ? _scaffoldKey.currentState?.openDrawer()
             : Navigator.of(context).pop(),
       ),
       elevation: 0.1,
@@ -158,7 +162,7 @@ class _StudyDetailState extends State<StudyDetailPage> {
                 width: 180.0,
               ),
         Text(
-          widget.research.name ?? "Research",
+          widget.research.name,
           style: TextStyle(
             color: GlobalConstants.appFg,
             fontSize: 24.0,
@@ -302,8 +306,7 @@ class _StudyDetailState extends State<StudyDetailPage> {
                         width: 180.0,
                       ),
                 Text(
-                  " ${_nrInvBlueprints.toInt().toString()} / $_nrAvailBlueprints $_blueprintName" ??
-                      "Blueprint",
+                  " ${_nrInvBlueprints.toInt().toString()} / $_nrAvailBlueprints $_blueprintName",
                   style:
                       TextStyle(color: GlobalConstants.appFg, fontSize: 18.0),
                 ),
@@ -446,6 +449,8 @@ class _StudyDetailState extends State<StudyDetailPage> {
           title: 'Error',
           description: err.response?.data["message"],
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       return;
@@ -463,9 +468,10 @@ class _StudyDetailState extends State<StudyDetailPage> {
       showDialog(
         context: context,
         builder: (context) => CustomDialog(
-          title: AppLocalizations.of(context).translate('congrats'),
+          title: AppLocalizations.of(context)!.translate('congrats'),
           description: response["message"],
           buttonText: "Okay",
+          images: [],
           callback: () {
             Navigator.of(context).pop();
             Navigator.of(context).pushNamed('/research');

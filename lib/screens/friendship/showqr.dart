@@ -20,7 +20,11 @@ class ShowQRPage extends StatefulWidget {
   double longitude = 0.0;
 
   ///
-  ShowQRPage({Key key, this.latitude, this.longitude}) : super(key: key);
+  ShowQRPage({
+    Key? key,
+    required this.latitude,
+    required this.longitude,
+  }) : super(key: key);
 
   @override
   _ShowQRState createState() => _ShowQRState();
@@ -84,7 +88,7 @@ class _ShowQRState extends State<ShowQRPage> {
           // size: 32,
         ),
         onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState.openDrawer()
+            ? _scaffoldKey.currentState?.openDrawer()
             : Navigator.of(context).pop(),
       ),
       elevation: 0.1,

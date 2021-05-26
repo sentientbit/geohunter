@@ -55,6 +55,7 @@ class _ForgotPageState extends State<ForgotPage> {
             title: 'Forgot password',
             description: message,
             buttonText: "Okay",
+            images: [],
             callback: () {
               Navigator.of(context).pop();
               Navigator.of(context).pushNamed('/login');
@@ -65,8 +66,10 @@ class _ForgotPageState extends State<ForgotPage> {
         context: context,
         builder: (context) => CustomDialog(
           title: 'Forgot password',
-          description: err?.response?.data["message"],
+          description: err.response?.data["message"],
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
     }
@@ -88,7 +91,7 @@ class _ForgotPageState extends State<ForgotPage> {
   void populateEmail() async {
     var secureStorage = await _storage.readAll();
     if (secureStorage.containsKey("email")) {
-      _emailController.text = secureStorage["email"];
+      _emailController.text = secureStorage["email"] ?? "";
     }
   }
 
@@ -118,7 +121,7 @@ class _ForgotPageState extends State<ForgotPage> {
           children: <Widget>[
             Icon(Icons.shopping_cart, color: Color(0xffe6a04e)),
             Text(
-              AppLocalizations.of(context).translate('recover_btn'),
+              AppLocalizations.of(context)!.translate('recover_btn'),
               style: TextStyle(
                 color: Color(0xffe6a04e),
                 fontSize: 18,
@@ -133,7 +136,7 @@ class _ForgotPageState extends State<ForgotPage> {
 
     final goBack = TextButton(
       child: Text(
-        AppLocalizations.of(context).translate('recover_back_btn'),
+        AppLocalizations.of(context)!.translate('recover_back_btn'),
         style: TextStyle(
             color: Colors.white,
             fontSize: 16,
@@ -194,7 +197,7 @@ class _ForgotPageState extends State<ForgotPage> {
                 padding: EdgeInsets.only(top: 90, left: 24.0, right: 24.0),
                 children: <Widget>[
                   Text(
-                    AppLocalizations.of(context)
+                    AppLocalizations.of(context)!
                         .translate('recover_title_label'),
                     style: TextStyle(
                       color: Colors.white,
@@ -211,7 +214,7 @@ class _ForgotPageState extends State<ForgotPage> {
                   ),
                   SizedBox(height: 24.0),
                   Text(
-                    AppLocalizations.of(context)
+                    AppLocalizations.of(context)!
                         .translate('recover_subtitle_label'),
                     style: TextStyle(
                         color: Colors.white,

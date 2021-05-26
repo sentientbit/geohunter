@@ -30,10 +30,9 @@ class QuestLinePage extends StatefulWidget {
   final String name = 'questline';
 
   ///
-  final Quest quest;
-
-  ///
-  QuestLinePage({Key key, @required this.quest}) : super(key: key);
+  QuestLinePage({
+    Key? key,
+  }) : super(key: key);
 
   @override
   _QuestLinePageState createState() => _QuestLinePageState();
@@ -56,7 +55,7 @@ class _QuestLinePageState extends State<QuestLinePage> {
 
   final _pastRewards = [];
 
-  DailyReward _nextReward;
+  DailyReward _nextReward = DailyReward.blank();
 
   ///
   int _elapsedSeconds = 0;
@@ -295,7 +294,8 @@ class _QuestLinePageState extends State<QuestLinePage> {
             CountdownTimer(
               endTime: DateTime.now().millisecondsSinceEpoch +
                   (86400 - _elapsedSeconds) * 1000,
-              widgetBuilder: (BuildContext context, CurrentRemainingTime time) {
+              widgetBuilder:
+                  (BuildContext context, CurrentRemainingTime? time) {
                 if (time != null) {
                   return countDownTimer(time);
                 }
@@ -588,7 +588,7 @@ class _QuestLinePageState extends State<QuestLinePage> {
           // size: 32,
         ),
         onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState.openDrawer()
+            ? _scaffoldKey.currentState?.openDrawer()
             : Navigator.of(context).pop(),
       ),
       elevation: 0.1,
@@ -772,13 +772,16 @@ class _QuestLinePageState extends State<QuestLinePage> {
         context: context,
         builder: (context) => CustomDialog(
           title: 'Error',
-          description: 'Daily reward failed ${err?.response?.data['message']}',
+          description: 'Daily reward failed ${err.response?.data['message']}',
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       return;
     }
 
+    // ignore: omit_local_variable_types
     List<Image> imagesArr = [];
 
     if (response.containsKey("success")) {
@@ -817,12 +820,12 @@ class _QuestLinePageState extends State<QuestLinePage> {
         showDialog(
           context: context,
           builder: (context) => CustomDialog(
-            title: AppLocalizations.of(context).translate('congrats'),
+            title: AppLocalizations.of(context)!.translate('congrats'),
             description: "You grabed a daily reward!",
             buttonText: "Okay",
             images: imagesArr,
             callback: () async {
-              await _getPastRewards();
+              _getPastRewards();
               setState(() {
                 _isLoading = false;
                 _elapsedSeconds = 0;

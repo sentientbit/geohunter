@@ -76,7 +76,7 @@ class _RegisterPageState extends State<RegisterPage> {
           children: <Widget>[
             Icon(Icons.shopping_cart, color: Color(0xffe6a04e)),
             Text(
-              AppLocalizations.of(context).translate('register_submit_btn'),
+              AppLocalizations.of(context)!.translate('register_submit_btn'),
               style: TextStyle(
                 color: Color(0xffe6a04e),
                 fontSize: 16,
@@ -91,7 +91,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     final forgotLabel = TextButton(
       child: Text(
-        AppLocalizations.of(context).translate('register_back_btn'),
+        AppLocalizations.of(context)!.translate('register_back_btn'),
         style: TextStyle(
             color: Colors.white,
             fontSize: 16,
@@ -161,7 +161,7 @@ class _RegisterPageState extends State<RegisterPage> {
               padding: EdgeInsets.only(left: 24.0, right: 24.0),
               children: <Widget>[
                 Text(
-                  AppLocalizations.of(context)
+                  AppLocalizations.of(context)!
                       .translate('register_title_label'),
                   style: TextStyle(
                       color: Colors.white,
@@ -177,7 +177,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 SizedBox(height: 16.0),
                 Text(
-                  AppLocalizations.of(context)
+                  AppLocalizations.of(context)!
                       .translate('register_username_label'),
                   style: TextStyle(
                       color: Colors.white,
@@ -206,7 +206,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           controller: _usernameController,
                           decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: AppLocalizations.of(context)
+                              hintText: AppLocalizations.of(context)!
                                   .translate('register_username_label')),
                           onSubmitted: (text) {},
                         ),
@@ -232,7 +232,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     : Text(''),
                 SizedBox(height: 8.0),
                 Text(
-                  AppLocalizations.of(context)
+                  AppLocalizations.of(context)!
                       .translate('register_email_label'),
                   style: TextStyle(
                       color: Colors.white,
@@ -286,7 +286,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     : Text(''),
                 SizedBox(height: 8.0),
                 Text(
-                  AppLocalizations.of(context)
+                  AppLocalizations.of(context)!
                       .translate('register_password_label'),
                   style: TextStyle(
                       color: Colors.white,
@@ -315,7 +315,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           controller: _passwordController,
                           decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: AppLocalizations.of(context)
+                              hintText: AppLocalizations.of(context)!
                                   .translate('register_password_label')),
                           obscureText: true,
                           onSubmitted: (text) {},
@@ -342,7 +342,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     : Text(''),
                 SizedBox(height: 8.0),
                 Text(
-                  AppLocalizations.of(context)
+                  AppLocalizations.of(context)!
                       .translate('register_confirm_password_label'),
                   style: TextStyle(
                       color: Colors.white,
@@ -371,7 +371,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           controller: _retypePasswordController,
                           decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: AppLocalizations.of(context).translate(
+                              hintText: AppLocalizations.of(context)!.translate(
                                   'register_confirm_password_label')),
                           obscureText: true,
                           onSubmitted: (text) {},
@@ -407,7 +407,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     GestureDetector(
                       onTap: () => {Navigator.of(context).pushNamed('/terms')},
                       child: Text(
-                        AppLocalizations.of(context)
+                        AppLocalizations.of(context)!
                             .translate('register_terms_label'),
                         maxLines: 1,
                         style: TextStyle(
@@ -461,7 +461,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (_usernameController.text.isEmpty) {
       setState(() {
-        _usernameControllerMessage = AppLocalizations.of(context)
+        _usernameControllerMessage = AppLocalizations.of(context)!
             .translate('register_fill_username_error');
         _showUsernameError = true;
       });
@@ -470,15 +470,15 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (_emailController.text.isEmpty) {
       setState(() {
-        _emailControllerMessage =
-            AppLocalizations.of(context).translate('register_fill_email_error');
+        _emailControllerMessage = AppLocalizations.of(context)!
+            .translate('register_fill_email_error');
         _showEmailError = true;
       });
       return;
     }
     if (_passwordController.text.isEmpty) {
       setState(() {
-        _passwordControllerMessage = AppLocalizations.of(context)
+        _passwordControllerMessage = AppLocalizations.of(context)!
             .translate('register_fill_password_error');
         _showPasswordError = true;
       });
@@ -486,7 +486,7 @@ class _RegisterPageState extends State<RegisterPage> {
     }
     if (_retypePasswordController.text.isEmpty) {
       setState(() {
-        _retypePasswordControllerMessage = AppLocalizations.of(context)
+        _retypePasswordControllerMessage = AppLocalizations.of(context)!
             .translate('register_fill_password_error');
         _showRetypePasswordError = true;
       });
@@ -495,7 +495,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (_passwordController.text != _retypePasswordController.text) {
       setState(() {
-        _retypePasswordControllerMessage = AppLocalizations.of(context)
+        _retypePasswordControllerMessage = AppLocalizations.of(context)!
             .translate('register_confirm_password_error');
         _showRetypePasswordError = true;
       });
@@ -507,7 +507,7 @@ class _RegisterPageState extends State<RegisterPage> {
     if (!_acceptedTerms) {
       //print('Accepted terms not ');
       setState(() {
-        _showAcceptedTermsMessage = AppLocalizations.of(context)
+        _showAcceptedTermsMessage = AppLocalizations.of(context)!
             .translate('register_accept_terms_error');
       });
       return;
@@ -527,6 +527,8 @@ class _RegisterPageState extends State<RegisterPage> {
                 description:
                     "We have sent an email to you with a validation link",
                 buttonText: "Okay",
+                images: [],
+                callback: () {},
               ));
 
       // Navigator.of(context).pop();
@@ -541,6 +543,8 @@ class _RegisterPageState extends State<RegisterPage> {
             title: "Register Error",
             description: err.response?.data["message"],
             buttonText: 'Okay',
+            images: [],
+            callback: () {},
           );
         },
       );

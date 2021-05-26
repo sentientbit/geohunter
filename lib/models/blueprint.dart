@@ -10,17 +10,17 @@ class Blueprint {
   String name = "";
 
   ///
-  String img = "";
+  String img = "nothing.png";
 
   /// Nr of blueprints available to the player
   int nr = 0;
 
   ///
   Blueprint({
-    this.id,
-    this.name,
-    this.img,
-    this.nr,
+    required this.id,
+    required this.name,
+    required this.img,
+    required this.nr,
   });
 
   ///
@@ -28,7 +28,7 @@ class Blueprint {
     return Blueprint(
       id: 0,
       name: "",
-      img: "",
+      img: "nothing.png",
       nr: 0,
     );
   }

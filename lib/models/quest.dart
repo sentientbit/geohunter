@@ -1,31 +1,47 @@
 ///
 class Quest {
   ///
-  String id;
+  String id = "";
 
   ///
-  String title;
+  String title = "";
 
   ///
-  String body;
+  String body = "";
 
   ///
-  String img;
+  String img = "";
 
   ///
-  String thumbnail;
+  String thumbnail = "";
 
   ///
-  String quest;
+  String quest = "";
 
   ///
-  Status status;
+  Status status = Status.blank();
 
   ///
-  Condition condition;
+  Condition condition = Condition.blank();
 
   ///
   List<Options> options = [];
+
+  /// constructor
+  Quest({
+    required this.id,
+    required this.title,
+    required this.img,
+  });
+
+  ///
+  factory Quest.blank() {
+    return Quest(
+      id: "",
+      title: "",
+      img: "",
+    );
+  }
 
   ///
   Quest.fromJson(dynamic json) {
@@ -53,16 +69,32 @@ class Options {
   String option = "";
 
   ///
-  Reward reward;
+  Reward reward = Reward.blank();
 
   ///
   int chosen = 0;
 
   ///
-  Condition condition;
+  Condition condition = Condition.blank();
 
   ///
-  Status status;
+  Status status = Status.blank();
+
+  /// constructor
+  Options({
+    required this.id,
+    required this.option,
+    required this.chosen,
+  });
+
+  ///
+  factory Options.blank() {
+    return Options(
+      id: "",
+      option: "",
+      chosen: 0,
+    );
+  }
 
   ///
   Options.fromJson(dynamic json) {
@@ -79,6 +111,18 @@ class Options {
 class Reward {
   ///
   String xp = "";
+
+  /// constructor
+  Reward({
+    required this.xp,
+  });
+
+  ///
+  factory Reward.blank() {
+    return Reward(
+      xp: "",
+    );
+  }
 
   ///
   Reward.fromJson(dynamic json) {
@@ -97,6 +141,22 @@ class Status {
   ///
   String isFailed = "";
 
+  /// constructor
+  Status({
+    required this.isStarted,
+    required this.isCompleted,
+    required this.isFailed,
+  });
+
+  ///
+  factory Status.blank() {
+    return Status(
+      isStarted: "",
+      isCompleted: "",
+      isFailed: "",
+    );
+  }
+
   ///
   Status.fromJson(dynamic json) {
     isStarted = json["is_started"].toString();
@@ -109,6 +169,18 @@ class Status {
 class Condition {
   ///
   String iff = "";
+
+  /// constructor
+  Condition({
+    required this.iff,
+  });
+
+  ///
+  factory Condition.blank() {
+    return Condition(
+      iff: "",
+    );
+  }
 
   ///
   Condition.fromJson(dynamic json) {

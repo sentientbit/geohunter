@@ -1,6 +1,8 @@
 ///
 import 'package:flutter/material.dart';
 
+import 'package:logger/logger.dart';
+
 ///
 import '../shared/constants.dart';
 
@@ -24,17 +26,21 @@ class CustomAppBar extends StatelessWidget {
   final Icon icon;
 
   ///
-  const CustomAppBar(
+  CustomAppBar(
     this.textColor,
     this.iconColor,
     this.scaffoldKey, {
-    Key key,
+    Key? key,
     this.systemHeaderBrightness = Brightness.dark,
     this.icon = const Icon(
       Icons.menu,
       // size: 32,
     ),
   }) : super(key: key);
+
+  final Logger log = Logger(
+      printer: PrettyPrinter(
+          colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
   @override
   Widget build(BuildContext context) {
@@ -54,9 +60,13 @@ class CustomAppBar extends StatelessWidget {
       leading: IconButton(
         color: iconColor,
         icon: icon,
-        onPressed: () => scaffoldKey != null
-            ? scaffoldKey.currentState.openDrawer()
-            : Navigator.of(context).pop(),
+        onPressed: () {
+          if (scaffoldKey.currentState != null) {
+            scaffoldKey.currentState?.openDrawer();
+          } else {
+            Navigator.of(context).pop();
+          }
+        },
       ),
     );
   }

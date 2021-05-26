@@ -1,35 +1,30 @@
-///
+// @dart=2.11
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
-// Admob variant 1 :(
 import 'package:admob_flutter/admob_flutter.dart';
-// Admob variant 2 :(
-//import 'package:firebase_admob/firebase_admob.dart';
-// Admob variant 3 :(
-//import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter_inapp_purchase/flutter_inapp_purchase.dart';
 import 'package:flutter/material.dart';
-//import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:loading_overlay/loading_overlay.dart';
-// import 'package:logger/logger.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_offline/flutter_offline.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:encrypt/encrypt.dart' as enq;
+
+// import 'package:logger/logger.dart';
 
 ///
 import '../app_localizations.dart';
 import '../models/mine.dart';
 import '../models/secret.dart';
 import '../models/user.dart';
+import '../providers/api_provider.dart';
 import '../providers/custom_interceptors.dart';
 import '../providers/stream_location.dart';
 import '../screens/map_explore.dart' show PoiMap;
-import '../text_style.dart';
-import '../providers/api_provider.dart';
 import '../shared/constants.dart';
+import '../text_style.dart';
 import '../widgets/custom_dialog.dart';
 import '../widgets/drawer.dart';
 import '../widgets/network_status_message.dart';
@@ -77,7 +72,10 @@ class PlacesPage extends StatefulWidget {
   int mineTypeFilter = 0;
 
   ///
-  PlacesPage({Key key, this.mineTypeFilter}) : super(key: key);
+  PlacesPage({
+    Key key,
+    @required this.mineTypeFilter,
+  }) : super(key: key);
 
   @override
   _PlacesState createState() => _PlacesState();
@@ -90,26 +88,24 @@ class _PlacesState extends State<PlacesPage> {
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  final InAppPurchaseConnection _iap = InAppPurchaseConnection.instance;
-
-  StreamSubscription _subscription;
-
   bool _isIapAvailable = false;
-
-  List<ProductDetails> _iapProducts = [];
-
-  List<String> _productIds = ["gold11coins", "", ""];
-  List<String> _productDescriptions = ["Card payment\nComing soon", "", ""];
-  List<String> _productPrices = ["N/A", "", ""];
-
-  List<PurchaseDetails> _purchases = [];
+  List<String> _productIds = ["gold11coins"];
+  List<String> _productDescriptions = ["Card payment\nComing soon"];
+  List<String> _productPrices = ["N/A"];
+  List<IAPItem> _items = [];
+  List<PurchasedItem> _purchases = [];
+  StreamSubscription _iapSubscription;
+  StreamSubscription _purchaseUpdatedSubscription;
+  StreamSubscription _purchaseErrorSubscription;
 
   bool _showCoinSheet = false;
 
   /// Curent loggedin user
-  User _user;
+  User _user = User.blank();
 
   LtLn _userLocation = LtLn(51.5, 0.0);
+
+  int _mineTypeFilter = 0;
 
   // final Logger log = Logger(
   //     printer: PrettyPrinter(
@@ -121,37 +117,19 @@ class _PlacesState extends State<PlacesPage> {
   /// Transaction Id has to match the database token
   int _transactionId = 0;
 
-  // Admob variant 3 :(
-  // RewardedAd _rewardedAd;
-  // bool _rewardedReady = false;
-  // static final AdRequest request = AdRequest(
-  //   testDevices: null,
-  //   keywords: GlobalConstants.keywords,
-  //   nonPersonalizedAds: true,
-  // );
-
-  // Admob variant 2 :(
-  // static const MobileAdTargetingInfo targetingInfo = MobileAdTargetingInfo(
-  //   testDevices: <String>[],
-  //   keywords: GlobalConstants.keywords,
-  //   childDirected: false,
-  //   nonPersonalizedAds: true,
-  // );
-
   // Admob variant 1 :(
   AdmobReward _admobAdvert;
 
-  Mine mine;
+  Mine mine = Mine.blank();
   final _places = [];
   final _recommandations = [];
   bool _isLoading = false;
   bool _isRewarded = false;
 
-  String _admobType;
-  int _admobAmount;
-  int _mineTypeFilter = 0;
+  String _admobType = "";
+  int _admobAmount = 0;
 
-  int mineId;
+  int mineId = 0;
   final _apiProvider = ApiProvider();
 
   final _locationStreamBus = getIt.get<StreamLocation>();
@@ -160,75 +138,13 @@ class _PlacesState extends State<PlacesPage> {
   @override
   void initState() {
     super.initState();
+    _mineTypeFilter = widget.mineTypeFilter;
 
-    _initializeIAP();
+    //_initializeIAP();
     _getUserDetails();
 
     _locationStreamSubscription =
         _locationStreamBus.stream$.listen(_updateUserLocation);
-    // Admob variant 3 :(
-    // MobileAds.instance.initialize().then((InitializationStatus status) {
-    //   print('Initialization done: ${status.adapterStatuses}');
-    //   MobileAds.instance
-    //       .updateRequestConfiguration(RequestConfiguration(
-    //           tagForChildDirectedTreatment:
-    //               TagForChildDirectedTreatment.unspecified))
-    //       .then((value) {
-    //     createRewardedAd();
-    //   });
-    // });
-
-    // Admob variant 2 :(
-    // RewardedVideoAd.instance.listener = (event, {rewardType, rewardAmount}) {
-    //   if (event == RewardedVideoAdEvent.loaded) {
-    //     RewardedVideoAd.instance.show();
-    //     _isRewarded = false;
-    //   } else if (event == RewardedVideoAdEvent.closed) {
-    //     if (_isRewarded) {
-    //       _serverReward(null);
-    //     } else {
-    //       showDialog(
-    //         context: context,
-    //         builder: (context) => CustomDialog(
-    //           title: 'Info',
-    //           description: "You have to watch the whole commercial "
-    //               "to get the materials from that point",
-    //           buttonText: "Okay",
-    //         ),
-    //       );
-    //     }
-    //     _isRewarded = false;
-    //     setState(() {
-    //       _admobType = "";
-    //       _isLoading = false;
-    //     });
-    //   } else if (event == RewardedVideoAdEvent.rewarded) {
-    //     setState(() {
-    //       _isRewarded = true;
-    //       setState(() {
-    //         _admobType = "Reward";
-    //         _admobAmount += rewardAmount;
-    //         _isLoading = false;
-    //       });
-    //     });
-    //   } else if (event == RewardedVideoAdEvent.failedToLoad) {
-    //     _isRewarded = false;
-    //     showDialog(
-    //       context: context,
-    //       builder: (context) => CustomDialog(
-    //         title: 'Error',
-    //         description: Platform.isAndroid
-    //             ? "Google Mobile Ads failed. Please try again later."
-    //             : "Apple Mobile Ads failed. Please try again later.",
-    //         buttonText: "Okay",
-    //       ),
-    //     );
-    //     _deleteReward();
-    //     setState(() {
-    //       _isLoading = false;
-    //     });
-    //   }
-    // };
 
     // Admob variant 1 :(
     _admobAdvert = AdmobReward(
@@ -236,15 +152,15 @@ class _PlacesState extends State<PlacesPage> {
       listener: (event, args) {
         if (event == AdmobAdEvent.loaded) {
           //print('--- AdmobReward loaded');
-          _admobAdvert.show();
+          _admobAdvert?.show();
           setState(() {
             _isRewarded = false;
           });
         } else if (event == AdmobAdEvent.closed) {
           //print('--- AdmobReward closed');
-          _admobAdvert.dispose();
+          _admobAdvert?.dispose();
           if (_isRewarded) {
-            _serverReward(null);
+            _serverReward();
           } else {
             showDialog(
               context: context,
@@ -253,6 +169,8 @@ class _PlacesState extends State<PlacesPage> {
                 description: "You have to watch the whole commercial "
                     "to get the materials from that point",
                 buttonText: "Okay",
+                images: [],
+                callback: () {},
               ),
             );
           }
@@ -265,8 +183,9 @@ class _PlacesState extends State<PlacesPage> {
           //print('--- AdmobReward rewarded');
           _admobType = "Reward";
           _isRewarded = true;
+          var totalAmount = int.tryParse(args['amount'].toString()) ?? 0;
           setState(() {
-            _admobAmount += args['amount'];
+            _admobAmount += totalAmount;
             _isLoading = false;
           });
         } else if (event == AdmobAdEvent.failedToLoad) {
@@ -280,10 +199,12 @@ class _PlacesState extends State<PlacesPage> {
                   ? "Google Mobile Ads failed. Please try again later."
                   : "Apple Mobile Ads failed. Please try again later.",
               buttonText: "Okay",
+              images: [],
+              callback: () {},
             ),
           );
           _deleteReward();
-          _admobAdvert.dispose();
+          _admobAdvert?.dispose();
           setState(() {
             _isLoading = false;
           });
@@ -296,44 +217,15 @@ class _PlacesState extends State<PlacesPage> {
       name: widget.name,
       context: context,
     );
-  }
 
-  // Admob variant 3 :(
-  // void createRewardedAd() {
-  //   _rewardedAd ??= RewardedAd(
-  //     adUnitId: RewardedAd.testAdUnitId,
-  //     request: request,
-  //     listener: AdListener(
-  //         onAdLoaded: (Ad ad) {
-  //           print('${ad.runtimeType} loaded.');
-  //           _rewardedReady = true;
-  //         },
-  //         onAdFailedToLoad: (Ad ad, LoadAdError error) {
-  //           print('${ad.runtimeType} failed to load: $error');
-  //           ad.dispose();
-  //           _rewardedAd = null;
-  //           createRewardedAd();
-  //         },
-  //         onAdOpened: (Ad ad) => print('${ad.runtimeType} onAdOpened.'),
-  //         onAdClosed: (Ad ad) {
-  //           print('${ad.runtimeType} closed.');
-  //           ad.dispose();
-  //           createRewardedAd();
-  //         },
-  //         onApplicationExit: (Ad ad) =>
-  //             print('${ad.runtimeType} onApplicationExit.'),
-  //         onRewardedAdUserEarnedReward: (RewardedAd ad, RewardItem reward) {
-  //           print(
-  //             '$RewardedAd with reward $RewardItem(${reward.amount}, ${reward.type})',
-  //           );
-  //         }),
-  //   )..load();
-  // }
+    initPlatformState();
+  }
 
   @override
   void dispose() {
     _locationStreamSubscription?.cancel();
     BackButtonInterceptor.remove(myInterceptor);
+    _iapSubscription?.cancel();
     _admobAdvert?.dispose();
     super.dispose();
   }
@@ -353,99 +245,122 @@ class _PlacesState extends State<PlacesPage> {
     return true;
   }
 
-  void _initializeIAP() async {
-    // Check IAP availability
-    _isIapAvailable = await _iap.isAvailable();
-
-    if (_isIapAvailable) {
-      await _getProducts();
-
-      _subscription = _iap.purchaseUpdatedStream.listen((data) {
-        setState(() {
-          _purchases.addAll(data);
-          _isLoading = false;
-        });
-        //print('NEW PURCHASE');
-        _callbackPurchase();
-      });
+  // Platform messages are asynchronous, so we initialize in an async method.
+  Future<void> initPlatformState() async {
+    String platformVersion;
+    // Platform messages may fail, so we use a try/catch PlatformException.
+    try {
+      platformVersion = await FlutterInappPurchase.instance.platformVersion;
+    } on Exception {
+      platformVersion = 'platform version unknown';
     }
 
-    await loadPlaces();
-  }
+    // prepare
+    var result = await FlutterInappPurchase.instance.initConnection;
+    print('result: $result');
 
-  /// Return purchase of specific product ID
-  PurchaseDetails _hasPurchased(String productId) {
-    return _purchases.firstWhere((element) => element.productID == productId,
-        orElse: () => null);
-  }
+    // If the widget was removed from the tree while the asynchronous platform
+    // message was in flight, we want to discard the reply rather than calling
+    // setState to update our non-existent appearance.
+    if (!mounted) return;
 
-  void _callbackPurchase() {
-    //ignore: omit_local_variable_types
-    PurchaseDetails purchase = _hasPurchased(_productIds[0]);
-    if (purchase == null) {
-      //print('PurchaseStatus.null');
-      _deleteReward();
-      return;
+    // refresh items for android
+    try {
+      String msg = await FlutterInappPurchase.instance.consumeAllItems;
+      print('consumeAllItems: $msg');
+    } on Exception catch (err) {
+      print('consumeAllItems error: $err');
     }
-    if (purchase.status == PurchaseStatus.purchased) {
-      //print('PurchaseStatus.purchased');
-      _serverReward(purchase);
-    } else if (purchase.status == PurchaseStatus.error) {
-      //print('PurchaseStatus.error');
-      _deleteReward();
-    }
-  }
 
-  Future<void> _getProducts() async {
-    //ignore: omit_local_variable_types
-    Set<String> ids = Set.from([_productIds[0]]);
-
-    //ignore: omit_local_variable_types
-    ProductDetailsResponse response = await _iap.queryProductDetails(ids);
-    setState(() {
-      _iapProducts = response.productDetails;
+    _iapSubscription =
+        FlutterInappPurchase.connectionUpdated.listen((connected) {
+      print('connected: $connected');
     });
 
-    var idx = 0;
-    for (var prod in _iapProducts) {
+    _purchaseUpdatedSubscription =
+        FlutterInappPurchase.purchaseUpdated.listen((productItem) {
+      print('new-purchase: $productItem');
+      _callbackPurchase(productItem.productId);
+    });
+
+    _purchaseErrorSubscription =
+        FlutterInappPurchase.purchaseError.listen((purchaseError) {
+      print('purchase-error: $purchaseError');
       setState(() {
-        _productIds[idx] = prod.id;
-        _productDescriptions[idx] = prod.description;
-        _productPrices[idx] = prod.price;
+        _isLoading = false;
+        _isRewarded = false;
       });
-    }
+    });
+
+    await _getProducts();
+    await _getPurchases();
   }
 
-  /// Purchase a product
-  void _buyProduct(ProductDetails prod) {
-    //ignore: omit_local_variable_types
-    final PurchaseParam purchaseParam = PurchaseParam(productDetails: prod);
-    // _iap.buyNonConsumable(purchaseParam: purchaseParam);
-    /*, autoConsume: false block purchases again until marked as purchased */
-    _iap.buyConsumable(purchaseParam: purchaseParam);
-    _goForReward(prod.id);
+  Future _getProducts() async {
+    // ignore: omit_local_variable_types
+    List<IAPItem> items =
+        await FlutterInappPurchase.instance.getProducts(_productIds);
+    var idx = 0;
+    for (var item in items) {
+      _productPrices[idx] = item.localizedPrice;
+      _productDescriptions[idx] = item.description;
+      _productIds[idx] = item.productId;
+      idx++;
+    }
+
+    setState(() {
+      _items.addAll(items.toList());
+    });
+  }
+
+  Future _getPurchases() async {
+    // ignore: omit_local_variable_types
+    List<PurchasedItem> items =
+        await FlutterInappPurchase.instance.getAvailablePurchases();
+    // for (var item in items) {
+    //   print('${item.toString()}');
+    //   _purchases.add(item);
+    // }
+
+    setState(() {
+      _purchases.addAll(items.toList());
+    });
+  }
+
+  void _callbackPurchase(String productId) {
+    if (productId != _productIds[0]) {
+      _deleteReward();
+      setState(() {
+        _isLoading = false;
+        _isRewarded = false;
+      });
+      return;
+    }
+    _serverReward();
+    setState(() {
+      _isLoading = false;
+      _isRewarded = true;
+    });
+  }
+
+  void _requestPurchase(IAPItem item) {
+    // log.d(item.productId);
+    FlutterInappPurchase.instance.requestPurchase(item.productId);
+    _goForReward(item.productId);
   }
 
   void choiceAction(BuildContext context, PopupMenuChoice choice) async {
     if (choice == PopupMenuChoice.noFilter) {
-      setState(() {
-        _mineTypeFilter = 0;
-      });
+      _mineTypeFilter = 0;
       loadPlaces();
     } else if (choice == PopupMenuChoice.filterMetal) {
-      setState(() {
-        _mineTypeFilter = 1;
-      });
+      _mineTypeFilter = 1;
       loadPlaces();
     } else if (choice == PopupMenuChoice.filterWood) {
-      setState(() {
-        _mineTypeFilter = 2;
-      });
+      _mineTypeFilter = 2;
       loadPlaces();
     } else if (choice == PopupMenuChoice.filterLeather) {
-      setState(() {
-        _mineTypeFilter = 3;
-      });
+      _mineTypeFilter = 3;
       loadPlaces();
     } else if (choice == PopupMenuChoice.showCoinSheet) {
       setState(() {
@@ -571,7 +486,7 @@ class _PlacesState extends State<PlacesPage> {
           // size: 32,
         ),
         onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState.openDrawer()
+            ? _scaffoldKey.currentState?.openDrawer()
             : Navigator.of(context).pop(),
       ),
       elevation: 0.1,
@@ -703,7 +618,7 @@ class _PlacesState extends State<PlacesPage> {
         onPressed: () {
           // Admob variant 1 :(
           _goForReward("AdReward");
-          _admobAdvert.load();
+          _admobAdvert?.load();
           // Admob variant 2 :(
           //RewardedVideoAd.instance.load(adUnitId: AdManager.woodchopAdUnitId,targetingInfo: targetingInfo).catchError((e) => print("error in loading ${e.toString()}")).then((v) => setState(() => _adLoaded = v));
           // Admob variant 3 :(
@@ -743,7 +658,7 @@ class _PlacesState extends State<PlacesPage> {
             side: BorderSide(width: 1, color: Colors.white),
           ),
           onPressed: () {
-            _buyProduct(_iapProducts[idx]);
+            _requestPurchase(_items[idx]);
           },
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -1022,49 +937,50 @@ class _PlacesState extends State<PlacesPage> {
           title: 'Error',
           description: 'The place is nowhere to be seen',
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       return;
     }
 
+    List<Mine> tmp = [];
+    List<dynamic> places = [];
+
     if (response.containsKey("success")) {
       if (response["success"] == true) {
         if (response.containsKey("places")) {
-          setState(() {
-            _places.clear();
-            response["places"].forEach((elem) => _places.add(Mine(elem, 1)));
-          });
+          response["places"].forEach(
+            (elem) => places.add(Mine.fromJson(elem, 1, _userLocation)),
+          );
         }
-        //print('recomnd 111');
-        //print(response["recommandations"]);
-        //ignore: omit_local_variable_types
-        List<Mine> tmp = [];
+
         if (response.containsKey("recommandations")) {
           if (response["recommandations"].isNotEmpty) {
             response["recommandations"].forEach((elem) {
-              //print('recomnd 222');
               tmp.add(
-                Mine(elem, 1, location: _userLocation),
+                Mine.fromJson(elem, 1, _userLocation),
               );
               tmp.sort(
-                  (a, b) => a.distanceToPoint.compareTo(b.distanceToPoint));
+                (a, b) => a.distanceToPoint.compareTo(b.distanceToPoint),
+              );
             });
           }
-          setState(() {
-            _recommandations.clear();
-            _recommandations.addAll(tmp.toList());
-          });
         }
       }
     }
 
     setState(() {
+      _places.clear();
+      _recommandations.clear();
       _isLoading = false;
       _isRewarded = false;
+      _places.addAll(places.toList());
+      _recommandations.addAll(tmp.toList());
     });
   }
 
-  Future _serverReward(PurchaseDetails purchase) async {
+  Future _serverReward() async {
     dynamic response;
     try {
       response = await _apiProvider.post(
@@ -1082,6 +998,8 @@ class _PlacesState extends State<PlacesPage> {
           description:
               '${err.response?.data['message']} trnx: ${_transactionId.toString()}',
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       return;
@@ -1109,6 +1027,8 @@ class _PlacesState extends State<PlacesPage> {
             description: "You gained ${response['amount']} coins, "
                 "for a grand total of ${_user.details.coins.toString()} !",
             buttonText: "Okay",
+            images: [],
+            callback: () {},
           ),
         );
       }
@@ -1167,7 +1087,6 @@ class _PlacesState extends State<PlacesPage> {
           title: AppLocalizations.of(context).translate('congrats'),
           description: 'You mined succesfully Point ${mine.id}',
           buttonText: "Okay",
-          image: AssetImage('assets/achievements/first_wood.png'),
           images: imagesArr,
           callback: () {
             loadPlaces();
@@ -1214,6 +1133,8 @@ class _PlacesState extends State<PlacesPage> {
           title: 'Error',
           description: '${err.response?.data['message']}',
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       setState(() {
@@ -1240,6 +1161,8 @@ class _PlacesState extends State<PlacesPage> {
           title: 'Error',
           description: 'Invalid ad server response. Please try again later.',
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       setState(() {
@@ -1291,6 +1214,8 @@ class _PlacesState extends State<PlacesPage> {
           title: 'Error',
           description: '${err.response?.data}',
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       setState(() {
@@ -1343,6 +1268,8 @@ class _PlacesState extends State<PlacesPage> {
     setState(() {
       _user = user;
       _userLocation = LtLn(_user.details.lat, _user.details.lng);
+      // load Places after we get the current position
+      loadPlaces();
     });
   }
 

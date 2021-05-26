@@ -36,7 +36,7 @@ class _NoGroupState extends State<NoGroup> {
   //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
   /// Curent loggedin user
-  User _user;
+  User _user = User.blank();
 
   String userGuildId = "0";
 
@@ -280,7 +280,7 @@ class _NoGroupState extends State<NoGroup> {
           // size: 32,
         ),
         onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState.openDrawer()
+            ? _scaffoldKey.currentState?.openDrawer()
             : Navigator.of(context).pop(),
       ),
       elevation: 0.1,
@@ -426,11 +426,16 @@ class _NoGroupState extends State<NoGroup> {
             guilds.add(
               Guild(
                 id: int.tryParse(elem["id"]) ?? 0,
+                factionId: 0,
+                leaderId: 0,
                 guid: elem["guid"],
                 name: elem["name"],
                 isHidden: int.tryParse(elem["is_hidden"]) ?? 0,
                 isLocked: int.tryParse(elem["is_locked"]) ?? 0,
                 nrUsers: elem["users"].length,
+                picture: Picture.blank(),
+                users: [],
+                description: "",
               ),
             );
           }
@@ -441,9 +446,9 @@ class _NoGroupState extends State<NoGroup> {
       });
     } on DioError catch (e) {
       if (e.response != null) {
-        print(e.response.data["message"]);
+        print(e.response?.data["message"]);
       } else {
-        print(e.response.statusCode);
+        print(e.response?.statusCode);
         print(e.message);
       }
     }
@@ -477,6 +482,6 @@ class _NoGroupState extends State<NoGroup> {
     //   return;
     // }
 
-    await _getAllGuilds();
+    _getAllGuilds();
   }
 }

@@ -13,11 +13,16 @@ class PinLocation {
   double lng = 0.0;
 
   ///
-  String desc;
+  String desc = "";
 
   /// List of images for this point
   List<File> images = [];
 
   ///
-  PinLocation({this.mineId, this.lat, this.lng, this.desc});
+  PinLocation({
+    required this.mineId,
+    required this.lat,
+    required this.lng,
+    required this.desc,
+  });
 }

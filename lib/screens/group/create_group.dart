@@ -25,6 +25,9 @@ class CreateGroup extends StatefulWidget {
 class _CreateGroupState extends State<CreateGroup> {
   final ApiProvider _apiProvider = ApiProvider();
 
+  ///
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   // final Logger log = Logger(
   //     printer: PrettyPrinter(
   //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
@@ -46,7 +49,7 @@ class _CreateGroupState extends State<CreateGroup> {
   bool _showPasswordError = false;
 
   /// Curent loggedin user
-  User _user;
+  User _user = User.blank();
 
   @override
   void initState() {
@@ -143,7 +146,7 @@ class _CreateGroupState extends State<CreateGroup> {
                   child: CustomAppBar(
                     Colors.white,
                     Colors.white,
-                    null,
+                    _scaffoldKey,
                     icon: Icon(Icons.arrow_back),
                   )),
               Expanded(
@@ -318,7 +321,7 @@ class _CreateGroupState extends State<CreateGroup> {
                                 ),
                                 if (_isLocked)
                                   Text(
-                                    AppLocalizations.of(context)
+                                    AppLocalizations.of(context)!
                                         .translate('password_input_label'),
                                     semanticsLabel: 'Password',
                                     style: TextStyle(
@@ -445,9 +448,10 @@ class _CreateGroupState extends State<CreateGroup> {
       showDialog(
         context: context,
         builder: (context) => CustomDialog(
-          title: AppLocalizations.of(context).translate('congrats'),
+          title: AppLocalizations.of(context)!.translate('congrats'),
           description: response["message"],
           buttonText: "Okay",
+          images: [],
           callback: () {
             Navigator.of(context).pop();
             Navigator.of(context).pushReplacementNamed('/in-group');
@@ -462,6 +466,8 @@ class _CreateGroupState extends State<CreateGroup> {
           title: 'Error',
           description: err.response?.data["message"],
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       //log.e(err.response);

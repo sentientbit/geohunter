@@ -19,7 +19,7 @@ class Item {
   int blueprintId = 0;
 
   ///
-  String img = '';
+  String img = "nothing.png";
 
   ///
   int level = 0;
@@ -32,14 +32,14 @@ class Item {
 
   ///
   Item({
-    this.id,
-    this.dropChance,
-    this.name,
-    this.blueprintId,
-    this.img,
-    this.level,
-    this.rarity,
-    this.nr,
+    required this.id,
+    required this.dropChance,
+    required this.name,
+    required this.blueprintId,
+    required this.img,
+    required this.level,
+    required this.rarity,
+    required this.nr,
   });
 
   ///
@@ -49,7 +49,7 @@ class Item {
       dropChance: 0,
       name: "",
       blueprintId: 0,
-      img: "",
+      img: "nothing.png",
       level: 0,
       rarity: 0,
       nr: 0,
