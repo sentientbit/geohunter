@@ -1,6 +1,7 @@
 /// based on https://medium.com/@afegbua/this-is-the-second-part-of-the-beautiful-list-ui-and-detail-page-article-ecb43e203915
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:dio/dio.dart';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:geohunter/fonts/rpg_awesome_icons.dart';
 //import 'package:logger/logger.dart';
@@ -20,7 +21,10 @@ class ItemDetailPage extends StatefulWidget {
   final Item item;
 
   ///
-  ItemDetailPage({Key key, this.item}) : super(key: key);
+  ItemDetailPage({
+    Key? key,
+    required this.item,
+  }) : super(key: key);
 
   @override
   _ItemDetailState createState() => _ItemDetailState();
@@ -80,7 +84,7 @@ class _ItemDetailState extends State<ItemDetailPage> {
           // size: 32,
         ),
         onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState.openDrawer()
+            ? _scaffoldKey.currentState?.openDrawer()
             : Navigator.of(context).pop(),
       ),
       elevation: 0.1,
@@ -116,7 +120,7 @@ class _ItemDetailState extends State<ItemDetailPage> {
           width: 180.0,
         ),
         Text(
-          widget.item.name ?? "Item",
+          widget.item.name,
           style: TextStyle(
             color: Item.color(widget.item.rarity),
             fontSize: 24.0,
@@ -214,7 +218,7 @@ class _ItemDetailState extends State<ItemDetailPage> {
               children: <Widget>[
                 SizedBox(height: 18),
                 Text(
-                  _description ?? "N/A",
+                  _description,
                   style:
                       TextStyle(color: GlobalConstants.appFg, fontSize: 18.0),
                 ),
@@ -241,7 +245,7 @@ class _ItemDetailState extends State<ItemDetailPage> {
                     width: 180.0,
                   ),
                 Text(
-                  _blueprintName ?? "Blueprint",
+                  _blueprintName,
                   style:
                       TextStyle(color: GlobalConstants.appFg, fontSize: 18.0),
                 ),
@@ -359,8 +363,10 @@ class _ItemDetailState extends State<ItemDetailPage> {
         context: context,
         builder: (context) => CustomDialog(
           title: 'Error',
-          description: err?.response?.data['message'],
+          description: err.response?.data['message'],
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       return;
@@ -387,10 +393,11 @@ class _ItemDetailState extends State<ItemDetailPage> {
     }
 
     if (response["success"] == true) {
+      FlameAudio.audioCache.play('sfx/break_1.ogg');
       showDialog(
         context: context,
         builder: (context) => CustomDialog(
-          title: AppLocalizations.of(context).translate('congrats'),
+          title: AppLocalizations.of(context)!.translate('congrats'),
           description: response["message"],
           buttonText: "Okay",
           images: imagesArr,

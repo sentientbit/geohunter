@@ -15,6 +15,8 @@ class EmptyPage extends StatefulWidget {
 }
 
 class _EmptyPageState extends State<EmptyPage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   // final Logger log = Logger(
   //     printer: PrettyPrinter(
   //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
@@ -60,7 +62,7 @@ class _EmptyPageState extends State<EmptyPage> {
                   child: CustomAppBar(
                     Colors.white,
                     Colors.white,
-                    null,
+                    _scaffoldKey,
                     icon: Icon(Icons.arrow_back),
                   )),
               Expanded(

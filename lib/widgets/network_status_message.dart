@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 class NetworkStatusMessage extends StatelessWidget {
   ///
   const NetworkStatusMessage({
-    Key key,
+    Key? key,
   }) : super(key: key);
 
   @override

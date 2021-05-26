@@ -10,7 +10,9 @@ class ItemsGrid extends StatelessWidget {
   List<Image> images = [];
 
   ///
-  ItemsGrid({@required this.images});
+  ItemsGrid({
+    required this.images,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -47,22 +49,18 @@ class CustomDialog extends StatelessWidget {
   String buttonText = "";
 
   ///
-  final ImageProvider image;
+  List<Image> images = [];
 
   ///
-  final List<Image> images;
-
-  ///
-  final VoidCallback callback;
+  VoidCallback callback = () {};
 
   ///
   CustomDialog({
-    @required this.title,
-    @required this.description,
-    @required this.buttonText,
-    this.image,
-    this.images,
-    this.callback,
+    required this.title,
+    required this.description,
+    required this.buttonText,
+    required this.images,
+    required this.callback,
   });
 
   ///
@@ -98,7 +96,7 @@ class CustomDialog extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min, // To make the card compact
                 children: <Widget>[
                   Text(
-                    title ?? 'Dialog',
+                    title,
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 24.0,
@@ -108,7 +106,7 @@ class CustomDialog extends StatelessWidget {
                   ),
                   SizedBox(height: 16.0),
                   Text(
-                    description ?? 'Please confirm',
+                    description,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white,
@@ -172,7 +170,6 @@ class CustomDialog extends StatelessWidget {
           left: GlobalConstants.padding,
           right: GlobalConstants.padding,
           child: CircleAvatar(
-            //backgroundImage: image,
             backgroundColor: Colors.transparent,
             radius: GlobalConstants.avatarRadius,
           ),

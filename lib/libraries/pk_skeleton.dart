@@ -44,8 +44,8 @@ class PKCardSkeleton extends StatefulWidget {
 
 class _PKCardSkeletonState extends State<PKCardSkeleton>
     with SingleTickerProviderStateMixin {
-  AnimationController _controller;
-  Animation<double> animation;
+  AnimationController? _controller;
+  Animation<double>? animation;
 
   @override
   void initState() {
@@ -56,22 +56,22 @@ class _PKCardSkeletonState extends State<PKCardSkeleton>
     );
 
     animation = Tween<double>(begin: -1.0, end: 2.0).animate(
-        CurvedAnimation(curve: Curves.easeInOutSine, parent: _controller));
+        CurvedAnimation(curve: Curves.easeInOutSine, parent: _controller!));
 
-    animation.addStatusListener((status) {
+    animation?.addStatusListener((status) {
       if (status == AnimationStatus.completed ||
           status == AnimationStatus.dismissed) {
-        _controller.repeat();
+        _controller?.repeat();
       } else if (status == AnimationStatus.dismissed) {
-        _controller.forward();
+        _controller?.forward();
       }
     });
-    _controller.forward();
+    _controller?.forward();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -80,7 +80,7 @@ class _PKCardSkeletonState extends State<PKCardSkeleton>
     var width = MediaQuery.of(context).size.width;
     var height = MediaQuery.of(context).size.height;
     return AnimatedBuilder(
-      animation: animation,
+      animation: animation!,
       builder: (context, child) {
         return Padding(
           padding: const EdgeInsets.all(16.0),
@@ -173,10 +173,9 @@ Decoration myDarkBoxDec(dynamic animation, {bool isCircle = false}) {
       begin: Alignment.centerLeft,
       end: Alignment.centerRight,
       colors: [
-        Colors.grey[700],
-        Colors.grey[600],
-        Colors.grey[700],
-        // Color(0xfff6f7f9),
+        Color(0xff616161),
+        Color(0xff757575),
+        Color(0xff616161),
       ],
       stops: [
         // animation.value * 0.1,
@@ -207,8 +206,8 @@ class PKDarkCardSkeleton extends StatefulWidget {
 
 class _PKDarkCardSkeletonState extends State<PKDarkCardSkeleton>
     with SingleTickerProviderStateMixin {
-  AnimationController _controller;
-  Animation<double> animation;
+  AnimationController? _controller;
+  Animation<double>? animation;
 
   @override
   void initState() {
@@ -219,22 +218,22 @@ class _PKDarkCardSkeletonState extends State<PKDarkCardSkeleton>
     );
 
     animation = Tween<double>(begin: -1.0, end: 2.0).animate(
-        CurvedAnimation(curve: Curves.easeInOutSine, parent: _controller));
+        CurvedAnimation(curve: Curves.easeInOutSine, parent: _controller!));
 
-    animation.addStatusListener((status) {
+    animation?.addStatusListener((status) {
       if (status == AnimationStatus.completed ||
           status == AnimationStatus.dismissed) {
-        _controller.repeat();
+        _controller?.repeat();
       } else if (status == AnimationStatus.dismissed) {
-        _controller.forward();
+        _controller?.forward();
       }
     });
-    _controller.forward();
+    _controller?.forward();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -243,7 +242,7 @@ class _PKDarkCardSkeletonState extends State<PKDarkCardSkeleton>
     var width = MediaQuery.of(context).size.width;
     var height = MediaQuery.of(context).size.height;
     return AnimatedBuilder(
-      animation: animation,
+      animation: animation!,
       builder: (context, child) {
         return Padding(
           padding: const EdgeInsets.all(16.0),
@@ -409,8 +408,8 @@ class PKCardProfileSkeleton extends StatefulWidget {
 
 class _PKCardProfileSkeletonState extends State<PKCardProfileSkeleton>
     with SingleTickerProviderStateMixin {
-  AnimationController _controller;
-  Animation<double> animation;
+  AnimationController? _controller;
+  Animation<double>? animation;
 
   @override
   void initState() {
@@ -421,22 +420,22 @@ class _PKCardProfileSkeletonState extends State<PKCardProfileSkeleton>
     );
 
     animation = Tween<double>(begin: -1.0, end: 2.0).animate(
-        CurvedAnimation(curve: Curves.easeInOutSine, parent: _controller));
+        CurvedAnimation(curve: Curves.easeInOutSine, parent: _controller!));
 
-    animation.addStatusListener((status) {
+    animation?.addStatusListener((status) {
       if (status == AnimationStatus.completed ||
           status == AnimationStatus.dismissed) {
-        _controller.repeat();
+        _controller?.repeat();
       } else if (status == AnimationStatus.dismissed) {
-        _controller.forward();
+        _controller?.forward();
       }
     });
-    _controller.forward();
+    _controller?.forward();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -445,7 +444,7 @@ class _PKCardProfileSkeletonState extends State<PKCardProfileSkeleton>
     var width = MediaQuery.of(context).size.width;
     var height = MediaQuery.of(context).size.height;
     return AnimatedBuilder(
-      animation: animation,
+      animation: animation!,
       builder: (context, child) {
         return Padding(
           padding: const EdgeInsets.all(16.0),
@@ -562,8 +561,8 @@ class PKDarkCardProfileSkeleton extends StatefulWidget {
 
 class _PKDarkCardProfileSkeletonState extends State<PKDarkCardProfileSkeleton>
     with SingleTickerProviderStateMixin {
-  AnimationController _controller;
-  Animation<double> animation;
+  AnimationController? _controller;
+  Animation<double>? animation;
 
   @override
   void initState() {
@@ -574,22 +573,22 @@ class _PKDarkCardProfileSkeletonState extends State<PKDarkCardProfileSkeleton>
     );
 
     animation = Tween<double>(begin: -1.0, end: 2.0).animate(
-        CurvedAnimation(curve: Curves.easeInOutSine, parent: _controller));
+        CurvedAnimation(curve: Curves.easeInOutSine, parent: _controller!));
 
-    animation.addStatusListener((status) {
+    animation?.addStatusListener((status) {
       if (status == AnimationStatus.completed ||
           status == AnimationStatus.dismissed) {
-        _controller.repeat();
+        _controller?.repeat();
       } else if (status == AnimationStatus.dismissed) {
-        _controller.forward();
+        _controller?.forward();
       }
     });
-    _controller.forward();
+    _controller?.forward();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -598,7 +597,7 @@ class _PKDarkCardProfileSkeletonState extends State<PKDarkCardProfileSkeleton>
     var width = MediaQuery.of(context).size.width;
     var height = MediaQuery.of(context).size.height;
     return AnimatedBuilder(
-      animation: animation,
+      animation: animation!,
       builder: (context, child) {
         return Padding(
           padding: const EdgeInsets.all(16.0),
@@ -710,8 +709,8 @@ class PKCardPageSkeleton extends StatefulWidget {
 
 class _PKCardPageSkeletonState extends State<PKCardPageSkeleton>
     with SingleTickerProviderStateMixin {
-  AnimationController _controller;
-  Animation<double> animation;
+  AnimationController? _controller;
+  Animation<double>? animation;
 
   @override
   void initState() {
@@ -722,22 +721,22 @@ class _PKCardPageSkeletonState extends State<PKCardPageSkeleton>
     );
 
     animation = Tween<double>(begin: -1.0, end: 2.0).animate(
-        CurvedAnimation(curve: Curves.easeInOutSine, parent: _controller));
+        CurvedAnimation(curve: Curves.easeInOutSine, parent: _controller!));
 
-    animation.addStatusListener((status) {
+    animation?.addStatusListener((status) {
       if (status == AnimationStatus.completed ||
           status == AnimationStatus.dismissed) {
-        _controller.repeat();
+        _controller?.repeat();
       } else if (status == AnimationStatus.dismissed) {
-        _controller.forward();
+        _controller?.forward();
       }
     });
-    _controller.forward();
+    _controller?.forward();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -746,7 +745,7 @@ class _PKCardPageSkeletonState extends State<PKCardPageSkeleton>
     var width = MediaQuery.of(context).size.width;
     var height = MediaQuery.of(context).size.height;
     return AnimatedBuilder(
-      animation: animation,
+      animation: animation!,
       builder: (context, child) {
         return Padding(
           padding: const EdgeInsets.all(16.0),
@@ -804,8 +803,8 @@ class PKDarkCardPageSkeleton extends StatefulWidget {
 
 class _PKDarkCardPageSkeletonState extends State<PKDarkCardPageSkeleton>
     with SingleTickerProviderStateMixin {
-  AnimationController _controller;
-  Animation<double> animation;
+  AnimationController? _controller;
+  Animation<double>? animation;
 
   @override
   void initState() {
@@ -816,22 +815,22 @@ class _PKDarkCardPageSkeletonState extends State<PKDarkCardPageSkeleton>
     );
 
     animation = Tween<double>(begin: -1.0, end: 2.0).animate(
-        CurvedAnimation(curve: Curves.easeInOutSine, parent: _controller));
+        CurvedAnimation(curve: Curves.easeInOutSine, parent: _controller!));
 
-    animation.addStatusListener((status) {
+    animation?.addStatusListener((status) {
       if (status == AnimationStatus.completed ||
           status == AnimationStatus.dismissed) {
-        _controller.repeat();
+        _controller?.repeat();
       } else if (status == AnimationStatus.dismissed) {
-        _controller.forward();
+        _controller?.forward();
       }
     });
-    _controller.forward();
+    _controller?.forward();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -840,45 +839,47 @@ class _PKDarkCardPageSkeletonState extends State<PKDarkCardPageSkeleton>
     var width = MediaQuery.of(context).size.width;
     var height = MediaQuery.of(context).size.height;
     return AnimatedBuilder(
-      animation: animation,
+      animation: animation!,
       builder: (context, child) {
         return Padding(
           padding: const EdgeInsets.all(16.0),
           child: Container(
-              color: Colors.grey[800],
-              padding: EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: List.generate(
-                    widget.totalLines,
-                    (i) => Column(
-                          children: <Widget>[
-                            Container(
-                              height: height * 0.007,
-                              width: width * 0.7,
-                              decoration: myDarkBoxDec(animation),
-                            ),
-                            SizedBox(
-                              height: 10,
-                            ),
-                            Container(
-                              height: height * 0.007,
-                              width: width * 0.8,
-                              decoration: myDarkBoxDec(animation),
-                            ),
-                            SizedBox(
-                              height: 10,
-                            ),
-                            Container(
-                              height: height * 0.007,
-                              width: width * 0.5,
-                              decoration: myDarkBoxDec(animation),
-                            ),
-                          ],
-                        )).toList(),
-              )),
+            color: Colors.grey[800],
+            padding: EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: List.generate(
+                widget.totalLines,
+                (i) => Column(
+                  children: <Widget>[
+                    Container(
+                      height: height * 0.007,
+                      width: width * 0.7,
+                      decoration: myDarkBoxDec(animation),
+                    ),
+                    SizedBox(
+                      height: 10,
+                    ),
+                    Container(
+                      height: height * 0.007,
+                      width: width * 0.8,
+                      decoration: myDarkBoxDec(animation),
+                    ),
+                    SizedBox(
+                      height: 10,
+                    ),
+                    Container(
+                      height: height * 0.007,
+                      width: width * 0.5,
+                      decoration: myDarkBoxDec(animation),
+                    ),
+                  ],
+                ),
+              ).toList(),
+            ),
+          ),
         );
       },
     );
@@ -902,8 +903,8 @@ class PKUserProfileSkeleton extends StatefulWidget {
 
 class _PKUserProfileSkeletonState extends State<PKUserProfileSkeleton>
     with SingleTickerProviderStateMixin {
-  AnimationController _controller;
-  Animation<double> animation;
+  AnimationController? _controller;
+  Animation<double>? animation;
 
   @override
   void initState() {
@@ -914,29 +915,29 @@ class _PKUserProfileSkeletonState extends State<PKUserProfileSkeleton>
     );
 
     animation = Tween<double>(begin: -1.0, end: 2.0).animate(
-        CurvedAnimation(curve: Curves.easeInOutSine, parent: _controller));
+        CurvedAnimation(curve: Curves.easeInOutSine, parent: _controller!));
 
-    animation.addStatusListener((status) {
+    animation?.addStatusListener((status) {
       if (status == AnimationStatus.completed ||
           status == AnimationStatus.dismissed) {
-        _controller.repeat();
+        _controller?.repeat();
       } else if (status == AnimationStatus.dismissed) {
-        _controller.forward();
+        _controller?.forward();
       }
     });
-    _controller.forward();
+    _controller?.forward();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: animation,
+      animation: animation!,
       builder: (context, child) {
         return Padding(
           padding: const EdgeInsets.all(1.0),

@@ -30,14 +30,14 @@ class DailyReward {
 
   ///
   DailyReward({
-    this.day,
-    this.blueprintId,
-    this.blueprint,
-    this.materialId,
-    this.material,
-    this.itemId,
-    this.item,
-    this.date,
+    required this.day,
+    required this.blueprintId,
+    required this.blueprint,
+    required this.materialId,
+    required this.material,
+    required this.itemId,
+    required this.item,
+    required this.date,
   });
 
   ///

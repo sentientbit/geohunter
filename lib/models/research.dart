@@ -5,26 +5,26 @@ import '../shared/constants.dart';
 ///
 class Research {
   ///
-  int id;
+  int id = 0;
 
   /// The name of the item
-  String name;
+  String name = "";
 
   ///
-  String img;
+  String img = "";
 
   ///
-  int nrInvested;
+  int nrInvested = 0;
 
   ///
-  Blueprint blueprint;
+  Blueprint blueprint = Blueprint.blank();
 
   ///
   Research({
-    this.id,
-    this.name,
-    this.img,
-    this.blueprint,
+    required this.id,
+    required this.name,
+    required this.img,
+    required this.blueprint,
   });
 
   ///

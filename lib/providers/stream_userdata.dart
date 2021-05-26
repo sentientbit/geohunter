@@ -11,6 +11,7 @@ class StreamUserData {
       miningSpeed: 0,
       guildId: "0",
       xp: 0,
+      unread: [],
     ),
   );
 

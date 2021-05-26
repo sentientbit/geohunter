@@ -6,23 +6,27 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:latlong/latlong.dart';
 
 ///
 class LtLn {
   ///
-  const LtLn(double latitude, double longitude)
-      : assert(latitude != null),
-        assert(longitude != null),
-        latitude =
-            (latitude < -90.0 ? -90.0 : (90.0 < latitude ? 90.0 : latitude)),
-        longitude = (longitude + 180.0) % 360.0 - 180.0;
+  LtLn(double lat, double lng)
+      : assert(lat != null),
+        assert(lng != null),
+        _latitude = (lat < -90.0 ? -90.0 : (90.0 < lat ? 90.0 : lat)),
+        _longitude = (lng + 180.0) % 360.0 - 180.0;
 
   ///
-  final double latitude;
+  double _latitude = 51.5;
 
   ///
-  final double longitude;
+  double get latitude => _latitude;
+
+  ///
+  double _longitude = 0.0;
+
+  ///
+  double get longitude => _longitude;
 }
 
 /// Flutter best practices:  Wrap the constants as statics in a class
@@ -40,7 +44,7 @@ class GlobalConstants {
   static const String appNamespace = "com.apsoni.geocraft";
 
   ///
-  static const String appVersion = "1.1.70";
+  static const String appVersion = "1.1.71";
 
   ///
 
@@ -125,20 +129,22 @@ const double earthRadius = 6367444.0;
 
 /// one radian is equal to 180/π degrees
 /// To convert from degrees to radians, multiply by π/180.
-const oneRad = math.pi / 180;
+const double oneRad = math.pi / 180;
 
 /// Convert Spherical coordinates to Cartesian system
 List<double> sphericalToCartesian(final double lat, final double lng) {
+  // Converts degree to radian: deg * (PI / 180.0)
   //ignore: omit_local_variable_types
-  double latR = degToRadian(lat);
+  double latRadian = lat * oneRad;
+  // Radian to degree: rad * (180.0 / PI)
   //ignore: omit_local_variable_types
-  double lngR = degToRadian(lng);
+  double lngRadian = lng * oneRad;
   //ignore: omit_local_variable_types
-  double cos = math.cos(latR);
+  double cos = math.cos(latRadian);
   return [
-    earthRadius * cos * math.cos(lngR),
-    earthRadius * math.sin(latR),
-    earthRadius * cos * math.sin(lngR)
+    earthRadius * cos * math.cos(lngRadian),
+    earthRadius * math.sin(latRadian),
+    earthRadius * cos * math.sin(lngRadian)
   ];
 }
 
@@ -328,11 +334,11 @@ int expToLevel(int exp) {
 /// $exp = 10 * (pow(2, $lvl) - 1);
 int levelToExp(int lvl) {
   var exp = math.pow(2, lvl) - 1;
-  return 10 * exp;
+  return 10 * int.parse(exp.toString());
 }
 
 /// Convert Research points into Crafting Level
-num researchToCrafting(num exp) {
+int researchToCrafting(num exp) {
   var lvl = math.log((exp) + 1) / math.ln2;
   var crafting = lvl.floor();
   // Cap to level 4 for now
@@ -343,9 +349,9 @@ num researchToCrafting(num exp) {
 }
 
 /// Convert Crafting Level into Research points
-num craftingToResearch(num lvl) {
+int craftingToResearch(num lvl) {
   var exp = math.pow(2, lvl) - 1;
-  return exp;
+  return int.parse(exp.toString());
 }
 
 /// String hashStringSHA256(String input) { var digest = sha256.convert(utf8.encode(input)); print("Digest as hex string: $digest"); return base64.encode(digest.bytes); }
@@ -551,15 +557,17 @@ class Debouncer {
 
   ///
   VoidCallback action = () {};
-  Timer _timer;
+  Timer? _timer;
 
   ///
-  Debouncer({this.milliseconds});
+  Debouncer({
+    required this.milliseconds,
+  });
 
   ///
   void run(VoidCallback action) {
     if (_timer != null) {
-      _timer.cancel();
+      _timer?.cancel();
     }
 
     _timer = Timer(Duration(milliseconds: milliseconds), action);

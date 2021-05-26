@@ -53,8 +53,12 @@ class PoiMap extends StatefulWidget {
   double longitude = 0.0;
 
   ///
-  PoiMap({Key key, this.goToRemoteLocation, this.latitude, this.longitude})
-      : super(key: key);
+  PoiMap({
+    Key? key,
+    required this.goToRemoteLocation,
+    required this.latitude,
+    required this.longitude,
+  }) : super(key: key);
 
   @override
   _PoiMapState createState() => _PoiMapState();
@@ -87,7 +91,7 @@ class _PoiMapState extends State<PoiMap>
   LtLn _userLocation = LtLn(51.5, 0);
 
   double _mapZoom = 14.0;
-  LatLng _displayWindowCenter;
+  LatLng _displayWindowCenter = LatLng(51.5, 0.0);
 
   /// final _storage = FlutterSecureStorage();
   /// await _storage.write(key: 'key', value: 'value');
@@ -112,7 +116,7 @@ class _PoiMapState extends State<PoiMap>
   bool _recenterBtnPressed = false;
   bool _showRecenterBtn = false;
 
-  Timer timer;
+  Timer? timer;
   Color _customAppBarTextColor = Colors.black;
   Color _customAppBarIconColor = Colors.black;
   Brightness _systemHeaderBrightness = Brightness.light;
@@ -125,13 +129,13 @@ class _PoiMapState extends State<PoiMap>
   final List<String> _thumbnails = [];
   final _storage = FlutterSecureStorage();
 
-  Mine _mine;
+  Mine _mine = Mine.blank();
   int _mineIdx = -1;
   int _mineId = 0;
-  String _mineUid;
+  String _mineUid = "";
 
   /// Curent loggedin user
-  User _user;
+  User _user = User.blank();
 
   String mapType = "outdoors-v11";
 
@@ -146,7 +150,7 @@ class _PoiMapState extends State<PoiMap>
     var url = '';
     if (_displayWindowCenter != null) {
       var d = 39136000 *
-          math.cos(degToRadian(location.longitude)) /
+          math.cos(location.longitude * oneRad) /
           math.pow(2, _mapZoom);
       if (d > 10000000) {
         d = 10000000;
@@ -190,7 +194,7 @@ class _PoiMapState extends State<PoiMap>
           return;
         } else if (err.response == null) {
           return;
-        } else if (err.response.statusCode == 401) {
+        } else if (err.response?.statusCode == 401) {
           Navigator.of(context).pop();
           Navigator.of(context).pushNamed('/login');
           return;
@@ -204,7 +208,7 @@ class _PoiMapState extends State<PoiMap>
           if (response.containsKey("geojson")) {
             if (response["geojson"]["features"] != null) {
               for (dynamic elem in response["geojson"]["features"]) {
-                final mine = Mine(elem, 1, location: _userLocation);
+                final mine = Mine.fromJson(elem, 1, _userLocation);
                 features.add(mine);
               }
             }
@@ -213,7 +217,7 @@ class _PoiMapState extends State<PoiMap>
           if (response.containsKey("players")) {
             if (response["players"]["features"] != null) {
               for (dynamic elem in response["players"]["features"]) {
-                final mine = Mine(elem, 2, location: _userLocation);
+                final mine = Mine.fromJson(elem, 2, _userLocation);
                 players.add(mine);
               }
             }
@@ -238,7 +242,7 @@ class _PoiMapState extends State<PoiMap>
                       width: 60,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.blue[300].withOpacity(0.5),
+                        color: Color(0x8864b5f6),
                       ),
                     ),
                   ),
@@ -361,9 +365,9 @@ class _PoiMapState extends State<PoiMap>
   // }
 
   final _minesStreamBus = getIt.get<StreamMines>();
-  StreamSubscription<List<Mine>> _minesStreamSubscription;
+  StreamSubscription<List<Mine>>? _minesStreamSubscription;
   final _locationStreamBus = getIt.get<StreamLocation>();
-  StreamSubscription<LtLn> _locationStreamSubscription;
+  StreamSubscription<LtLn>? _locationStreamSubscription;
 
   @override
   void didChangeDependencies() {
@@ -407,7 +411,7 @@ class _PoiMapState extends State<PoiMap>
     BackButtonInterceptor.remove(myInterceptor);
     timer?.cancel();
     _pois.clear();
-    _minesStreamSubscription.cancel();
+    _minesStreamSubscription?.cancel();
     _locationStreamSubscription?.cancel();
     //if (mapController != null) { mapController.removeListener(_onMapChanged); }
     super.dispose();
@@ -548,10 +552,12 @@ class _PoiMapState extends State<PoiMap>
     );
   }
 
-  Widget mapButton(String tag, Function function, IconData icon) {
+  Widget mapButton(String tag, Function func, IconData icon) {
     return FloatingActionButton(
       heroTag: tag,
-      onPressed: function,
+      onPressed: () {
+        func();
+      },
       materialTapTargetSize: MaterialTapTargetSize.padded,
       backgroundColor: Colors.black,
       child: Icon(
@@ -660,14 +666,15 @@ class _PoiMapState extends State<PoiMap>
           () {
             //ignore: omit_local_variable_types
             String mining =
-                AppLocalizations.of(context).translate('you_found_point');
+                AppLocalizations.of(context)!.translate('you_found_point');
             showDialog(
               context: context,
               builder: (context) => CustomDialog(
-                title: AppLocalizations.of(context).translate('congrats'),
+                title: AppLocalizations.of(context)!.translate('congrats'),
                 description: "$mining $mineId, $mineComment",
                 buttonText: "Okay",
                 images: imagesArr,
+                callback: () {},
               ),
             );
           },
@@ -684,6 +691,8 @@ class _PoiMapState extends State<PoiMap>
               title: 'Error',
               description: '${err.response?.data}',
               buttonText: "Okay",
+              images: [],
+              callback: () {},
             ),
           );
         },
@@ -1448,6 +1457,8 @@ class _PoiMapState extends State<PoiMap>
         title: 'Notice',
         description: 'Images no longer are to be uploaded',
         buttonText: "Okay",
+        images: [],
+        callback: () {},
       ),
     );
   }
@@ -1505,13 +1516,15 @@ class _PoiMapState extends State<PoiMap>
             await _apiProvider.uploadLandmarkPicture(
                 "/landmark/$_mineId", image);
           } on DioError catch (err) {
-            if (err?.response != null) {
+            if (err.response != null) {
               showDialog(
                 context: context,
                 builder: (context) => CustomDialog(
                   title: 'Error',
                   description: err.response?.data['message'],
                   buttonText: "Okay",
+                  images: [],
+                  callback: () {},
                 ),
               );
             }
@@ -1520,9 +1533,11 @@ class _PoiMapState extends State<PoiMap>
         showDialog(
           context: context,
           builder: (context) => CustomDialog(
-            title: AppLocalizations.of(context).translate('congrats'),
+            title: AppLocalizations.of(context)!.translate('congrats'),
             description: "${_images.length} pictures uploaded.",
             buttonText: "Okay",
+            images: [],
+            callback: () {},
           ),
         );
       }
@@ -1567,9 +1582,11 @@ class _PoiMapState extends State<PoiMap>
       showDialog(
         context: context,
         builder: (context) => CustomDialog(
-          title: AppLocalizations.of(context).translate('congrats'),
+          title: AppLocalizations.of(context)!.translate('congrats'),
           description: response["message"],
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
     }

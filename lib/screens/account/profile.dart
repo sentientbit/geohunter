@@ -24,20 +24,7 @@ import '../../widgets/drawer.dart';
 import '../../widgets/network_status_message.dart';
 
 /// 12 User equiped items with 0 as a starting index
-List<Item> _equipments = [
-  null,
-  null,
-  null,
-  null,
-  null,
-  null,
-  null,
-  null,
-  null,
-  null,
-  null,
-  null
-];
+List<Item> _equipments = List<Item>.filled(12, Item.blank());
 
 ///
 class ProfilePage extends StatefulWidget {
@@ -77,9 +64,9 @@ class _ProfilePageState extends State<ProfilePage> {
   User _user = User.blank();
 
   ///
-  List<DropdownMenuItem<String>> _locationPrivacies;
-  List<DropdownMenuItem<String>> _sexes;
-  List<DropdownMenuItem<String>> _languages;
+  List<DropdownMenuItem<String>> _locationPrivacies = [];
+  List<DropdownMenuItem<String>> _sexes = [];
+  List<DropdownMenuItem<String>> _languages = [];
 
   ///
   int currentLevel = 0;
@@ -160,8 +147,8 @@ class _ProfilePageState extends State<ProfilePage> {
           onChanged: (value) {
             setState(
               () {
-                _user.details.sex = value;
-                _currentSex = value;
+                _user.details.sex = value ?? "0";
+                _currentSex = value ?? "0";
               },
             );
           },
@@ -194,7 +181,7 @@ class _ProfilePageState extends State<ProfilePage> {
           onChanged: (value) {
             setState(
               () {
-                _user.details.locationPrivacy = value;
+                _user.details.locationPrivacy = value ?? "0";
               },
             );
           },
@@ -225,7 +212,7 @@ class _ProfilePageState extends State<ProfilePage> {
           onChanged: (value) {
             setState(
               () {
-                _user.details.language = value;
+                _user.details.language = value ?? "en";
               },
             );
           },
@@ -236,10 +223,8 @@ class _ProfilePageState extends State<ProfilePage> {
       );
 
   Widget itemLogo(double szWidth, int index, Item eqp) {
-    var rarity = 0;
-    if (eqp != null) {
-      rarity = int.tryParse(eqp.rarity.toString()) ?? 0;
-    }
+    var rarity = (eqp.id > 0) ? (int.tryParse(eqp.rarity.toString()) ?? 0) : 0;
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -251,7 +236,7 @@ class _ProfilePageState extends State<ProfilePage> {
       },
       child: Container(
         height: (szWidth - 60) / 3,
-        decoration: (eqp != null)
+        decoration: (eqp.id != 0)
             ? BoxDecoration(
                 borderRadius: BorderRadius.all(Radius.circular(8.0)),
                 border: Border.all(
@@ -331,13 +316,13 @@ class _ProfilePageState extends State<ProfilePage> {
           // size: 32,
         ),
         onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState.openDrawer()
+            ? _scaffoldKey.currentState?.openDrawer()
             : Navigator.of(context).pop(),
       ),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
       title: Text(
-        AppLocalizations.of(context).translate('profile'),
+        AppLocalizations.of(context)!.translate('profile'),
         style: Style.topBar,
       ),
     );
@@ -347,35 +332,35 @@ class _ProfilePageState extends State<ProfilePage> {
         DropdownMenuItem<String>(
           value: "1",
           child:
-              Text(AppLocalizations.of(context).translate('gender_male_text')),
+              Text(AppLocalizations.of(context)!.translate('gender_male_text')),
         ),
         DropdownMenuItem<String>(
           value: "2",
           child: Text(
-              AppLocalizations.of(context).translate('gender_female_text')),
+              AppLocalizations.of(context)!.translate('gender_female_text')),
         )
       ];
       _locationPrivacies = [
         DropdownMenuItem<String>(
           value: "0",
           child: Text(
-            AppLocalizations.of(context)
+            AppLocalizations.of(context)!
                 .translate('location_privacy_nobody_text'),
           ),
         ),
         DropdownMenuItem<String>(
           value: "1",
-          child: Text(AppLocalizations.of(context)
+          child: Text(AppLocalizations.of(context)!
               .translate('location_privacy_just_friends_text')),
         ),
         DropdownMenuItem<String>(
           value: "3",
-          child: Text(AppLocalizations.of(context)
+          child: Text(AppLocalizations.of(context)!
               .translate('location_privacy_friends_and_guild_text')),
         ),
         DropdownMenuItem<String>(
           value: "15",
-          child: Text(AppLocalizations.of(context)
+          child: Text(AppLocalizations.of(context)!
               .translate('location_privacy_public_text')),
         ),
       ];
@@ -406,7 +391,7 @@ class _ProfilePageState extends State<ProfilePage> {
         children: <Widget>[
           Icon(Icons.done, color: Color(0xffe6a04e)),
           Text(
-            " ${AppLocalizations.of(context).translate('save')}",
+            " ${AppLocalizations.of(context)!.translate('save')}",
             style: TextStyle(
               color: Color(0xffe6a04e),
               fontSize: 18,
@@ -699,7 +684,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       SizedBox(height: 18),
                       // Username
                       Text(
-                        AppLocalizations.of(context)
+                        AppLocalizations.of(context)!
                             .translate('update_profile_username_label'),
                         style: TextStyle(
                           color: Colors.white,
@@ -764,7 +749,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       // Gender
                       Text(
-                        AppLocalizations.of(context)
+                        AppLocalizations.of(context)!
                             .translate('update_profile_gender_label'),
                         style: TextStyle(
                           color: Colors.white,
@@ -806,7 +791,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       // Location Privacy
                       Text(
-                        AppLocalizations.of(context)
+                        AppLocalizations.of(context)!
                             .translate('update_profile_location_privacy_label'),
                         style: TextStyle(
                           color: Colors.white,
@@ -845,7 +830,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       // Language
                       Text(
-                        AppLocalizations.of(context)
+                        AppLocalizations.of(context)!
                             .translate('update_profile_language_label'),
                         style: TextStyle(
                             color: Colors.white,
@@ -878,7 +863,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       SizedBox(width: 18, height: 18),
                       Text(
-                        AppLocalizations.of(context)
+                        AppLocalizations.of(context)!
                             .translate('update_profile_status_text_label'),
                         style: TextStyle(
                             color: Colors.white,
@@ -978,6 +963,8 @@ class _ProfilePageState extends State<ProfilePage> {
             title: 'Success',
             description: 'Profile updated succesfully',
             buttonText: 'Okay',
+            images: [],
+            callback: () {},
           );
         },
       );
@@ -993,6 +980,8 @@ class _ProfilePageState extends State<ProfilePage> {
             title: 'Error',
             description: err.response?.data["message"],
             buttonText: 'Okay',
+            images: [],
+            callback: () {},
           );
         },
       );
@@ -1014,25 +1003,14 @@ class _ProfilePageState extends State<ProfilePage> {
           title: 'Error',
           description: err.response?.data["message"],
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       return;
     }
 
-    _equipments = [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-    ];
+    _equipments = List<Item>.filled(12, Item.blank());
 
     if (response["equipment"].isEmpty) {
       print('No equipment found');

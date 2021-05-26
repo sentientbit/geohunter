@@ -77,11 +77,11 @@ class _InGroupState extends State<InGroup> {
 
   final ApiProvider _apiProvider = ApiProvider();
 
-  Guild currentGuild;
+  Guild currentGuild = Guild.blank();
   String guildUid = "Unique ID";
 
   /// Curent loggedin user
-  User _user;
+  User _user = User.blank();
 
   //final Logger log = Logger(
   //    printer: PrettyPrinter(
@@ -195,7 +195,7 @@ class _InGroupState extends State<InGroup> {
           side: BorderSide(width: 1, color: Colors.white),
         ),
         onPressed: () {
-          _confirmLeave(_scaffoldKey.currentContext);
+          _confirmLeave(_scaffoldKey.currentContext!);
         },
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -257,7 +257,7 @@ class _InGroupState extends State<InGroup> {
           // size: 32,
         ),
         onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState.openDrawer()
+            ? _scaffoldKey.currentState?.openDrawer()
             : Navigator.of(context).pop(),
       ),
       elevation: 0.1,
@@ -484,7 +484,7 @@ class _InGroupState extends State<InGroup> {
                           ),
                           if ((_isLocked > 0) && _isGroupOwner)
                             Text(
-                              AppLocalizations.of(context)
+                              AppLocalizations.of(context)!
                                   .translate('password_input_label'),
                               semanticsLabel: 'Password',
                               style: TextStyle(
@@ -594,7 +594,7 @@ class _InGroupState extends State<InGroup> {
           guildUid = currentGuild.guid;
           _isHidden = currentGuild.isHidden;
           _isLocked = currentGuild.isLocked;
-          _passwordController.text = null;
+          _passwordController.text = "";
           _isGroupOwner = response["guilds"][0]["leader_id"] == user.details.id;
           _guildNameController.text = currentGuild.name;
         });
@@ -604,8 +604,10 @@ class _InGroupState extends State<InGroup> {
         context: context,
         builder: (context) => CustomDialog(
           title: 'Forgot password',
-          description: err?.response?.data["message"],
+          description: err.response?.data["message"],
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
     }
@@ -638,7 +640,7 @@ class _InGroupState extends State<InGroup> {
         "is_hidden": _isHidden,
         "is_locked": _isLocked,
       };
-      if ((_isLocked > 0) && _passwordController.text != null) {
+      if ((_isLocked > 0) && _passwordController.text != "") {
         data["password"] = _passwordController.text;
       }
       final response = await _apiProvider.put("/guild", data);
@@ -655,9 +657,11 @@ class _InGroupState extends State<InGroup> {
       showDialog(
         context: context,
         builder: (context) => CustomDialog(
-          title: AppLocalizations.of(context).translate('congrats'),
+          title: AppLocalizations.of(context)!.translate('congrats'),
           description: response["message"],
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       // _images.clear();
@@ -668,15 +672,17 @@ class _InGroupState extends State<InGroup> {
           title: 'Error',
           description: err.response?.data["message"],
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       //log.e(err.response);
     }
   }
 
-  void _confirmDelete(BuildContext context) {
+  void _confirmDelete(BuildContext? context) {
     showDialog<void>(
-      context: context,
+      context: context!,
       builder: (context) {
         return AlertDialog(
           title: Text(
@@ -858,9 +864,10 @@ class _InGroupState extends State<InGroup> {
       showDialog(
         context: context,
         builder: (context) => CustomDialog(
-          title: AppLocalizations.of(context).translate('congrats'),
+          title: AppLocalizations.of(context)!.translate('congrats'),
           description: response["message"],
           buttonText: "Okay",
+          images: [],
           callback: () {
             Navigator.of(context).pop();
             Navigator.of(context).pushNamed('/no-group');
@@ -874,6 +881,8 @@ class _InGroupState extends State<InGroup> {
           title: 'Error',
           description: err.response?.data["message"],
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       //log.e(err.response);
@@ -894,9 +903,10 @@ class _InGroupState extends State<InGroup> {
       showDialog(
         context: context,
         builder: (context) => CustomDialog(
-          title: AppLocalizations.of(context).translate('congrats'),
+          title: AppLocalizations.of(context)!.translate('congrats'),
           description: response["message"],
           buttonText: "Okay",
+          images: [],
           callback: () {
             Navigator.of(context).pop();
             Navigator.of(context).pushNamed('/no-group');
@@ -910,6 +920,8 @@ class _InGroupState extends State<InGroup> {
           title: 'Error',
           description: err.response?.data["message"],
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       //log.e(err.response);

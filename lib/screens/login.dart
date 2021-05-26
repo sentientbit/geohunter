@@ -4,7 +4,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:dio/dio.dart';
-import 'package:flame/flame.dart';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
 
@@ -16,7 +16,7 @@ import 'package:loading_overlay/loading_overlay.dart';
 
 ///
 import '../app_localizations.dart';
-import '../models/secret.dart';
+//import '../models/secret.dart';
 import '../providers/api_provider.dart';
 import '../providers/custom_interceptors.dart';
 import '../shared/constants.dart';
@@ -164,6 +164,8 @@ class _LoginPageState extends State<LoginPage> {
           title: "Error",
           description: err.response?.data["message"],
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       setState(() {
@@ -232,6 +234,8 @@ class _LoginPageState extends State<LoginPage> {
           title: "Error",
           description: "Check internet connection, or try again later",
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
     }
@@ -260,7 +264,7 @@ class _LoginPageState extends State<LoginPage> {
       _isLoading = true;
     });
     var secureStorage = await _storage.readAll();
-    _emailController.text = secureStorage["email"];
+    _emailController.text = secureStorage["email"] ?? "";
 
     if (secureStorage.containsKey("api_key")) {
       if (secureStorage["api_key"] != null) {
@@ -312,7 +316,7 @@ class _LoginPageState extends State<LoginPage> {
       ),
       onPressed: login,
       child: Text(
-        AppLocalizations.of(context).translate('submit_login'),
+        AppLocalizations.of(context)!.translate('submit_login'),
         style: TextStyle(
             color: Color(0xffe6a04e),
             fontSize: 18,
@@ -323,7 +327,7 @@ class _LoginPageState extends State<LoginPage> {
 
     final forgotLabel = TextButton(
       child: Text(
-        AppLocalizations.of(context).translate('forgot_password_btn_label'),
+        AppLocalizations.of(context)!.translate('forgot_password_btn_label'),
         style: TextStyle(
           color: Colors.white,
           fontSize: 16,
@@ -345,7 +349,7 @@ class _LoginPageState extends State<LoginPage> {
 
     final registerButton = TextButton(
       child: Text(
-        AppLocalizations.of(context).translate('create_account_btn_label'),
+        AppLocalizations.of(context)!.translate('create_account_btn_label'),
         style: TextStyle(
             color: Colors.white,
             fontSize: 16,
@@ -367,7 +371,7 @@ class _LoginPageState extends State<LoginPage> {
     ///
     final termsButton = TextButton(
       child: Text(
-        AppLocalizations.of(context).translate('terms_drawer_label'),
+        AppLocalizations.of(context)!.translate('terms_drawer_label'),
         style: TextStyle(
           color: Colors.white,
           fontSize: 16,
@@ -382,7 +386,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
       onPressed: () {
-        Flame.audio.play(
+        FlameAudio.audioCache.play(
             'sfx/bookOpen_${(math.Random.secure().nextInt(2) + 1).toString()}.ogg');
         Navigator.of(context).pushNamed('/terms');
       },
@@ -501,7 +505,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       SizedBox(height: 24.0),
                       Text(
-                        AppLocalizations.of(context)
+                        AppLocalizations.of(context)!
                             .translate('email_input_label'),
                         style: TextStyle(
                           color: Colors.white,
@@ -560,7 +564,7 @@ class _LoginPageState extends State<LoginPage> {
                           : Text(''),
                       SizedBox(height: 18.0),
                       Text(
-                        AppLocalizations.of(context)
+                        AppLocalizations.of(context)!
                             .translate('password_input_label'),
                         semanticsLabel: 'Password',
                         style: TextStyle(

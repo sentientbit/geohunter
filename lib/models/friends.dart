@@ -32,16 +32,16 @@ class Friend {
 
   ///
   Friend({
-    this.id,
-    this.sex,
-    this.username,
-    this.status,
-    this.xp,
-    this.locationPrivacy,
-    this.thumbnail,
-    this.isReq,
-    this.lat,
-    this.lng,
+    required this.id,
+    required this.sex,
+    required this.username,
+    required this.status,
+    required this.xp,
+    required this.locationPrivacy,
+    required this.thumbnail,
+    required this.isReq,
+    required this.lat,
+    required this.lng,
   });
 
   ///

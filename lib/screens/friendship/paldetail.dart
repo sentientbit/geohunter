@@ -2,7 +2,7 @@
 import 'dart:async';
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:dio/dio.dart';
-import 'package:flame/flame.dart';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 
@@ -28,7 +28,10 @@ class PalDetailPage extends StatefulWidget {
   final Friend friend;
 
   ///
-  PalDetailPage({Key key, this.friend}) : super(key: key);
+  PalDetailPage({
+    Key? key,
+    required this.friend,
+  }) : super(key: key);
 
   @override
   _PalDetailState createState() => _PalDetailState();
@@ -49,6 +52,9 @@ class _PalDetailState extends State<PalDetailPage> {
 
   /// Curent loggedin user
   User _user = User.blank();
+
+  ///
+  bool firstTimeCraaw = true;
 
   ///
   int currentLevel = 0;
@@ -75,7 +81,7 @@ class _PalDetailState extends State<PalDetailPage> {
   IconData buttonIcon = Icons.done;
 
   ///
-  Timer poorManTimer;
+  Timer? poorManTimer;
 
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -192,7 +198,7 @@ class _PalDetailState extends State<PalDetailPage> {
         side: BorderSide(width: 1, color: Colors.white),
       ),
       onPressed: () async {
-        await sendMessage(currentFriend.id);
+        sendMessage(currentFriend.id);
       },
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -214,8 +220,9 @@ class _PalDetailState extends State<PalDetailPage> {
   Widget build(BuildContext context) {
     var szWidth = MediaQuery.of(context).size.width;
 
-    if (isNewMessage) {
-      Flame.audio.play('sfx/raven_1.ogg');
+    if (isNewMessage && firstTimeCraaw == true) {
+      FlameAudio.audioCache.play('sfx/raven_1.ogg');
+      firstTimeCraaw = false;
     }
 
     //ignore: omit_local_variable_types
@@ -231,7 +238,7 @@ class _PalDetailState extends State<PalDetailPage> {
           // size: 32,
         ),
         onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState.openDrawer()
+            ? _scaffoldKey.currentState?.openDrawer()
             : Navigator.of(context).pop(),
       ),
       elevation: 0.1,
@@ -607,6 +614,8 @@ class _PalDetailState extends State<PalDetailPage> {
           title: "Error",
           description: err.response?.data["message"],
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
     }
@@ -650,6 +659,8 @@ class _PalDetailState extends State<PalDetailPage> {
           title: "Error",
           description: err.response?.data["message"],
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
     }

@@ -32,10 +32,9 @@ class InventoryPage extends StatefulWidget {
   final String name = 'inventory';
 
   ///
-  final Item item;
-
-  ///
-  InventoryPage({Key key, this.item}) : super(key: key);
+  InventoryPage({
+    Key? key,
+  }) : super(key: key);
 
   @override
   _InventoryState createState() => _InventoryState();
@@ -57,7 +56,7 @@ class _InventoryState extends State<InventoryPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   /// Curent loggedin user
-  User _user;
+  User _user = User.blank();
 
   ///
   final _items = [];
@@ -196,7 +195,7 @@ class _InventoryState extends State<InventoryPage> {
           // size: 32,
         ),
         onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState.openDrawer()
+            ? _scaffoldKey.currentState?.openDrawer()
             : Navigator.of(context).pop(),
       ),
       elevation: 0.1,

@@ -25,10 +25,10 @@ class MaterialSelectPage extends StatefulWidget {
 
   ///
   MaterialSelectPage({
-    Key key,
-    this.blueprintId,
-    this.placement,
-    this.mat0,
+    Key? key,
+    required this.blueprintId,
+    required this.placement,
+    required this.mat0,
   }) : super(key: key);
 
   @override
@@ -155,7 +155,7 @@ class _MaterialSelectState extends State<MaterialSelectPage> {
           // size: 32,
         ),
         onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState.openDrawer()
+            ? _scaffoldKey.currentState?.openDrawer()
             : Navigator.of(context).pop(),
       ),
       elevation: 0.1,
