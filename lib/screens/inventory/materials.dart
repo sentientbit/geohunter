@@ -30,20 +30,8 @@ enum PopupMenuChoice {
 ///
 class MaterialListPage extends StatefulWidget {
   ///
-  int blueprintId = 0;
-
-  ///
-  int placement = 0;
-
-  ///
-  int mat0 = 0;
-
-  ///
   MaterialListPage({
-    Key key,
-    this.blueprintId,
-    this.placement,
-    this.mat0,
+    Key? key,
   }) : super(key: key);
 
   @override
@@ -195,7 +183,7 @@ class _MaterialListState extends State<MaterialListPage> {
           // size: 32,
         ),
         onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState.openDrawer()
+            ? _scaffoldKey.currentState?.openDrawer()
             : Navigator.of(context).pop(),
       ),
       elevation: 0.1,

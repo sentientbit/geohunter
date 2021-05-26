@@ -26,13 +26,14 @@ class Planet {
 
   ///
 
-  const Planet(
-      {this.id,
-      this.name,
-      this.location,
-      this.distance,
-      this.gravity,
-      this.description,
-      this.image,
-      this.picture});
+  const Planet({
+    required this.id,
+    required this.name,
+    required this.location,
+    required this.distance,
+    required this.gravity,
+    required this.description,
+    required this.image,
+    required this.picture,
+  });
 }

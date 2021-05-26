@@ -28,7 +28,7 @@ class ApiProvider {
   }
 
   ///
-  bool hookStatus(int status) {
+  bool hookStatus(int? status) {
     //print('hookStatus');
     //print(status);
     if (status == 401) {
@@ -144,21 +144,20 @@ class ApiProvider {
 
   /// Upload pictures [image, mineId] from map with add landmark
   Future uploadLandmarkPicture(String endpoint, File image) async {
-    Response response;
     try {
-      if (image != null) {
-        final fileName = image.path.split('/').last;
-        final formData = FormData.fromMap({
-          "landmarkfile":
-              await MultipartFile.fromFile(image.path, filename: fileName),
-        });
-        //api.options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+      final fileName = image.path.split('/').last;
+      final formData = FormData.fromMap({
+        "landmarkfile":
+            await MultipartFile.fromFile(image.path, filename: fileName),
+      });
+      //api.options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
 
-        response = await api.post(
-          "https://${GlobalConstants.apiHostUrl}/api$endpoint",
-          data: formData,
-        );
-      }
+      // ignore: omit_local_variable_types
+      Response response = await api.post(
+        "https://${GlobalConstants.apiHostUrl}/api$endpoint",
+        data: formData,
+      );
+
       return response.data;
     } on Exception catch (error, stacktrace) {
       print("Exception occured: $error stackTrace: $stacktrace");

@@ -1,4 +1,5 @@
 // ignore_for_file: omit_local_variable_types
+// @dart=2.11
 library crashy;
 
 import 'dart:async';
@@ -13,12 +14,12 @@ import 'package:admob_flutter/admob_flutter.dart';
 //import 'package:device_info/device_info.dart';
 import 'package:dio/dio.dart';
 import 'package:double_back_to_close_app/double_back_to_close_app.dart';
-import 'package:flame/flame.dart';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 //import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
+//import 'package:in_app_purchase/in_app_purchase.dart';
 //import 'package:latlong/latlong.dart';
 //import 'package:package_info/package_info.dart';
 import 'package:sentry/sentry.dart' as sentry;
@@ -112,21 +113,17 @@ Future<Null> main() async {
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   // This captures errors reported by the Flutter framework.
-  FlutterError.onError = (details) async {
+  FlutterError.onError = (FlutterErrorDetails details) async {
     if (isInDebugMode) {
       // In development mode simply print to console.
       FlutterError.dumpErrorToConsole(details);
     } else {
       // In production mode report to the application zone to report to
       // Sentry.
-      Zone.current.handleUncaughtError(details.exception, details.stack);
+      StackTrace myDetails = details.stack ?? StackTrace.empty;
+      Zone.current.handleUncaughtError(details.exception, myDetails);
     }
   };
-
-  // For play billing library 2.0 on Android, it is mandatory to call
-  // [enablePendingPurchases](https://developer.android.com/reference/com/android/billingclient/api/BillingClient.Builder.html#enablependingpurchases)
-  // as part of initializing the app.
-  InAppPurchaseConnection.enablePendingPurchases();
 
   // This creates a [Zone] that contains the Flutter application and stablishes
   // an error handler that captures errors and reports them.
@@ -189,16 +186,21 @@ Future<Null> main() async {
           '/register': (context) => RegisterPage(),
           '/forgot': (context) => ForgotPage(),
           '/profile': (context) => ProfilePage(),
-          '/poi-map': (context) => PoiMap(goToRemoteLocation: false),
+          '/poi-map': (context) => PoiMap(
+                goToRemoteLocation: false,
+                latitude: 51.5,
+                longitude: 0.0,
+              ),
           '/inventory': (context) => InventoryPage(),
           '/blueprints': (context) => BlueprintListPage(),
           '/research': (context) => ResearchPage(),
           '/forge': (context) => ForgePage(),
           '/materials': (context) => MaterialListPage(),
           '/friends': (context) => FriendsPage(),
-          '/places': (context) => PlacesPage(),
-          '/questline': (context) =>
-              QuestLinePage(quest: ModalRoute.of(context).settings.arguments),
+          '/places': (context) => PlacesPage(
+                mineTypeFilter: 0,
+              ),
+          '/questline': (context) => QuestLinePage(),
           '/help': (context) => LegendPage(),
           '/group': (context) =>
               (_groupStatus == GroupStatus.inGroup) ? InGroup() : NoGroup(),
@@ -252,8 +254,6 @@ class SplashScreenState extends State<SplashScreen> {
   ///
   bool isPositionStreaming = false;
 
-  String _appVersion = GlobalConstants.appVersion;
-
   @override
   void dispose() {
     //if (_positionStream != null) { _positionStream.cancel(); _positionStream = null; }
@@ -264,33 +264,6 @@ class SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     _checkGps();
-
-    //https://jap.alekhin.io/scoring-storage-sound-tutorial-flame-flutter-part-4
-    Flame.audio.disableLog();
-    Flame.audio.loadAll(<String>[
-      'sfx/bookOpen_1.ogg',
-      'sfx/bookOpen_2.ogg',
-      'sfx/chopWood_1.ogg',
-      'sfx/chopWood_2.ogg',
-      'sfx/chopWood_3.ogg',
-      'sfx/chopWood_4.ogg',
-      'sfx/chopWood_5.ogg',
-      'sfx/click_1.ogg',
-      'sfx/click_2.ogg',
-      'sfx/click_3.ogg',
-      'sfx/click_4.ogg',
-      'sfx/click_5.ogg',
-      'sfx/doorClose_1.ogg',
-      'sfx/doorClose_2.ogg',
-      'sfx/doorClose_3.ogg',
-      'sfx/doorOpen_1.ogg',
-      'sfx/doorOpen_2.ogg',
-      'sfx/miningPick_1.ogg',
-      'sfx/miningPick_2.ogg',
-      'sfx/miningPick_3.ogg',
-      'sfx/miningPick_4.ogg',
-      'sfx/raven_1.ogg'
-    ]);
   }
 
   ///
@@ -335,7 +308,7 @@ class SplashScreenState extends State<SplashScreen> {
     }
 
     if (isPositionStreaming == true) {
-      await _streamLocation();
+      _streamLocation();
     }
     Timer(Duration(milliseconds: 500), _tryAutoLogin);
     Timer(Duration(milliseconds: 1000), _loadMines);
@@ -354,7 +327,7 @@ class SplashScreenState extends State<SplashScreen> {
       //log.i(cookies);
 
       if (cookies.isEmpty || !cookies.containsKey('jwt')) {
-        Flame.audio.play('sfx/doorClose_1.ogg');
+        FlameAudio.audioCache.play('sfx/doorClose_1.ogg');
         Navigator.of(context).pushNamed('/login');
         return;
       }
@@ -368,8 +341,8 @@ class SplashScreenState extends State<SplashScreen> {
       // log.i(now);
       // log.d(now.isAfter(expirationDate));
       if (now.isAfter(expirationDate)) {
-        print('session expired');
-        Flame.audio.play('sfx/doorClose_3.ogg');
+        //print('session expired');
+        FlameAudio.audioCache.play('sfx/doorClose_3.ogg');
         Navigator.of(context).pushNamed('/login');
         return;
       } else {
@@ -392,7 +365,7 @@ class SplashScreenState extends State<SplashScreen> {
       //final tmp = await _apiProvider.get('/profile');
       //final quest = Quest.fromJson(cookies["user"]["current_quests"][0]);
 
-      Flame.audio.play(
+      FlameAudio.audioCache.play(
           'sfx/doorOpen_${(math.Random.secure().nextInt(2) + 1).toString()}.ogg');
 
       Navigator.of(context).pushNamed('/poi-map');
@@ -405,6 +378,8 @@ class SplashScreenState extends State<SplashScreen> {
           title: 'Main Error',
           description: err.error.toString(),
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
     }
@@ -448,7 +423,7 @@ class SplashScreenState extends State<SplashScreen> {
             ]),
       ),
       onPressed: () {
-        Flame.audio.play(
+        FlameAudio.audioCache.play(
             'sfx/bookOpen_${(math.Random.secure().nextInt(2) + 1).toString()}.ogg');
         Navigator.of(context).pushNamed('/terms');
       },
@@ -577,7 +552,7 @@ class SplashScreenState extends State<SplashScreen> {
                             ),
                           ),
                           Text(
-                            "version: $_appVersion",
+                            "version: ${GlobalConstants.appVersion}",
                             style:
                                 TextStyle(fontSize: 14.0, color: Colors.white),
                           ),
@@ -609,7 +584,7 @@ class SplashScreenState extends State<SplashScreen> {
       response = await _apiProvider.get(
           '/radar?cntr_lng=${currentLocation.longitude}&cntr_lat=${currentLocation.latitude}2&zoom=$mapZoom&sw_lng=$swLng&sw_lat=$swLat&ne_lng=$neLng&ne_lat=$neLat');
     } on DioError catch (err) {
-      print(err?.response?.data);
+      print(err.response?.data);
       return _mines;
     }
 
@@ -617,7 +592,7 @@ class SplashScreenState extends State<SplashScreen> {
     if (response.containsKey("geojson")) {
       if (response["geojson"]["features"] != null) {
         response["geojson"]["features"].forEach(
-            (mine) => _mines.add(Mine(mine, 1, location: currentLocation)));
+            (mine) => _mines.add(Mine.fromJson(mine, 1, currentLocation)));
       }
     }
 

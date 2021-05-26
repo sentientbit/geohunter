@@ -4,7 +4,7 @@ import '../models/mine.dart';
 
 ///
 class StreamMines {
-  final _mine = BehaviorSubject<List<Mine>>.seeded(null);
+  final _mine = BehaviorSubject<List<Mine>>.seeded([]);
 
   /// Create stream for mines
   Stream<List<Mine>> get stream$ => _mine.stream;

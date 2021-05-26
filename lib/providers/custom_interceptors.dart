@@ -29,20 +29,20 @@ class CustomInterceptors extends Interceptor {
     if (options.path != "/login") {
       options.headers["authorization"] = "Bearer ${userDatastored["jwt"]}";
     }
-    print("[${options?.method}] ${options?.path}");
+    print("[${options.method}] ${options.path}");
     super.onRequest(options, handler);
   }
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
     //_cache[response.requestOptions.uri] = response;
-    print("[${response?.statusCode}] ${response?.requestOptions?.path}");
+    print("[${response.statusCode}] ${response.requestOptions.path}");
     super.onResponse(response, handler);
   }
 
   @override
   void onError(DioError err, ErrorInterceptorHandler handler) {
-    print("[${err?.response?.statusCode}] ${err.requestOptions.path}");
+    print("[${err.response?.statusCode}] ${err.requestOptions.path}");
     super.onError(err, handler);
   }
 
@@ -102,7 +102,7 @@ class CustomInterceptors extends Interceptor {
 
   ///
   static bool equalsIgnoreCase(String string1, String string2) {
-    return string1?.toLowerCase() == string2?.toLowerCase();
+    return string1.toLowerCase() == string2.toLowerCase();
   }
 
   ///

@@ -1,9 +1,9 @@
 ///
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 
 ///
+import '../../app_localizations.dart';
 import '../../shared/constants.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/drawer.dart';
@@ -11,8 +11,6 @@ import '../../widgets/drawer.dart';
 ///
 class LegendPage extends StatelessWidget {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  String _appVersion = GlobalConstants.appVersion;
 
   final List<dynamic> _listViewData = [
     {
@@ -114,18 +112,70 @@ class LegendPage extends StatelessWidget {
                             ),
                             title: Text(
                               data["title"],
-                              style: TextStyle(color: Colors.white),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontFamily: 'Cormorant SC',
+                                fontWeight: FontWeight.bold,
+                                shadows: <Shadow>[
+                                  Shadow(
+                                    offset: Offset(1.0, 1.0),
+                                    blurRadius: 3.0,
+                                    color: Color.fromARGB(255, 0, 0, 0),
+                                  ),
+                                ],
+                              ),
                             ),
                             subtitle: Text(
                               data["subtitle"],
-                              style: TextStyle(color: Colors.white),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontFamily: 'Cormorant SC',
+                                fontWeight: FontWeight.bold,
+                                shadows: <Shadow>[
+                                  Shadow(
+                                    offset: Offset(1.0, 1.0),
+                                    blurRadius: 3.0,
+                                    color: Color.fromARGB(255, 0, 0, 0),
+                                  ),
+                                ],
+                              ),
                             ),
                           ))
                       .toList(),
                 ),
               ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  TextButton(
+                    child: Text(
+                      AppLocalizations.of(context)!
+                          .translate('terms_drawer_label'),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontFamily: 'Open Sans',
+                        fontWeight: FontWeight.bold,
+                        shadows: <Shadow>[
+                          Shadow(
+                            offset: Offset(1.0, 1.0),
+                            blurRadius: 3.0,
+                            color: Color.fromARGB(255, 0, 0, 0),
+                          ),
+                        ],
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pushNamed('/terms');
+                    },
+                  )
+                ],
+              ),
               Text(
-                "version: $_appVersion",
+                "version: ${GlobalConstants.appVersion}",
                 style: TextStyle(fontSize: 14.0, color: Colors.white),
               ),
             ],

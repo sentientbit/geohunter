@@ -129,8 +129,8 @@ class _FriendsPageState extends State<FriendsPage> {
           privacy = 0;
           if (elem.containsKey("privacy")) {
             privacy = int.tryParse(elem["privacy"].toString()) ?? 0;
-            lat = double.parse(elem["lat"].toString()) ?? 0.0;
-            lng = double.parse(elem["lng"].toString()) ?? 0.0;
+            lat = double.parse(elem["lat"].toString());
+            lng = double.parse(elem["lng"].toString());
           }
           friends.add(
             Friend(
@@ -174,7 +174,7 @@ class _FriendsPageState extends State<FriendsPage> {
       if (err.response != null) {
         print(err.response?.data["message"]);
       } else {
-        print(err.response.statusCode);
+        print(err.response?.statusCode);
         print(err.message);
       }
       setState(() {
@@ -208,7 +208,7 @@ class _FriendsPageState extends State<FriendsPage> {
           // size: 32,
         ),
         onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState.openDrawer()
+            ? _scaffoldKey.currentState?.openDrawer()
             : Navigator.of(context).pop(),
       ),
       elevation: 0.1,
@@ -377,6 +377,8 @@ class _FriendsPageState extends State<FriendsPage> {
             title: "Error",
             description: "This is not a valid QR Code",
             buttonText: "Okay",
+            images: [],
+            callback: () {},
           ),
         );
       } else {
@@ -386,6 +388,8 @@ class _FriendsPageState extends State<FriendsPage> {
             title: "Error",
             description: err.response?.data["message"],
             buttonText: "Okay",
+            images: [],
+            callback: () {},
           ),
         );
       }
@@ -395,9 +399,11 @@ class _FriendsPageState extends State<FriendsPage> {
         showDialog(
           context: context,
           builder: (context) => CustomDialog(
-            title: AppLocalizations.of(context).translate('congrats'),
+            title: AppLocalizations.of(context)!.translate('congrats'),
             description: response["message"],
             buttonText: "Okay",
+            images: [],
+            callback: () {},
           ),
         );
       }

@@ -34,7 +34,7 @@ class QuestCard extends StatelessWidget {
       ),
     );
 
-    Widget _planetValue({String value}) {
+    Widget _planetValue({String? value}) {
       return Container(
         child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
           Text('Is completed: ', style: TextStyle(color: Colors.black)),
@@ -60,12 +60,12 @@ class QuestCard extends StatelessWidget {
             horizontal ? CrossAxisAlignment.start : CrossAxisAlignment.center,
         children: <Widget>[
           Text(
-            quest.title ?? 'No title',
+            quest.title,
             style: TextStyle(color: Colors.black),
             softWrap: true,
           ),
           Container(height: 10.0),
-          Text(quest.quest ?? "No description for quest",
+          Text(quest.quest,
               maxLines: 1,
               softWrap: false,
               overflow: TextOverflow.fade,

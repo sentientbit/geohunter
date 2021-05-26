@@ -15,7 +15,7 @@ import '../../providers/api_provider.dart';
 ///
 class BlueprintSelectPage extends StatefulWidget {
   ///
-  BlueprintSelectPage({Key key}) : super(key: key);
+  BlueprintSelectPage({Key? key}) : super(key: key);
 
   @override
   _BlueprintSelectState createState() => _BlueprintSelectState();
@@ -141,7 +141,7 @@ class _BlueprintSelectState extends State<BlueprintSelectPage> {
           // size: 32,
         ),
         onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState.openDrawer()
+            ? _scaffoldKey.currentState?.openDrawer()
             : Navigator.of(context).pop(),
       ),
       elevation: 0.1,

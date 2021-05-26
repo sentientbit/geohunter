@@ -18,7 +18,11 @@ class EquipmentPage extends StatefulWidget {
   final Item item;
 
   ///
-  EquipmentPage({Key key, this.placement, this.item}) : super(key: key);
+  EquipmentPage({
+    Key? key,
+    required this.placement,
+    required this.item,
+  }) : super(key: key);
 
   @override
   _EquipmentState createState() => _EquipmentState();
@@ -157,7 +161,7 @@ class _EquipmentState extends State<EquipmentPage> {
           // size: 32,
         ),
         onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState.openDrawer()
+            ? _scaffoldKey.currentState?.openDrawer()
             : Navigator.of(context).pop(),
       ),
       elevation: 0.1,

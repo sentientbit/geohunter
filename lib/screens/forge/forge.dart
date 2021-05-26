@@ -1,17 +1,14 @@
-/// IAP https://www.youtube.com/watch?v=NWbkKH-2xcQ
+///
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:dio/dio.dart';
 import 'package:back_button_interceptor/back_button_interceptor.dart';
-// Admob variant 1 :(
 import 'package:admob_flutter/admob_flutter.dart';
-// Admob variant 2 :(
-//import 'package:firebase_admob/firebase_admob.dart';
-// Admob variant 3 :(
-//import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_inapp_purchase/flutter_inapp_purchase.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:loading_overlay/loading_overlay.dart';
 import '../../app_localizations.dart';
 
@@ -49,19 +46,13 @@ class _ForgeState extends State<ForgePage> {
   /// Secure Storage for User Data
   final _storage = FlutterSecureStorage();
 
-  final InAppPurchaseConnection _iap = InAppPurchaseConnection.instance;
-
-  StreamSubscription _subscription;
+  StreamSubscription? _subscription;
 
   bool _isIapAvailable = false;
-
-  List<ProductDetails> _iapProducts = [];
 
   List<String> _productIds = ["gold11coins", "", ""];
   List<String> _productDescriptions = ["Card payment\nComing soon", "", ""];
   List<String> _productPrices = ["N/A", "", ""];
-
-  List<PurchaseDetails> _purchases = [];
 
   bool _showCoinSheet = false;
 
@@ -78,7 +69,7 @@ class _ForgeState extends State<ForgePage> {
   String _craftedItemRarity = "";
 
   /// Curent loggedin user
-  User _user;
+  User _user = User.blank();
 
   /// Validation token is used to sign every purchase transaction on the API
   String _validationToken = '';
@@ -87,13 +78,13 @@ class _ForgeState extends State<ForgePage> {
   int _transactionId = 0;
 
   // Admob variant 1 :(
-  AdmobReward _admobAdvert;
+  AdmobReward? _admobAdvert;
 
   bool _isLoading = false;
   bool _isRewarded = false;
   bool _adLoaded = false;
-  String _admobType;
-  int _admobAmount;
+  String _admobType = "";
+  int _admobAmount = 0;
 
   //final Logger log = Logger(
   //    printer: PrettyPrinter(
@@ -111,7 +102,6 @@ class _ForgeState extends State<ForgePage> {
   @override
   void initState() {
     super.initState();
-    _initializeIAP();
     _getPlacements();
     _getUserDetails();
 
@@ -121,15 +111,15 @@ class _ForgeState extends State<ForgePage> {
       listener: (event, args) {
         if (event == AdmobAdEvent.loaded) {
           //print('--- AdmobReward loaded');
-          _admobAdvert.show();
+          _admobAdvert?.show();
           setState(() {
             _isRewarded = false;
           });
         } else if (event == AdmobAdEvent.closed) {
           //print('--- AdmobReward closed');
-          _admobAdvert.dispose();
+          _admobAdvert?.dispose();
           if (_isRewarded) {
-            _serverReward(null);
+            _serverReward();
           } else {
             showDialog(
               context: context,
@@ -138,6 +128,8 @@ class _ForgeState extends State<ForgePage> {
                 description: "You have to watch the whole commercial "
                     "to get the materials from that point",
                 buttonText: "Okay",
+                images: [],
+                callback: () {},
               ),
             );
           }
@@ -150,8 +142,9 @@ class _ForgeState extends State<ForgePage> {
           //print('--- AdmobReward rewarded');
           _admobType = "Reward";
           _isRewarded = true;
+          var totalAmount = int.tryParse(args['amount'].toString()) ?? 0;
           setState(() {
-            _admobAmount += args['amount'];
+            _admobAmount += totalAmount;
             _isLoading = false;
           });
         } else if (event == AdmobAdEvent.failedToLoad) {
@@ -165,10 +158,12 @@ class _ForgeState extends State<ForgePage> {
                   ? "Google Mobile Ads failed. Please try again later."
                   : "Apple Mobile Ads failed. Please try again later.",
               buttonText: "Okay",
+              images: [],
+              callback: () {},
             ),
           );
           _deleteReward();
-          _admobAdvert.dispose();
+          _admobAdvert?.dispose();
           setState(() {
             _isLoading = false;
           });
@@ -206,84 +201,6 @@ class _ForgeState extends State<ForgePage> {
     return true;
   }
 
-  void _initializeIAP() async {
-    // Check IAP availability
-    _isIapAvailable = await _iap.isAvailable();
-
-    if (_isIapAvailable) {
-      await _getProducts();
-
-      _subscription = _iap.purchaseUpdatedStream.listen((data) {
-        setState(() {
-          _purchases.addAll(data);
-          _isLoading = false;
-        });
-        //print('NEW PURCHASE');
-        _callbackPurchase();
-      });
-    }
-  }
-
-  /// Return purchase of specific product ID
-  PurchaseDetails _hasPurchased(String productId) {
-    return _purchases.firstWhere((element) => element.productID == productId,
-        orElse: () => null);
-  }
-
-  void _callbackPurchase() {
-    //ignore: omit_local_variable_types
-    PurchaseDetails purchase = _hasPurchased(_productIds[0]);
-    if (purchase == null) {
-      //print('PurchaseStatus.null');
-      _deleteReward();
-      return;
-    }
-    if (purchase.status == PurchaseStatus.purchased) {
-      //print('PurchaseStatus.purchased');
-      _serverReward(purchase);
-    } else if (purchase.status == PurchaseStatus.error) {
-      //print('PurchaseStatus.error');
-      _deleteReward();
-    }
-  }
-
-  Future<void> _getProducts() async {
-    //ignore: omit_local_variable_types
-    Set<String> ids = Set.from([_productIds[0]]);
-
-    //ignore: omit_local_variable_types
-    ProductDetailsResponse response = await _iap.queryProductDetails(ids);
-    setState(() {
-      _iapProducts = response.productDetails;
-    });
-
-    var idx = 0;
-    for (var prod in _iapProducts) {
-      setState(() {
-        _productIds[idx] = prod.id;
-        _productDescriptions[idx] = prod.description;
-        _productPrices[idx] = prod.price;
-      });
-    }
-  }
-
-  // getPast purchases
-  // _iap.queryPastPurchases does not return consumed products
-  // so it's only relevant for non-consumed products
-
-  /// Purchase a product
-  void _buyProduct(int idx) {
-    ProductDetails prod = _iapProducts[idx];
-    //ignore: omit_local_variable_types
-    final PurchaseParam purchaseParam = PurchaseParam(productDetails: prod);
-    // _iap.buyNonConsumable(purchaseParam: purchaseParam);
-    /*, autoConsume: false block purchases again until marked as purchased */
-    var isCons = _iap.buyConsumable(purchaseParam: purchaseParam);
-    //print('_buyProduct');
-    //print(isCons);
-    _goForReward(prod.id);
-  }
-
   Widget blueprintPlace() {
     return Ink(
       decoration: BoxDecoration(
@@ -296,7 +213,7 @@ class _ForgeState extends State<ForgePage> {
       ),
       child: InkWell(
         onTap: () async {
-          await _clearPlacements();
+          _clearPlacements();
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -329,6 +246,8 @@ class _ForgeState extends State<ForgePage> {
       ),
       child: InkWell(
         onTap: () {
+          FlameAudio.audioCache.play(
+              'sfx/hammer_${(math.Random.secure().nextInt(3) + 1).toString()}.ogg');
           if (_blueprintId == 0) {
             showDialog(
               context: context,
@@ -336,6 +255,8 @@ class _ForgeState extends State<ForgePage> {
                 title: 'Error',
                 description: "Please select a blueprint first",
                 buttonText: "Okay",
+                images: [],
+                callback: () {},
               ),
             );
             return;
@@ -365,7 +286,7 @@ class _ForgeState extends State<ForgePage> {
       ),
       child: InkWell(
         onTap: () async {
-          await _craftItem();
+          _craftItem();
         },
         splashColor: Colors.brown.withOpacity(0.5),
       ),
@@ -374,7 +295,7 @@ class _ForgeState extends State<ForgePage> {
 
   void choiceAction(BuildContext context, PopupMenuChoice choice) async {
     if (choice == PopupMenuChoice.refreshForge) {
-      await _clearPlacements();
+      _clearPlacements();
     } else if (choice == PopupMenuChoice.showCoinSheet) {
       setState(() {
         _showCoinSheet = !_showCoinSheet;
@@ -395,7 +316,7 @@ class _ForgeState extends State<ForgePage> {
           // size: 32,
         ),
         onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState.openDrawer()
+            ? _scaffoldKey.currentState?.openDrawer()
             : Navigator.of(context).pop(),
       ),
       elevation: 0.1,
@@ -476,7 +397,7 @@ class _ForgeState extends State<ForgePage> {
         side: BorderSide(width: 1, color: Colors.white),
       ),
       onPressed: () async {
-        await _clearPlacements();
+        _clearPlacements();
       },
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -504,7 +425,7 @@ class _ForgeState extends State<ForgePage> {
         side: BorderSide(width: 1, color: Colors.white),
       ),
       onPressed: () async {
-        await _craftItem();
+        _craftItem();
       },
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -537,7 +458,7 @@ class _ForgeState extends State<ForgePage> {
         onPressed: () {
           // Admob variant 1 :(
           _goForReward("AdReward");
-          _admobAdvert.load();
+          _admobAdvert?.load();
         },
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -578,9 +499,7 @@ class _ForgeState extends State<ForgePage> {
             ),
             side: BorderSide(width: 1, color: Colors.white),
           ),
-          onPressed: () {
-            _buyProduct(idx);
-          },
+          onPressed: () {},
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
@@ -943,22 +862,22 @@ class _ForgeState extends State<ForgePage> {
     var secureStorage = await _storage.readAll();
     setState(() {
       if (secureStorage.containsKey("forgeBlueprintId")) {
-        _blueprintId = int.tryParse(secureStorage["forgeBlueprintId"]) ?? 0;
+        _blueprintId = int.tryParse(secureStorage["forgeBlueprintId"]!) ?? 0;
         _blueprintImg = secureStorage["forgeBlueprintImg"] ?? "nothing.png";
         _blueprintName = secureStorage["forgeBlueprintName"] ?? "Blueprint";
       }
       if (secureStorage.containsKey("forgeMaterial0Id")) {
-        _materialsId[0] = int.tryParse(secureStorage["forgeMaterial0Id"]) ?? 0;
+        _materialsId[0] = int.tryParse(secureStorage["forgeMaterial0Id"]!) ?? 0;
         _materialsImg[0] = secureStorage["forgeMaterial0Img"] ?? "nothing.png";
         _materialsName[0] = secureStorage["forgeMaterial0Name"] ?? "Material";
       }
       if (secureStorage.containsKey("forgeMaterial1Id")) {
-        _materialsId[1] = int.tryParse(secureStorage["forgeMaterial1Id"]) ?? 0;
+        _materialsId[1] = int.tryParse(secureStorage["forgeMaterial1Id"]!) ?? 0;
         _materialsImg[1] = secureStorage["forgeMaterial1Img"] ?? "nothing.png";
         _materialsName[1] = secureStorage["forgeMaterial1Name"] ?? "Material";
       }
       if (secureStorage.containsKey("forgeMaterial2Id")) {
-        _materialsId[2] = int.tryParse(secureStorage["forgeMaterial2Id"]) ?? 0;
+        _materialsId[2] = int.tryParse(secureStorage["forgeMaterial2Id"]!) ?? 0;
         _materialsImg[2] = secureStorage["forgeMaterial2Img"] ?? "nothing.png";
         _materialsName[2] = secureStorage["forgeMaterial2Name"] ?? "Material";
       }
@@ -990,7 +909,7 @@ class _ForgeState extends State<ForgePage> {
 
   void _craftItem() async {
     if (_blueprintId <= 0) {
-      await _clearPlacements();
+      _clearPlacements();
       setState(() {
         _craftedItemImg = "";
         _craftedItemName = "";
@@ -1010,6 +929,8 @@ class _ForgeState extends State<ForgePage> {
           title: 'Error',
           description: '${err.response?.data['message']}',
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       return;
@@ -1018,13 +939,14 @@ class _ForgeState extends State<ForgePage> {
     if (response.containsKey("success")) {
       if (response["success"] == true) {
         if (response["items"][0]["nr"] > 0) {
-          await _clearPlacements();
+          _clearPlacements();
           //log.d(response);
           setState(() {
             _craftedItemImg = response["items"][0]["img"];
             _craftedItemName = response["items"][0]["name"];
             _craftedItemRarity = response["items"][0]["rarity"];
           });
+          FlameAudio.audioCache.play('sfx/anvil_1.ogg');
         }
 
         if (response.containsKey("coins")) {
@@ -1042,7 +964,7 @@ class _ForgeState extends State<ForgePage> {
     return;
   }
 
-  Future _serverReward(PurchaseDetails purchase) async {
+  Future _serverReward() async {
     dynamic response;
     try {
       response = await _apiProvider.post(
@@ -1059,6 +981,8 @@ class _ForgeState extends State<ForgePage> {
           title: 'Error',
           description: 'Ad reward failed to validate',
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       return;
@@ -1075,10 +999,6 @@ class _ForgeState extends State<ForgePage> {
           _isLoading = false;
         });
 
-        if (purchase != null) {
-          _iap.completePurchase(purchase);
-        }
-
         _userdata.updateUserData(
           double.tryParse(response["coins"].toString()) ?? 0.0,
           0,
@@ -1094,10 +1014,12 @@ class _ForgeState extends State<ForgePage> {
         showDialog(
           context: context,
           builder: (context) => CustomDialog(
-            title: AppLocalizations.of(context).translate('congrats'),
+            title: AppLocalizations.of(context)!.translate('congrats'),
             description: "You gained ${response['amount']} coins, "
                 "for a grand total of ${_user.details.coins.toString()} !",
             buttonText: "Okay",
+            images: [],
+            callback: () {},
           ),
         );
       }
@@ -1117,6 +1039,8 @@ class _ForgeState extends State<ForgePage> {
           title: 'Error',
           description: 'Invalid ad server response. Please try again later.',
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       setState(() {
@@ -1156,6 +1080,8 @@ class _ForgeState extends State<ForgePage> {
           title: 'Error',
           description: '${err.response?.data}',
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       setState(() {
