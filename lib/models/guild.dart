@@ -22,7 +22,7 @@ class Guild {
   int isHidden = 0;
 
   ///
-  Picture picture;
+  Picture picture = Picture.blank();
 
   /// Guild Unique Id
   String guid = "0";
@@ -35,24 +35,41 @@ class Guild {
 
   ///
   Guild({
-    this.id,
-    this.factionId,
-    this.leaderId,
-    this.name,
-    this.description,
-    this.isLocked,
-    this.isHidden,
-    this.picture,
-    this.guid,
-    this.users,
-    this.nrUsers,
+    required this.id,
+    required this.factionId,
+    required this.leaderId,
+    required this.name,
+    required this.description,
+    required this.isLocked,
+    required this.isHidden,
+    required this.picture,
+    required this.guid,
+    required this.users,
+    required this.nrUsers,
   });
+
+  ///
+  factory Guild.blank() {
+    return Guild(
+      id: 0,
+      factionId: 0,
+      leaderId: 0,
+      name: "",
+      description: "",
+      isLocked: 0,
+      isHidden: 0,
+      picture: Picture.blank(),
+      guid: "0",
+      users: [],
+      nrUsers: 0,
+    );
+  }
 
   ///
   Guild.fromJson(dynamic json) {
     id = int.parse(json["id"].toString());
     factionId = int.parse(json["faction_id"].toString());
-    leaderId = int.parse(json["leader_id"]?.toString());
+    leaderId = int.parse(json["leader_id"].toString());
     name = json["name"].toString();
     isLocked = int.tryParse(json["is_locked"]) ?? 0;
     isHidden = int.tryParse(json["is_hidden"]) ?? 0;
@@ -72,13 +89,29 @@ class Guild {
 ///
 class Picture {
   ///
-  int id;
+  int id = 0;
 
   ///
-  String fileName;
+  String fileName = "";
 
   ///
-  String thumbnail;
+  String thumbnail = "";
+
+  /// constructor
+  Picture({
+    required this.id,
+    required this.fileName,
+    required this.thumbnail,
+  });
+
+  ///
+  factory Picture.blank() {
+    return Picture(
+      id: 0,
+      fileName: "",
+      thumbnail: "",
+    );
+  }
 
   ///
   Picture.fromJson(dynamic json) {
@@ -91,13 +124,29 @@ class Picture {
 ///
 class GuildUser {
   ///
-  int id;
+  int id = 0;
 
   ///
-  String permissions;
+  String permissions = "";
 
   ///
-  DateTime created;
+  DateTime created = DateTime.now();
+
+  /// constructor
+  GuildUser({
+    required this.id,
+    required this.permissions,
+    required this.created,
+  });
+
+  ///
+  factory GuildUser.blank() {
+    return GuildUser(
+      id: 0,
+      permissions: "",
+      created: DateTime.now(),
+    );
+  }
 
   ///
   GuildUser.fromJson(dynamic json) {
@@ -106,37 +155,5 @@ class GuildUser {
     created = json["created"] != null
         ? DateTime.parse(json["created"])
         : DateTime.parse('2020-01-01 01:01:01');
-  }
-}
-
-///
-class GuildChat {
-  ///
-  String userId;
-
-  ///
-  String userName;
-
-  ///
-  String userIcon;
-
-  ///
-  String message;
-
-  ///
-  String sendAt;
-
-  ///
-  GuildChat.fromJson(dynamic json) {
-    userName = json["user_name"];
-    userId = json["user_id"].toString();
-    userIcon = json["user_icon"].toString();
-    message = json["message"];
-    sendAt = json["send_at"];
-  }
-
-  ///
-  Map<String, dynamic> toStr(String userId, String message, String icon) {
-    return {"user_id": userId, "message": message, "user_icon": icon};
   }
 }

@@ -10,7 +10,7 @@ class Materialmodel {
   String name = "";
 
   ///
-  String img = "";
+  String img = "nothing.png";
 
   /// Total nr of materials in player posession
   int nr = 0;
@@ -20,11 +20,11 @@ class Materialmodel {
 
   ///
   Materialmodel({
-    this.id,
-    this.name,
-    this.img,
-    this.nr,
-    this.needed,
+    required this.id,
+    required this.name,
+    required this.img,
+    required this.nr,
+    required this.needed,
   });
 
   ///
@@ -32,7 +32,7 @@ class Materialmodel {
     return Materialmodel(
       id: 0,
       name: "",
-      img: "",
+      img: "nothing.png",
       nr: 0,
       needed: 0,
     );

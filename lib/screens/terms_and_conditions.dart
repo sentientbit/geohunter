@@ -2,7 +2,7 @@
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_html/flutter_html.dart';
+
 //import 'package:flutter_html/style.dart';//tobeused in 1.0.0
 // import 'package:logger/logger.dart';
 
@@ -22,6 +22,8 @@ class TermsAndPrivacyPage extends StatefulWidget {
 }
 
 class _TermsAndPrivacyPageState extends State<TermsAndPrivacyPage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   // final Logger log = Logger(
   //     printer: PrettyPrinter(
   //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
@@ -75,8 +77,12 @@ class _TermsAndPrivacyPageState extends State<TermsAndPrivacyPage> {
               ConstrainedBox(
                 // height: 0,
                 constraints: BoxConstraints(maxHeight: 80),
-                child: CustomAppBar(Colors.white, Colors.white, null,
-                    icon: Icon(Icons.arrow_back)),
+                child: CustomAppBar(
+                  Colors.white,
+                  Colors.white,
+                  _scaffoldKey,
+                  icon: Icon(Icons.arrow_back),
+                ),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -158,22 +164,15 @@ class _TermsAndPrivacyPageState extends State<TermsAndPrivacyPage> {
                       mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: <Widget>[
-                        if (_showTerms)
-                          Html(
-                            data: _terms,
-                            defaultTextStyle: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                            ),
+                        Text(
+                          _showTerms ? _terms : _privacy,
+                          style: TextStyle(
+                            color: Color(0xffffffff),
+                            fontSize: 18,
+                            fontFamily: 'Cormorant SC',
+                            fontWeight: FontWeight.bold,
                           ),
-                        if (_showPrivacy)
-                          Html(
-                            data: _privacy,
-                            defaultTextStyle: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                            ),
-                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -190,9 +189,9 @@ class _TermsAndPrivacyPageState extends State<TermsAndPrivacyPage> {
     try {
       // print();
       final requestTerms = await _apiProvider.get(
-          "https://${GlobalConstants.apiHostUrl}/api/docs?docname=terms&lang=${AppLocalizations.of(context).locale.languageCode}");
+          "https://${GlobalConstants.apiHostUrl}/api/docs?docname=terms&lang=${AppLocalizations.of(context)!.locale.languageCode}");
       final requesPrivacyt = await _apiProvider.get(
-          "https://${GlobalConstants.apiHostUrl}/api/docs?docname=privacy&lang=${AppLocalizations.of(context).locale.languageCode}");
+          "https://${GlobalConstants.apiHostUrl}/api/docs?docname=privacy&lang=${AppLocalizations.of(context)!.locale.languageCode}");
       // log.d(request["message"]);
       setState(() {
         _terms = requestTerms["message"];
@@ -206,6 +205,8 @@ class _TermsAndPrivacyPageState extends State<TermsAndPrivacyPage> {
           title: 'Main Error',
           description: err.error.toString(),
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
     }

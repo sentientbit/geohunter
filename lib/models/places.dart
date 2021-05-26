@@ -20,11 +20,11 @@ class Place {
 
   ///
   Place({
-    this.id,
-    this.lat,
-    this.lng,
-    this.ico,
-    this.lastVisited,
-    this.desc,
+    required this.id,
+    required this.lat,
+    required this.lng,
+    required this.ico,
+    required this.lastVisited,
+    required this.desc,
   });
 }

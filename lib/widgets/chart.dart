@@ -6,7 +6,9 @@ class Chart extends StatelessWidget {
   String imgUrl = "";
 
   ///
-  Chart({this.imgUrl});
+  Chart({
+    required this.imgUrl,
+  });
 
   @override
   Widget build(BuildContext context) {

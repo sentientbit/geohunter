@@ -21,7 +21,7 @@ class JoinGroup extends StatefulWidget {
   static String tag = 'join-group';
 
   ///
-  String guid;
+  String guid = "";
 
   ///
   int isLocked = 0;
@@ -30,13 +30,20 @@ class JoinGroup extends StatefulWidget {
   String title = "";
 
   ///
-  JoinGroup({Key key, this.guid, this.isLocked, this.title}) : super(key: key);
+  JoinGroup({
+    Key? key,
+    required this.guid,
+    required this.isLocked,
+    required this.title,
+  }) : super(key: key);
 
   @override
   _JoinGroupState createState() => _JoinGroupState();
 }
 
 class _JoinGroupState extends State<JoinGroup> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   final ApiProvider _apiProvider = ApiProvider();
 
   // final Logger log = Logger(
@@ -58,7 +65,7 @@ class _JoinGroupState extends State<JoinGroup> {
   String pageTitle = "Join Guild";
 
   /// Curent loggedin user
-  User _user;
+  User _user = User.blank();
 
   @override
   void initState() {
@@ -165,7 +172,7 @@ class _JoinGroupState extends State<JoinGroup> {
                 child: CustomAppBar(
                   Colors.white,
                   Colors.white,
-                  null,
+                  _scaffoldKey,
                   icon: Icon(Icons.arrow_back),
                 ),
               ),
@@ -316,7 +323,7 @@ class _JoinGroupState extends State<JoinGroup> {
                                 ),
                                 if (_isLocked)
                                   Text(
-                                    AppLocalizations.of(context)
+                                    AppLocalizations.of(context)!
                                         .translate('password_input_label'),
                                     semanticsLabel: 'Password',
                                     style: TextStyle(
@@ -448,9 +455,10 @@ class _JoinGroupState extends State<JoinGroup> {
         showDialog(
           context: context,
           builder: (context) => CustomDialog(
-            title: AppLocalizations.of(context).translate('congrats'),
+            title: AppLocalizations.of(context)!.translate('congrats'),
             description: response["message"],
             buttonText: "Okay",
+            images: [],
             callback: () {
               Navigator.of(context).pop();
               Navigator.of(context).pushReplacementNamed('/in-group');
@@ -465,6 +473,8 @@ class _JoinGroupState extends State<JoinGroup> {
           title: 'Error',
           description: err.response?.data["message"],
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
     }

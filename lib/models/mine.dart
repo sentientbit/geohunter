@@ -10,16 +10,16 @@ class Mine {
   int id = 0;
 
   ///
-  Geometry geometry;
+  Geometry geometry = Geometry.blank();
 
   /// 1 = mine, 2 = player
   int category = 0;
 
   ///
-  Properties properties;
+  MineProperties properties = MineProperties.blank();
 
   ///
-  String lastVisited = "";
+  String lastVisited = "1980-01-01 01:01:01Z";
 
   ///
   double distanceToPoint = 0.0;
@@ -34,7 +34,20 @@ class Mine {
   List<Blueprint> blueprints = [];
 
   ///
-  Mine(dynamic json, this.category, {LtLn location = const LtLn(51.5, 0)}) {
+  Mine({
+    required this.id,
+    required this.geometry,
+    required this.category,
+    required this.properties,
+    required this.lastVisited,
+    required this.distanceToPoint,
+    required this.items,
+    required this.materials,
+    required this.blueprints,
+  });
+
+  ///
+  Mine.fromJson(dynamic json, this.category, LtLn location) {
     id = int.parse(json["id"].toString());
     if (json["last_visited"] != null && json["last_visited"] != "") {
       lastVisited = json["last_visited"];
@@ -42,13 +55,28 @@ class Mine {
       lastVisited = "1980-01-01 01:01:01Z";
     }
     geometry = Geometry.fromJson(json["geometry"]);
-    properties = Properties.fromJson(json["properties"]);
+    properties = MineProperties.fromJson(json["properties"]);
     final x = sphericalToCartesian(
       geometry.coordinates[1],
       geometry.coordinates[0],
     );
     final y = sphericalToCartesian(location.latitude, location.longitude);
     distanceToPoint = doubleDistance(x, y);
+  }
+
+  ///
+  factory Mine.blank() {
+    return Mine(
+      id: 0,
+      geometry: Geometry.blank(),
+      category: 0,
+      properties: MineProperties.blank(),
+      lastVisited: "1980-01-01 01:01:01Z",
+      distanceToPoint: 0.0,
+      items: [],
+      materials: [],
+      blueprints: [],
+    );
   }
 
   ///
@@ -73,7 +101,21 @@ class Geometry {
   String type = "";
 
   ///
-  List<double> coordinates = [0, 0];
+  List<double> coordinates = [51.5, 0.0];
+
+  ///
+  Geometry({
+    required this.type,
+    required this.coordinates,
+  });
+
+  ///
+  factory Geometry.blank() {
+    return Geometry(
+      type: "",
+      coordinates: [51.5, 0.0],
+    );
+  }
 
   ///
   Geometry.fromJson(dynamic json) {
@@ -84,7 +126,7 @@ class Geometry {
 }
 
 ///
-class Properties {
+class MineProperties {
   ///
   String title = "";
 
@@ -104,14 +146,36 @@ class Properties {
   String uid = "";
 
   ///
-  Properties.fromJson(dynamic input) {
+  MineProperties({
+    required this.title,
+    required this.comment,
+    required this.status,
+    required this.ico,
+    required this.thumbnails,
+    required this.uid,
+  });
+
+  ///
+  factory MineProperties.blank() {
+    return MineProperties(
+      title: "",
+      comment: "",
+      status: "",
+      ico: "0",
+      thumbnails: [],
+      uid: "",
+    );
+  }
+
+  ///
+  MineProperties.fromJson(dynamic input) {
     title = input["title"];
     comment = input["comment"];
     status = input["status"];
     ico = input["ico"].toString();
-    List<dynamic> pics = input["pictures"];
+    List<dynamic> pics = input["pictures"] ?? [];
     thumbnails.clear();
-    if (pics != null) {
+    if (pics.length > 0) {
       for (var pic in pics) {
         thumbnails.add(pic["thumbnail"]);
       }

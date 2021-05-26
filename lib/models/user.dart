@@ -17,9 +17,9 @@ class User {
 
   /// constructor
   User({
-    this.uid,
-    this.details,
-    this.jwt,
+    required this.uid,
+    required this.details,
+    required this.jwt,
   });
 
   ///
@@ -91,9 +91,9 @@ class UserGuild {
 
   ///
   UserGuild({
-    this.guildId,
-    this.permissions,
-    this.guid,
+    required this.guildId,
+    required this.permissions,
+    required this.guid,
   });
 
   ///
@@ -124,10 +124,10 @@ class UserGuild {
 ///
 class UserData {
   ///
-  String id;
+  String id = "";
 
   ///
-  String username;
+  String username = "";
 
   ///
   String guildId = "";
@@ -145,7 +145,7 @@ class UserData {
   String sex = "0";
 
   ///
-  String language;
+  String language = "en";
 
   ///
   String locationPrivacy = "0";
@@ -154,16 +154,16 @@ class UserData {
   String status = "";
 
   ///
-  List<String> currentQuests;
+  List<String> currentQuests = [];
 
   ///
-  String experience;
+  String experience = "";
 
   ///
-  double level;
+  double level = 0.0;
 
   ///
-  int percentage;
+  int percentage = 0;
 
   /// Total amount of funds
   double coins = 0.0;
@@ -190,7 +190,7 @@ class UserData {
     this.guildId = "",
     this.unnaprovedMembers = 0,
     this.xp = 0,
-    this.unread,
+    required this.unread,
   });
 
   ///

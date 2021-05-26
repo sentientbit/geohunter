@@ -50,9 +50,7 @@ class _DrawerPageState extends State<DrawerPage> {
   void loadUser() async {
     final tmp = await _apiProvider.getStoredUser();
     // log.d(tmp.details.unread);
-    if (tmp.details.unread == null) {
-      tmp.details.unread = [];
-    }
+
     _user = tmp;
     setState(() {
       _user = tmp;
@@ -72,9 +70,6 @@ class _DrawerPageState extends State<DrawerPage> {
   ///
   Widget numberOfUnreadMessages() {
     // log.d(_user.details.unread);
-    if (_user == null) {
-      return Text("");
-    }
     if (_user.details.unread.length > 0) {
       return Chip(
         backgroundColor: Colors.red,
@@ -252,7 +247,8 @@ class _DrawerPageState extends State<DrawerPage> {
                 ),
                 ListTile(
                   leading: Icon(Icons.portrait, color: GlobalConstants.appFg),
-                  title: Text(AppLocalizations.of(context).translate('profile'),
+                  title: Text(
+                      AppLocalizations.of(context)!.translate('profile'),
                       style: Style.menuTextStyle),
                   onTap: () {
                     Navigator.of(context).pop();
@@ -261,7 +257,8 @@ class _DrawerPageState extends State<DrawerPage> {
                 ),
                 ListTile(
                   leading: Icon(Icons.explore, color: GlobalConstants.appFg),
-                  title: Text(AppLocalizations.of(context).translate('explore'),
+                  title: Text(
+                      AppLocalizations.of(context)!.translate('explore'),
                       style: Style.menuTextStyle),
                   onTap: () {
                     // Update the state of the app
@@ -298,7 +295,7 @@ class _DrawerPageState extends State<DrawerPage> {
                 ListTile(
                   leading: Icon(Icons.assignment, color: GlobalConstants.appFg),
                   title: Text(
-                      AppLocalizations.of(context).translate('drawer_quests'),
+                      AppLocalizations.of(context)!.translate('drawer_quests'),
                       style: Style.menuTextStyle),
                   onTap: () {
                     // Update the state of the app
@@ -312,7 +309,7 @@ class _DrawerPageState extends State<DrawerPage> {
                 ListTile(
                   leading: Icon(Icons.flag, color: GlobalConstants.appFg),
                   title: Text(
-                      AppLocalizations.of(context)
+                      AppLocalizations.of(context)!
                           .translate('drawer_my_points'),
                       style: Style.menuTextStyle),
                   onTap: () {
@@ -325,7 +322,7 @@ class _DrawerPageState extends State<DrawerPage> {
                   title: Row(
                     children: <Widget>[
                       Text(
-                          AppLocalizations.of(context)
+                          AppLocalizations.of(context)!
                               .translate('drawer_friends'),
                           style: Style.menuTextStyle),
                       SizedBox(
@@ -350,7 +347,7 @@ class _DrawerPageState extends State<DrawerPage> {
                 ListTile(
                   leading: Icon(Icons.security, color: GlobalConstants.appFg),
                   title: Text(
-                      AppLocalizations.of(context)
+                      AppLocalizations.of(context)!
                           .translate('guild_drawer_label'),
                       style: Style.menuTextStyle),
                   onTap: () async {
@@ -371,7 +368,7 @@ class _DrawerPageState extends State<DrawerPage> {
                 ListTile(
                   leading:
                       Icon(Icons.help_outline, color: GlobalConstants.appFg),
-                  title: Text(AppLocalizations.of(context).translate('help'),
+                  title: Text(AppLocalizations.of(context)!.translate('help'),
                       style: Style.menuTextStyle),
                   onTap: () {
                     // Update the state of the app
@@ -385,7 +382,8 @@ class _DrawerPageState extends State<DrawerPage> {
                     leading: Icon(Icons.power_settings_new,
                         color: GlobalConstants.appFg),
                     title: Text(
-                        AppLocalizations.of(context).translate('drawer_logout'),
+                        AppLocalizations.of(context)!
+                            .translate('drawer_logout'),
                         style: Style.menuTextStyle),
                     onTap: () async => {await logout()}),
                 SizedBox(
@@ -402,7 +400,7 @@ class _DrawerPageState extends State<DrawerPage> {
   ///
   Future getImage() async {
     final picker = ImagePicker();
-    PickedFile pickedFile;
+    PickedFile? pickedFile;
     try {
       pickedFile =
           await picker.getImage(source: ImageSource.gallery, imageQuality: 100);
@@ -431,6 +429,8 @@ class _DrawerPageState extends State<DrawerPage> {
           title: 'Error',
           description: '${response['message']}',
           buttonText: "Okay",
+          images: [],
+          callback: () {},
         ),
       );
       setState(() {
