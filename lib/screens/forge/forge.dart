@@ -50,7 +50,7 @@ class _ForgeState extends State<ForgePage> {
 
   bool _isIapAvailable = false;
 
-  List<String> _productIds = ["gold11coins", "", ""];
+  List<String> _productIds = ["tgh.gold.coins.xs", "", ""];
   List<String> _productDescriptions = ["Card payment\nComing soon", "", ""];
   List<String> _productPrices = ["N/A", "", ""];
 

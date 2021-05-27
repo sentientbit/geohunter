@@ -89,8 +89,8 @@ class _PlacesState extends State<PlacesPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   bool _isIapAvailable = false;
-  List<String> _productIds = ["gold11coins"];
-  List<String> _productDescriptions = ["Card payment\nComing soon"];
+  List<String> _productIds = ["tgh.gold.coins.xs"];
+  List<String> _productDescriptions = ["Direct payment\nComing soon"];
   List<String> _productPrices = ["N/A"];
   List<IAPItem> _items = [];
   List<PurchasedItem> _purchases = [];
@@ -343,7 +343,11 @@ class _PlacesState extends State<PlacesPage> {
     });
   }
 
-  void _requestPurchase(IAPItem item) {
+  void _requestPurchase(int idx) {
+    if (_items.length <= 0) {
+      return;
+    }
+    IAPItem item = _items[idx];
     // log.d(item.productId);
     FlutterInappPurchase.instance.requestPurchase(item.productId);
     _goForReward(item.productId);
@@ -658,7 +662,7 @@ class _PlacesState extends State<PlacesPage> {
             side: BorderSide(width: 1, color: Colors.white),
           ),
           onPressed: () {
-            _requestPurchase(_items[idx]);
+            _requestPurchase(idx);
           },
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
