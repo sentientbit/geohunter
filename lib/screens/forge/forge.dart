@@ -247,7 +247,7 @@ class _ForgeState extends State<ForgePage> {
       child: InkWell(
         onTap: () {
           FlameAudio.audioCache.play(
-              'sfx/hammer_${(math.Random.secure().nextInt(3) + 1).toString()}.ogg');
+              'sfx/hammer_${(math.Random.secure().nextInt(3) + 1).toString()}.mp3');
           if (_blueprintId == 0) {
             showDialog(
               context: context,
