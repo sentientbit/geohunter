@@ -393,7 +393,7 @@ class _ItemDetailState extends State<ItemDetailPage> {
     }
 
     if (response["success"] == true) {
-      FlameAudio.audioCache.play('sfx/break_1.ogg');
+      FlameAudio.audioCache.play('sfx/break_1.mp3');
       showDialog(
         context: context,
         builder: (context) => CustomDialog(
