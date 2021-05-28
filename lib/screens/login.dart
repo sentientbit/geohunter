@@ -363,7 +363,7 @@ class _LoginPageState extends State<LoginPage> {
             ]),
       ),
       onPressed: () {
-        //Flame.audio.play('sfx/bookOpen_${(math.Random.secure().nextInt(2) + 1).toString()}.ogg');
+        //Flame.audio.play('sfx/bookOpen_${(math.Random.secure().nextInt(2) + 1).toString()}.mp3');
         Navigator.of(context).pushNamed('/register');
       },
     );
@@ -387,7 +387,7 @@ class _LoginPageState extends State<LoginPage> {
       ),
       onPressed: () {
         FlameAudio.audioCache.play(
-            'sfx/bookOpen_${(math.Random.secure().nextInt(2) + 1).toString()}.ogg');
+            'sfx/bookOpen_${(math.Random.secure().nextInt(2) + 1).toString()}.mp3');
         Navigator.of(context).pushNamed('/terms');
       },
     );
