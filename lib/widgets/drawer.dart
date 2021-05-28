@@ -1,13 +1,14 @@
 ///
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:image_picker/image_picker.dart';
-
 // import 'package:logger/logger.dart';
 
 ///
@@ -102,17 +103,15 @@ class _DrawerPageState extends State<DrawerPage> {
     ///
     var currentExperience = 0;
 
-    if (_user != null && _user.details != null) {
-      username = _user.details.username;
-      currentExperience = _user.details.xp;
-      currentLevel = expToLevel(currentExperience);
-      nextExperienceLevel = levelToExp(currentLevel + 1);
-      percentage = currentExperience / nextExperienceLevel;
-      //status = _user.details.status;
+    username = _user.details.username;
+    currentExperience = _user.details.xp;
+    currentLevel = expToLevel(currentExperience);
+    nextExperienceLevel = levelToExp(currentLevel + 1);
+    percentage = currentExperience / nextExperienceLevel;
+    //status = _user.details.status;
 
-      _avatar = NetworkImage(
-          'https://${GlobalConstants.apiHostUrl}${_user.details.picture}');
-    }
+    _avatar = NetworkImage(
+        'https://${GlobalConstants.apiHostUrl}${_user.details.picture}');
 
     // Add a ListView to the drawer. This ensures the user can scroll
     // through the options in the drawer if there isn't enough vertical
@@ -174,6 +173,7 @@ class _DrawerPageState extends State<DrawerPage> {
                           ),
                           GestureDetector(
                             onTap: () {
+                              playClick();
                               Navigator.of(context).pop();
                               Navigator.of(context)
                                   .pushReplacementNamed('/profile');
@@ -251,6 +251,7 @@ class _DrawerPageState extends State<DrawerPage> {
                       AppLocalizations.of(context)!.translate('profile'),
                       style: Style.menuTextStyle),
                   onTap: () {
+                    playClick();
                     Navigator.of(context).pop();
                     Navigator.of(context).pushReplacementNamed('/profile');
                   },
@@ -268,6 +269,7 @@ class _DrawerPageState extends State<DrawerPage> {
                     // ModalRoute.of(context).settings.name == "/poi-map"
                     //     ? log.d("Already on map")
                     //     : Navigator.of(context).pop();
+                    playClick();
                     Navigator.of(context).pushReplacementNamed('/poi-map');
                   },
                 ),
@@ -280,6 +282,7 @@ class _DrawerPageState extends State<DrawerPage> {
                   leading: Icon(Icons.widgets, color: GlobalConstants.appFg),
                   title: Text('Inventory', style: Style.menuTextStyle),
                   onTap: () {
+                    playClick();
                     Navigator.of(context).pop();
                     Navigator.of(context).pushReplacementNamed('/inventory');
                   },
@@ -288,6 +291,7 @@ class _DrawerPageState extends State<DrawerPage> {
                   leading: Icon(Icons.gavel, color: GlobalConstants.appFg),
                   title: Text('Forge', style: Style.menuTextStyle),
                   onTap: () {
+                    playClick();
                     Navigator.of(context).pop();
                     Navigator.of(context).pushReplacementNamed('/forge');
                   },
@@ -298,11 +302,8 @@ class _DrawerPageState extends State<DrawerPage> {
                       AppLocalizations.of(context)!.translate('drawer_quests'),
                       style: Style.menuTextStyle),
                   onTap: () {
-                    // Update the state of the app
-                    // ...
-                    // Then close the drawer
+                    playClick();
                     Navigator.of(context).pop();
-
                     Navigator.of(context).pushReplacementNamed('/questline');
                   },
                 ),
@@ -313,6 +314,7 @@ class _DrawerPageState extends State<DrawerPage> {
                           .translate('drawer_my_points'),
                       style: Style.menuTextStyle),
                   onTap: () {
+                    playClick();
                     Navigator.of(context).pop();
                     Navigator.of(context).pushReplacementNamed('/places');
                   },
@@ -332,9 +334,7 @@ class _DrawerPageState extends State<DrawerPage> {
                     ],
                   ),
                   onTap: () {
-                    // Update the state of the app
-                    // ...
-                    // Then close the drawer
+                    playClick();
                     Navigator.of(context).pop();
                     // ModalRoute.of(context).settings.name == "/poi-map"
                     //     // ? Navigator.of(context).pushNamed('/friends')
@@ -351,6 +351,7 @@ class _DrawerPageState extends State<DrawerPage> {
                           .translate('guild_drawer_label'),
                       style: Style.menuTextStyle),
                   onTap: () async {
+                    playClick();
                     if (_user.details.unnaprovedMembers > 0) {
                       _user.details.unnaprovedMembers = 0;
                       await CustomInterceptors.setStoredCookies(
@@ -371,9 +372,7 @@ class _DrawerPageState extends State<DrawerPage> {
                   title: Text(AppLocalizations.of(context)!.translate('help'),
                       style: Style.menuTextStyle),
                   onTap: () {
-                    // Update the state of the app
-                    // ...
-                    // Then close the drawer
+                    playClick();
                     Navigator.of(context).pop();
                     Navigator.of(context).pushReplacementNamed('/help');
                   },
@@ -385,7 +384,10 @@ class _DrawerPageState extends State<DrawerPage> {
                         AppLocalizations.of(context)!
                             .translate('drawer_logout'),
                         style: Style.menuTextStyle),
-                    onTap: () async => {await logout()}),
+                    onTap: () {
+                      playClick();
+                      logout();
+                    }),
                 SizedBox(
                   height: 24,
                 ),
@@ -395,6 +397,11 @@ class _DrawerPageState extends State<DrawerPage> {
         ),
       ],
     );
+  }
+
+  void playClick() {
+    FlameAudio.audioCache.play(
+        'sfx/click_${(math.Random.secure().nextInt(3) + 1).toString()}.mp3');
   }
 
   ///

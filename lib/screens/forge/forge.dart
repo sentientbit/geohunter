@@ -946,7 +946,7 @@ class _ForgeState extends State<ForgePage> {
             _craftedItemName = response["items"][0]["name"];
             _craftedItemRarity = response["items"][0]["rarity"];
           });
-          FlameAudio.audioCache.play('sfx/anvil_1.ogg');
+          FlameAudio.audioCache.play('sfx/anvil_1.mp3');
         }
 
         if (response.containsKey("coins")) {

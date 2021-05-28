@@ -221,7 +221,7 @@ class _PalDetailState extends State<PalDetailPage> {
     var szWidth = MediaQuery.of(context).size.width;
 
     if (isNewMessage && firstTimeCraaw == true) {
-      FlameAudio.audioCache.play('sfx/raven_1.ogg');
+      FlameAudio.audioCache.play('sfx/raven_1.mp3');
       firstTimeCraaw = false;
     }
 

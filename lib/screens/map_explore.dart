@@ -822,9 +822,9 @@ class _PoiMapState extends State<PoiMap>
     return Dialog(
       backgroundColor: GlobalConstants.appBg,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(2),
+        borderRadius: BorderRadius.circular(GlobalConstants.padding),
       ),
-      //elevation: 0,
+      //elevation: 0.0,
       insetPadding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
       child: Padding(
         padding: EdgeInsets.symmetric(
@@ -1464,7 +1464,7 @@ class _PoiMapState extends State<PoiMap>
   }
 
   void _loadMines(List<Mine> mines) async {
-    print(' --- _loadMines from Stream --- ');
+    //print(' --- _loadMines from Stream --- ');
     if (mines != null) {
       setState(() {
         _pois.clear();
