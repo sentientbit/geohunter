@@ -5,8 +5,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 //import 'package:qrscan/qrscan.dart' as scanner;
-import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+// import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter_offline/flutter_offline.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:qrcode_flutter/qrcode_flutter.dart';
 
 //import 'package:logger/logger.dart';
 
@@ -23,6 +26,8 @@ import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
 import '../../widgets/friends_summary.dart';
 import '../../widgets/network_status_message.dart';
+
+final _debouncer = Debouncer(milliseconds: 500);
 
 ///
 enum PopupMenuChoice {
@@ -63,33 +68,37 @@ class _FriendsPageState extends State<FriendsPage> {
   final _apiProvider = ApiProvider();
 
   String _scanBarcode = '';
+  bool qrFound = false;
 
   Map<int, dynamic> ravens = {};
 
-  Future<void> scanQR() async {
-    String barcodeScanRes;
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    try {
-      barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
-          '#ff6666', 'Cancel', true, ScanMode.QR);
-    } on Exception catch (err) {
-      barcodeScanRes = '';
-    }
+  final QRCaptureController controllerQr = QRCaptureController();
 
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
-    if (!mounted) return;
+  // Future<void> scanQR() async {
+  //   String barcodeScanRes;
+  //   // Platform messages may fail, so we use a try/catch PlatformException.
+  //   try {
+  //     barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
+  //         '#ff6666', 'Cancel', true, ScanMode.QR);
+  //   } on Exception catch (err) {
+  //     barcodeScanRes = '';
+  //   }
 
-    setState(() {
-      _scanBarcode = barcodeScanRes;
-    });
-  }
+  //   // If the widget was removed from the tree while the asynchronous platform
+  //   // message was in flight, we want to discard the reply rather than calling
+  //   // setState to update our non-existent appearance.
+  //   if (!mounted) return;
+
+  //   setState(() {
+  //     _scanBarcode = barcodeScanRes;
+  //   });
+  // }
 
   @override
   void initState() {
     super.initState();
     _loadFriends();
+    controllerQr.onCapture(iFoundSomething);
     BackButtonInterceptor.add(myInterceptor,
         name: widget.name, context: context);
   }
@@ -107,12 +116,24 @@ class _FriendsPageState extends State<FriendsPage> {
       return false;
     } else {
       setState(() => ifPop = true);
-      if (_scaffoldKey != null) {
-        Navigator.of(context).pop();
-        Navigator.of(context).pushNamed(GlobalConstants.backButtonPage);
-      }
+      Navigator.of(context).pop();
+      Navigator.of(context).pushNamed(GlobalConstants.backButtonPage);
     }
     return true;
+  }
+
+  /// When a QR Code is found
+  void iFoundSomething(String data) {
+    if (qrFound == false) {
+      //print('--- found ---');
+      controllerQr.pause();
+      FlameAudio.audioCache.play('sfx/stick_1.mp3');
+      //print('--- pause ---');
+      setState(() {
+        _scanBarcode = data;
+        qrFound = true;
+      });
+    }
   }
 
   Future _loadFriends() async {
@@ -122,7 +143,7 @@ class _FriendsPageState extends State<FriendsPage> {
       final friends = [];
 
       var privacy = 0;
-      var lat = 0.0;
+      var lat = 51.5;
       var lng = 0.0;
       if (response["success"] == true) {
         for (dynamic elem in response["friends"]) {
@@ -183,17 +204,118 @@ class _FriendsPageState extends State<FriendsPage> {
     }
   }
 
-  void choiceAction(PopupMenuChoice choice) {
-    if (choice == PopupMenuChoice.scan) {
-      _scan();
-    } else if (choice == PopupMenuChoice.showQR) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ShowQRPage(latitude: 51.5, longitude: 0.0),
+  Widget camButton() {
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        padding: EdgeInsets.only(left: 10, right: 10, top: 10, bottom: 10),
+        backgroundColor: GlobalConstants.appBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
         ),
-      );
-    }
+        side: BorderSide(width: 1, color: Colors.white),
+      ),
+      onPressed: () {
+        afterScan();
+        Navigator.of(context).pop();
+      },
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Icon(Icons.done, color: Color(0xffe6a04e)),
+          Text(
+            " Okay",
+            style: TextStyle(
+              color: Color(0xffe6a04e),
+              fontSize: 16,
+              fontFamily: 'Cormorant SC',
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// When pressing Start Scan
+  void showScan(BuildContext context) async {
+    controllerQr.resume();
+    //print('--- resume ---');
+    setState(() {
+      _scanBarcode = "";
+      qrFound = false;
+    });
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(GlobalConstants.padding),
+        ),
+        //elevation: 0.0,
+        insetPadding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
+        backgroundColor: Colors.transparent,
+        child: Stack(
+          children: <Widget>[
+            SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: 0,
+                ),
+                child: Container(
+                  padding: EdgeInsets.only(
+                    top: GlobalConstants.avatarRadius + GlobalConstants.padding,
+                    bottom: GlobalConstants.padding,
+                    left: GlobalConstants.padding,
+                    right: GlobalConstants.padding,
+                  ),
+                  margin: EdgeInsets.only(top: GlobalConstants.avatarRadius),
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    shape: BoxShape.rectangle,
+                    borderRadius:
+                        BorderRadius.circular(GlobalConstants.padding),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 10.0,
+                        offset: const Offset(0.0, 10.0),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min, // To make the card compact
+                    children: <Widget>[
+                      Container(
+                        width: 300,
+                        height: 300,
+                        child: QRCaptureView(
+                          controller: controllerQr,
+                        ),
+                      ),
+                      SizedBox(height: 24.0),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        textDirection: TextDirection.rtl,
+                        children: <Widget>[
+                          camButton(),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: GlobalConstants.padding,
+              right: GlobalConstants.padding,
+              child: CircleAvatar(
+                backgroundColor: Colors.transparent,
+                radius: GlobalConstants.avatarRadius,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget build(BuildContext context) {
@@ -207,16 +329,26 @@ class _FriendsPageState extends State<FriendsPage> {
           Icons.menu,
           // size: 32,
         ),
-        onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState?.openDrawer()
-            : Navigator.of(context).pop(),
+        onPressed: () => Navigator.of(context).pop(),
       ),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
       title: Text("Friends", style: Style.topBar),
       actions: <Widget>[
         PopupMenuButton<PopupMenuChoice>(
-          onSelected: choiceAction,
+          onSelected: (choice) {
+            if (choice == PopupMenuChoice.scan) {
+              showScan(context);
+            } else if (choice == PopupMenuChoice.showQR) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      ShowQRPage(latitude: 51.5, longitude: 0.0),
+                ),
+              );
+            }
+          },
           itemBuilder: (context) => <PopupMenuEntry<PopupMenuChoice>>[
             PopupMenuItem<PopupMenuChoice>(
               value: PopupMenuChoice.scan,
@@ -358,14 +490,17 @@ class _FriendsPageState extends State<FriendsPage> {
     );
   }
 
-  Future _scan() async {
-    var response;
+  Future afterScan() async {
+    //print('--- afterScan ---');
+    if (_scanBarcode.length <= 0) {
+      //print('f');
+      return;
+    }
+    dynamic response;
     try {
-      await scanQR();
       if (_scanBarcode.length > 0) {
-        final r = await _apiProvider
+        response = await _apiProvider
             .put('/friends?token=${_scanBarcode.split('/')[5]}', {});
-        response = r;
         _loadFriends();
       }
     } on DioError catch (err) {
@@ -394,6 +529,7 @@ class _FriendsPageState extends State<FriendsPage> {
         );
       }
     }
+    _scanBarcode = "";
     if (response.containsKey("success")) {
       if (response["success"] == true) {
         showDialog(

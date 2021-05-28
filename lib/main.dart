@@ -327,7 +327,7 @@ class SplashScreenState extends State<SplashScreen> {
       //log.i(cookies);
 
       if (cookies.isEmpty || !cookies.containsKey('jwt')) {
-        FlameAudio.audioCache.play('sfx/doorClose_1.ogg');
+        FlameAudio.audioCache.play('sfx/doorClose_1.mp3');
         Navigator.of(context).pushNamed('/login');
         return;
       }
@@ -342,7 +342,7 @@ class SplashScreenState extends State<SplashScreen> {
       // log.d(now.isAfter(expirationDate));
       if (now.isAfter(expirationDate)) {
         //print('session expired');
-        FlameAudio.audioCache.play('sfx/doorClose_3.ogg');
+        FlameAudio.audioCache.play('sfx/doorClose_3.mp3');
         Navigator.of(context).pushNamed('/login');
         return;
       } else {
@@ -366,7 +366,7 @@ class SplashScreenState extends State<SplashScreen> {
       //final quest = Quest.fromJson(cookies["user"]["current_quests"][0]);
 
       FlameAudio.audioCache.play(
-          'sfx/doorOpen_${(math.Random.secure().nextInt(2) + 1).toString()}.ogg');
+          'sfx/doorOpen_${(math.Random.secure().nextInt(2) + 1).toString()}.mp3');
 
       Navigator.of(context).pushNamed('/poi-map');
       //Navigator.of(context).pushNamed('/quests-full-page', arguments: quest);
@@ -424,7 +424,7 @@ class SplashScreenState extends State<SplashScreen> {
       ),
       onPressed: () {
         FlameAudio.audioCache.play(
-            'sfx/bookOpen_${(math.Random.secure().nextInt(2) + 1).toString()}.ogg');
+            'sfx/bookOpen_${(math.Random.secure().nextInt(2) + 1).toString()}.mp3');
         Navigator.of(context).pushNamed('/terms');
       },
     );
