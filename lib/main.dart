@@ -5,12 +5,7 @@ library crashy;
 import 'dart:async';
 import 'dart:math' as math;
 
-// Admob variant 1 :(
 import 'package:admob_flutter/admob_flutter.dart';
-// Admob variant 2 :(
-//import 'package:firebase_admob/firebase_admob.dart';
-// Admob variant 3 :(
-//import 'package:google_mobile_ads/google_mobile_ads.dart';
 //import 'package:device_info/device_info.dart';
 import 'package:dio/dio.dart';
 import 'package:double_back_to_close_app/double_back_to_close_app.dart';
@@ -18,8 +13,6 @@ import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
-//import 'package:google_maps_flutter/google_maps_flutter.dart';
-//import 'package:in_app_purchase/in_app_purchase.dart';
 //import 'package:latlong/latlong.dart';
 //import 'package:package_info/package_info.dart';
 import 'package:sentry/sentry.dart' as sentry;
@@ -360,6 +353,8 @@ class SplashScreenState extends State<SplashScreen> {
         cookies["user"]["guild"]["id"],
         cookies["user"]["xp"],
         cookies["user"]["unread"],
+        cookies["user"]["attack"],
+        cookies["user"]["defense"],
       );
 
       //final tmp = await _apiProvider.get('/profile');
@@ -392,9 +387,7 @@ class SplashScreenState extends State<SplashScreen> {
       //print('_streamLocation');
       //position.latitude.toString()
       //position.longitude.toString()
-      if (position != null) {
-        _location.updateLocation(LtLn(position.latitude, position.longitude));
-      }
+      _location.updateLocation(LtLn(position.latitude, position.longitude));
     });
   }
 

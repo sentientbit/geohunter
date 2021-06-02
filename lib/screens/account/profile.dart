@@ -11,6 +11,7 @@ import 'package:percent_indicator/linear_percent_indicator.dart';
 
 ///
 import '../../app_localizations.dart';
+import '../../fonts/rpg_awesome_icons.dart';
 import '../../models/item.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
@@ -22,6 +23,7 @@ import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
 import '../../widgets/network_status_message.dart';
+import '../../widgets/profile_info_card.dart';
 
 /// 12 User equiped items with 0 as a starting index
 List<Item> _equipments = List<Item>.filled(12, Item.blank());
@@ -152,9 +154,7 @@ class _ProfilePageState extends State<ProfilePage> {
               },
             );
           },
-          value: _user != null
-              ? (isValidGender(_user.details.sex) ? _user.details.sex : "1")
-              : "1",
+          value: (isValidGender(_user.details.sex) ? _user.details.sex : "1"),
         ),
       );
 
@@ -471,6 +471,39 @@ class _ProfilePageState extends State<ProfilePage> {
                           Expanded(
                             flex: 2,
                             child: Icon(
+                              RPGAwesome.hearts,
+                              size: 24,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Expanded(
+                            flex: 4,
+                            child: expBar(
+                              100,
+                              100,
+                              100,
+                              Colors.red,
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              ' Health',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          Expanded(
+                            flex: 2,
+                            child: Icon(
                               Icons.school,
                               size: 24,
                               color: Colors.white,
@@ -498,40 +531,51 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                         ],
                       ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          Expanded(
-                            flex: 2,
-                            child: Icon(
-                              Icons.healing,
-                              size: 24,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Expanded(
-                            flex: 4,
-                            child: expBar(
-                              100,
-                              100,
-                              100,
-                              Colors.red,
-                            ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              ' Health',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                      SizedBox(height: 18),
+                      Container(
+                        height: 80,
+                        child: Row(
+                          children: <Widget>[
+                            ProfileInfoCard(
+                              firstText: _user.details.coins.toString(),
+                              secondText: "Coins",
+                              hasImage: false,
+                              imagePath: "",
+                              hasIcon: true,
+                              iconResource: Icon(
+                                Icons.monetization_on,
+                                color: Color(0xffe6a04e),
                               ),
                             ),
-                          ),
-                        ],
+                            ProfileInfoCard(
+                              firstText: (_user.details.attack.length > 1)
+                                  ? "${_user.details.attack[0]} - ${_user.details.attack[1]}"
+                                  : "0",
+                              secondText: "Attack",
+                              hasImage: false,
+                              imagePath: "",
+                              hasIcon: true,
+                              iconResource: Icon(
+                                RPGAwesome.crossed_swords,
+                                color: Colors.red,
+                              ),
+                            ),
+                            ProfileInfoCard(
+                              firstText: (_user.details.defense.length > 1)
+                                  ? "${_user.details.defense[0]} - ${_user.details.defense[1]}"
+                                  : "0",
+                              secondText: "Defense",
+                              hasImage: false,
+                              imagePath: "",
+                              hasIcon: true,
+                              iconResource: Icon(
+                                RPGAwesome.shield,
+                                color: Color(0xff0da3d8),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      SizedBox(height: 18),
                       Text(
                         'Equipment',
                         textAlign: TextAlign.left,
@@ -564,7 +608,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ),
                           Container(
-                            color: Color(0x991c1411),
+                            color: Color(0xaa000000),
                             child: Column(
                               children: <Widget>[
                                 Row(
@@ -1031,7 +1075,8 @@ class _ProfilePageState extends State<ProfilePage> {
           double.tryParse(response["coins"].toString()) ?? 0.0;
       _user.details.xp = response["xp"];
       _user.details.unread = response["unread"];
-      // log.d(_user.details.unread);
+      _user.details.attack = response["attack"];
+      _user.details.defense = response["defense"];
 
       // update global data
       _userdata.updateUserData(
@@ -1040,6 +1085,8 @@ class _ProfilePageState extends State<ProfilePage> {
         response["guild"]["id"],
         _user.details.xp,
         _user.details.unread,
+        _user.details.attack,
+        _user.details.defense,
       );
     }
 
