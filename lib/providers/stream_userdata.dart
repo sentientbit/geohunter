@@ -12,6 +12,8 @@ class StreamUserData {
       guildId: "0",
       xp: 0,
       unread: [],
+      attack: [],
+      defense: [],
     ),
   );
 
@@ -28,6 +30,8 @@ class StreamUserData {
     String guildId,
     int xp,
     List<dynamic> unread,
+    List<dynamic> attack,
+    List<dynamic> defense,
   ) {
     _userdata.add(
       UserData(
@@ -36,6 +40,8 @@ class StreamUserData {
         guildId: guildId,
         xp: xp,
         unread: unread,
+        attack: attack,
+        defense: defense,
       ),
     );
   }

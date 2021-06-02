@@ -1,4 +1,5 @@
 import 'dart:async' show Future;
+import 'dart:convert';
 // To perform an interaction with a widget in your test, use the WidgetTester
 // utility that Flutter provides. For example, you can send tap and scroll
 // gestures. You can also use WidgetTester to find child widgets in the widget
@@ -32,6 +33,7 @@ import 'dart:async' show Future;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geohunter/shared/constants.dart';
 import 'package:encrypt/encrypt.dart' as enq;
+import 'package:geohunter/models/materialmodel.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -84,5 +86,21 @@ void main() {
     await Future.delayed(Duration(milliseconds: 50));
 
     expect(k, 2);
+  });
+
+  test('Material model test 1', () async {
+    final json1 =
+        r'''
+      {
+        "id": 1,
+        "name": "Tin Ingot",
+        "img": "ingot_tin.png",
+        "nr": "3",
+        "level": 1,
+      }
+  ''';
+    final test1 = Materialmodel.fromJson(jsonDecode(json1));
+
+    expect(test1.nr, 3);
   });
 }

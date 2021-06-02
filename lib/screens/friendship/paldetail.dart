@@ -41,6 +41,10 @@ class PalDetailPage extends StatefulWidget {
 class _PalDetailState extends State<PalDetailPage> {
   TextEditingController _controller = new TextEditingController();
 
+  // Define the focus node. To manage the lifecycle, create the FocusNode in
+  // the initState method, and clean it up in the dispose method.
+  late FocusNode myFocusNode;
+
   //final Logger log = Logger(
   //    printer: PrettyPrinter(
   //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
@@ -95,10 +99,13 @@ class _PalDetailState extends State<PalDetailPage> {
     nextExperienceLevel = levelToExp(currentLevel + 1);
     BackButtonInterceptor.add(myInterceptor);
     getMessages(currentFriend.id);
+    myFocusNode = FocusNode();
   }
 
   @override
   void dispose() {
+    // Clean up the focus node when the Form is disposed.
+    myFocusNode.dispose();
     BackButtonInterceptor.remove(myInterceptor);
     poorManTimer?.cancel();
     super.dispose();
@@ -297,6 +304,38 @@ class _PalDetailState extends State<PalDetailPage> {
             Expanded(
               flex: 2,
               child: Icon(
+                RPGAwesome.hearts,
+                size: 24,
+                color: Colors.white,
+              ),
+            ),
+            Expanded(
+              flex: 4,
+              child: expBar(
+                100,
+                100,
+                Colors.red,
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                ' Health',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Expanded(
+              flex: 2,
+              child: Icon(
                 Icons.school,
                 size: 24,
                 color: Colors.white,
@@ -314,38 +353,6 @@ class _PalDetailState extends State<PalDetailPage> {
               flex: 2,
               child: Text(
                 ' Xp',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ],
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Expanded(
-              flex: 2,
-              child: Icon(
-                Icons.healing,
-                size: 24,
-                color: Colors.white,
-              ),
-            ),
-            Expanded(
-              flex: 4,
-              child: expBar(
-                100,
-                100,
-                Colors.red,
-              ),
-            ),
-            Expanded(
-              flex: 2,
-              child: Text(
-                ' Health',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -412,47 +419,50 @@ class _PalDetailState extends State<PalDetailPage> {
                     SizedBox(height: 80),
                   ],
                 ),
-                Stack(
-                  children: <Widget>[
-                    Container(
-                      //width: 800,
-                      height: 222,
-                      decoration: BoxDecoration(
-                        image: DecorationImage(
-                          image: AssetImage(
-                            'assets/images/scroll.png',
-                          ),
-                          fit: BoxFit.fill,
-                        ),
-                      ),
-                    ),
-                    Align(
-                      alignment: Alignment.bottomCenter,
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          left: 50.0,
-                          right: 50.0,
-                          top: 21.0,
-                        ),
-                        child: Text(
-                          receivedMessage,
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 18,
-                            fontFamily: 'Cormorant SC',
-                            fontWeight: FontWeight.w900,
-                            shadows: <Shadow>[
-                              Shadow(
-                                offset: Offset(1.0, 1.0),
-                                blurRadius: 1.0,
-                                color: Color.fromRGBO(0, 0, 0, 210),
-                              )
-                            ],
+                GestureDetector(
+                  onTap: () => myFocusNode.requestFocus(),
+                  child: Stack(
+                    children: <Widget>[
+                      Container(
+                        //width: 800,
+                        height: 222,
+                        decoration: BoxDecoration(
+                          image: DecorationImage(
+                            image: AssetImage(
+                              'assets/images/scroll.png',
+                            ),
+                            fit: BoxFit.fill,
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            left: 50.0,
+                            right: 50.0,
+                            top: 21.0,
+                          ),
+                          child: Text(
+                            receivedMessage,
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 18,
+                              fontFamily: 'Cormorant SC',
+                              fontWeight: FontWeight.w900,
+                              shadows: <Shadow>[
+                                Shadow(
+                                  offset: Offset(1.0, 1.0),
+                                  blurRadius: 1.0,
+                                  color: Color.fromRGBO(0, 0, 0, 210),
+                                )
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 SizedBox(height: 18),
                 Row(
@@ -461,6 +471,7 @@ class _PalDetailState extends State<PalDetailPage> {
                     Expanded(
                       flex: 6,
                       child: TextFormField(
+                        focusNode: myFocusNode,
                         autofocus: false,
                         controller: _controller,
                         onChanged: (value) async {
@@ -587,6 +598,8 @@ class _PalDetailState extends State<PalDetailPage> {
             response["guild"]["id"],
             _user.details.xp,
             _user.details.unread,
+            _user.details.attack,
+            _user.details.defense,
           );
           ravenSound =
               (response["received_ack"] == 0 && response["received"].length > 0)

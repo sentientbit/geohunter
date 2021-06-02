@@ -19,12 +19,16 @@ class Materialmodel {
   int needed = 0;
 
   ///
+  int level = 0;
+
+  ///
   Materialmodel({
     required this.id,
     required this.name,
     required this.img,
     required this.nr,
     required this.needed,
+    required this.level,
   });
 
   ///
@@ -35,6 +39,7 @@ class Materialmodel {
       img: "nothing.png",
       nr: 0,
       needed: 0,
+      level: 0,
     );
   }
 
@@ -50,5 +55,14 @@ class Materialmodel {
     if (json.containsKey("needed")) {
       needed = int.tryParse(json["needed"].toString()) ?? 0;
     }
+    if (json.containsKey("level")) {
+      level = int.tryParse(json["level"].toString()) ?? 0;
+    }
+  }
+
+  /// Override toString to have a beautiful log of student object
+  @override
+  String toString() {
+    return 'Material({id: $id, name: "$name", img: "$img", nr: $nr, needed: $needed, level: $level})';
   }
 }

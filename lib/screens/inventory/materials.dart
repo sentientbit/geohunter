@@ -3,6 +3,8 @@ import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
 
+// import 'package:logger/logger.dart';
+
 ///
 import '../../models/materialmodel.dart';
 import '../../shared/constants.dart';
@@ -40,6 +42,10 @@ class MaterialListPage extends StatefulWidget {
 
 ///
 class _MaterialListState extends State<MaterialListPage> {
+  // final Logger log = Logger(
+  //     printer: PrettyPrinter(
+  //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
+
   /// Secure Storage for User Data
   final _storage = FlutterSecureStorage();
 
@@ -106,23 +112,29 @@ class _MaterialListState extends State<MaterialListPage> {
     return ListTile(
       contentPadding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
       leading: Container(
-          padding: EdgeInsets.only(right: 12.0),
-          decoration: BoxDecoration(
-            border: Border(
-              right: BorderSide(
-                width: 1.0,
-                color: Color(0xff333333),
-              ),
+        padding: EdgeInsets.only(right: 12.0),
+        decoration: BoxDecoration(
+          border: Border(
+            right: BorderSide(
+              width: 1.0,
+              color: Color(0xff333333),
             ),
           ),
-          child: Stack(children: <Widget>[
+        ),
+        child: Stack(
+          children: <Widget>[
             netImg,
             Positioned(
-                right: 0.0,
-                bottom: 0.0,
-                child: Text(_materials[index].nr.toString(),
-                    style: TextStyle(color: Colors.white))),
-          ])),
+              right: 0.0,
+              bottom: 0.0,
+              child: Text(
+                _materials[index].nr.toString(),
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      ),
       title: Text(
         _materials[index].name,
         style: TextStyle(
@@ -134,7 +146,7 @@ class _MaterialListState extends State<MaterialListPage> {
       subtitle: Row(
         children: <Widget>[
           Text(
-            " Material",
+            " Level ${_materials[index].level}",
             style: TextStyle(color: Colors.white),
           )
         ],
