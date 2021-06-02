@@ -174,6 +174,8 @@ class _FriendsPageState extends State<FriendsPage> {
               double.tryParse(response["coins"].toString()) ?? 0.0;
           _user.details.xp = response["xp"];
           _user.details.unread = response["unread"];
+          _user.details.attack = response["attack"];
+          _user.details.defense = response["defense"];
           // log.d(_user.details.unread);
           ravens = _user.details.unread.asMap();
 
@@ -184,6 +186,8 @@ class _FriendsPageState extends State<FriendsPage> {
             response["guild"]["id"],
             _user.details.xp,
             _user.details.unread,
+            _user.details.attack,
+            _user.details.defense,
           );
         }
       }
@@ -528,6 +532,8 @@ class _FriendsPageState extends State<FriendsPage> {
           ),
         );
       }
+      _scanBarcode = "";
+      return;
     }
     _scanBarcode = "";
     if (response.containsKey("success")) {

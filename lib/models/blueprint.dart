@@ -41,6 +41,8 @@ class Blueprint {
     id = int.tryParse(json["id"].toString()) ?? 0;
     name = json["name"];
     img = json["img"];
-    nr = int.tryParse(json["nr"].toString()) ?? 0;
+    if (json.containsKey("nr")) {
+      nr = int.tryParse(json["nr"].toString()) ?? 0;
+    }
   }
 }

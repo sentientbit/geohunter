@@ -44,7 +44,7 @@ class GlobalConstants {
   static const String appNamespace = "com.apsoni.geocraft";
 
   ///
-  static const String appVersion = "1.1.71";
+  static const String appVersion = "1.1.72";
 
   ///
 
