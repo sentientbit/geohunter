@@ -72,6 +72,8 @@ class User {
         "coins": details.coins,
         "xp": details.xp,
         "unread": details.unread,
+        "attack": details.attack,
+        "defense": details.defense,
       },
       "jwt": jwt
     };
@@ -180,6 +182,12 @@ class UserData {
   ///
   List<dynamic> unread = [];
 
+  ///
+  List<dynamic> attack = [];
+
+  ///
+  List<dynamic> defense = [];
+
   /// constructor
   UserData({
     this.username = "",
@@ -191,6 +199,8 @@ class UserData {
     this.unnaprovedMembers = 0,
     this.xp = 0,
     required this.unread,
+    required this.attack,
+    required this.defense,
   });
 
   ///
@@ -205,6 +215,8 @@ class UserData {
       unnaprovedMembers: 0,
       xp: 0,
       unread: [],
+      attack: [],
+      defense: [],
     );
   }
 
@@ -234,6 +246,8 @@ class UserData {
         : 0;
     xp = json["xp"];
     unread = json["unread"];
+    attack = json["attack"];
+    defense = json["defense"];
   }
 
   ///
@@ -246,5 +260,7 @@ class UserData {
         'unnaprovedMembers': unnaprovedMembers,
         'xp': xp,
         'unread': unread,
+        'attack': attack,
+        'defense': defense,
       };
 }

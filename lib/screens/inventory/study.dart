@@ -463,6 +463,8 @@ class _StudyDetailState extends State<StudyDetailPage> {
           response["guild"]["id"],
           response["xp"],
           response["unread"],
+          response["attack"],
+          response["defense"],
         );
       }
       showDialog(

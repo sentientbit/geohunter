@@ -957,6 +957,8 @@ class _ForgeState extends State<ForgePage> {
             response["guild"]["id"],
             response["xp"],
             response["unread"],
+            response["defense"],
+            response["attack"],
           );
         }
       }
@@ -1005,6 +1007,8 @@ class _ForgeState extends State<ForgePage> {
           response["guild"]["id"],
           response["xp"],
           response["unread"],
+          response["attack"],
+          response["defense"],
         );
 
         /// Retain the current total funds
