@@ -188,6 +188,7 @@ class _InventoryState extends State<InventoryPage> {
 
     /// Application top Bar
     final topBar = AppBar(
+      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
@@ -292,7 +293,7 @@ class _InventoryState extends State<InventoryPage> {
         Container(
           decoration: BoxDecoration(
             image: DecorationImage(
-              image: AssetImage('assets/images/backpack.jpg'),
+              image: AssetImage('assets/images/tools.jpg'),
               fit: BoxFit.fill,
             ),
           ),

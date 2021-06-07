@@ -148,6 +148,7 @@ class _MaterialSelectState extends State<MaterialSelectPage> {
   Widget build(BuildContext context) {
     /// Application top Bar
     final topBar = AppBar(
+      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
@@ -241,6 +242,7 @@ class _MaterialSelectState extends State<MaterialSelectPage> {
     setState(() {
       _materials.clear();
     });
+
     Navigator.pop(context);
     Navigator.pop(context);
     Navigator.of(context).pushNamed('/forge');

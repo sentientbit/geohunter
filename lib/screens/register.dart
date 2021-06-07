@@ -110,6 +110,7 @@ class _RegisterPageState extends State<RegisterPage> {
     );
 
     final topBar = AppBar(
+      brightness: Brightness.dark,
       backgroundColor: Colors.transparent,
       actions: <Widget>[
         IconButton(

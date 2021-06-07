@@ -44,7 +44,7 @@ class GlobalConstants {
   static const String appNamespace = "com.apsoni.geocraft";
 
   ///
-  static const String appVersion = "1.1.72";
+  static const String appVersion = "1.1.74";
 
   ///
 
@@ -115,17 +115,11 @@ class GlobalConstants {
 /// Distance to dig for treasure in meters
 const double digDistance = 15.0;
 
-/// Equator radius in meters (WGS84 ellipsoid)
-const double equatorRadius = 6378137.0;
-
-/// Polar radius in meters (WGS84 ellipsoid)
-const double polarRadius = 6356752.314245;
-
 /// WGS84
 const double flattening = 1 / 298.257223563;
 
 /// Earth radius in meters
-const double earthRadius = 6367444.0;
+const double terraRadius = 6367444.0;
 
 /// one radian is equal to 180/π degrees
 /// To convert from degrees to radians, multiply by π/180.
@@ -142,9 +136,9 @@ List<double> sphericalToCartesian(final double lat, final double lng) {
   //ignore: omit_local_variable_types
   double cos = math.cos(latRadian);
   return [
-    earthRadius * cos * math.cos(lngRadian),
-    earthRadius * math.sin(latRadian),
-    earthRadius * cos * math.sin(lngRadian)
+    terraRadius * cos * math.cos(lngRadian),
+    terraRadius * math.sin(latRadian),
+    terraRadius * cos * math.sin(lngRadian)
   ];
 }
 
@@ -352,6 +346,12 @@ int researchToCrafting(num exp) {
 int craftingToResearch(num lvl) {
   var exp = math.pow(2, lvl) - 1;
   return int.parse(exp.toString());
+}
+
+/// dmg = atk * (100 / (100 + def))
+double damageHealth(double atk, double def) {
+  var dmg = atk * (100 / (100 + def));
+  return dmg;
 }
 
 /// String hashStringSHA256(String input) { var digest = sha256.convert(utf8.encode(input)); print("Digest as hex string: $digest"); return base64.encode(digest.bytes); }

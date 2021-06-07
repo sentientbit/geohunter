@@ -50,8 +50,8 @@ class User {
 
   ///
   Map<String, dynamic> toMap() {
-    // print('--- log. toMap() ---');
-    // log.d(details);
+    ///print('--- log. toMap() ---');
+    ///log.d(details);
     return {
       "user": {
         "user_id": details.id,
@@ -66,7 +66,6 @@ class User {
         "sex": details.sex,
         "language": details.language,
         "location_privacy": details.locationPrivacy,
-        "experience": details.experience,
         "level": details.level,
         "percentage": details.percentage,
         "coins": details.coins,
@@ -74,6 +73,8 @@ class User {
         "unread": details.unread,
         "attack": details.attack,
         "defense": details.defense,
+        "daily": details.daily,
+        "music": details.music,
       },
       "jwt": jwt
     };
@@ -159,9 +160,6 @@ class UserData {
   List<String> currentQuests = [];
 
   ///
-  String experience = "";
-
-  ///
   double level = 0.0;
 
   ///
@@ -188,6 +186,12 @@ class UserData {
   ///
   List<dynamic> defense = [];
 
+  /// Elapsed number of seconds for the next Daily Reward
+  int daily = 0;
+
+  /// Music default volume
+  int music = 100;
+
   /// constructor
   UserData({
     this.username = "",
@@ -201,12 +205,14 @@ class UserData {
     required this.unread,
     required this.attack,
     required this.defense,
+    required this.daily,
+    this.music = 100,
   });
 
   ///
   factory UserData.blank() {
     return UserData(
-      username: "",
+      username: "Guest",
       sex: "0",
       locationPrivacy: "0",
       coins: 0.0,
@@ -217,6 +223,8 @@ class UserData {
       unread: [],
       attack: [],
       defense: [],
+      daily: 0,
+      music: 100,
     );
   }
 
@@ -236,7 +244,6 @@ class UserData {
     locationPrivacy = json["location_privacy"].toString();
     status = json["status"].toString();
     // currentQuests = json["current_quests"];
-    experience = json["experience"];
     level = double.tryParse(json["level"].toString()) ?? 0.0;
     percentage = int.parse(json["percentage"].toString());
     coins = double.tryParse(json["coins"].toString()) ?? 0.0;
@@ -244,15 +251,16 @@ class UserData {
     unnaprovedMembers = (json["unapproved_members"] != null)
         ? int.parse(json["unapproved_members"].toString())
         : 0;
-    xp = json["xp"];
-    unread = json["unread"];
-    attack = json["attack"];
-    defense = json["defense"];
+    xp = json["xp"] ?? 0;
+    unread = json["unread"] ?? [];
+    attack = json["attack"] ?? [];
+    defense = json["defense"] ?? [];
+    daily = json["daily"] ?? 0;
+    music = json["music"] ?? 100;
   }
 
   ///
   Map<String, dynamic> toJson() => {
-        'experience': experience,
         'percentage': percentage,
         'level': level,
         'miningSpeed': miningSpeed,
@@ -262,5 +270,13 @@ class UserData {
         'unread': unread,
         'attack': attack,
         'defense': defense,
+        'daily': daily,
+        'music': music,
       };
+
+  /// Override toString to have a beautiful log of student object
+  @override
+  String toString() {
+    return 'UserData({level: $level, coins: $coins, daily: $daily, music: $music})';
+  }
 }

@@ -22,7 +22,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # 4. Find out SHA-1 Fingerprint (see https://github.com/flame-engine/play_games/blob/master/doc/signin.md)
 # keytool -list -v -alias geocraft -keystore android\app\geocraft.jks
 # versionCode AUTOINCREMENTED in android/app/build.gradle versionCode +1
-version: 1.1.72
+version: 1.1.74
 
 environment:
   sdk: ">=2.12.0 <3.0.0"
@@ -70,7 +70,7 @@ dependencies:
   qrcode_flutter: ^2.0.1
   sentry: ^5.0.0
   shared_preferences: ^2.0.5
-  url_launcher: ^6.0.4
+  url_launcher: ^6.0.6
   # Deep Links
   # uni_links: ^0.2.0
   percent_indicator: "^3.0.1"
@@ -112,6 +112,7 @@ flutter:
     - assets/images/
     - assets/images/avatars/
     - assets/images/blueprints/
+    - assets/images/enemies/
     - assets/images/items/
     - assets/images/markers/
     - assets/images/materials/
@@ -124,6 +125,7 @@ flutter:
     - assets/secrets.json
     - assets/i18n/ro.json
     - assets/i18n/en.json
+    - assets/audio/music/
     - assets/audio/sfx/
 
   fonts:
