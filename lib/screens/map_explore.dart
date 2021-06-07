@@ -1281,7 +1281,7 @@ class _PoiMapState extends State<PoiMap>
     //var szWidth = MediaQuery.of(context).size.width;
 
     _createMap() {
-      print(mapType);
+      //print(mapType);
       if (mapType == 'outdoors') {
         return TileLayerOptions(
           urlTemplate: "https://api.mapbox.com/styles/v1/"
