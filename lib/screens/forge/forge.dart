@@ -1,4 +1,4 @@
-///
+// @dart=2.11
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
@@ -46,13 +46,17 @@ class _ForgeState extends State<ForgePage> {
   /// Secure Storage for User Data
   final _storage = FlutterSecureStorage();
 
-  StreamSubscription? _subscription;
+  StreamSubscription _subscription;
 
   bool _isIapAvailable = false;
-
-  List<String> _productIds = ["tgh.gold.coins.xs", "", ""];
-  List<String> _productDescriptions = ["Card payment\nComing soon", "", ""];
-  List<String> _productPrices = ["N/A", "", ""];
+  List<String> _productIds = ["tgh.gold.coins.xs"];
+  List<String> _productDescriptions = ["Direct payment\nComing soon"];
+  List<String> _productPrices = ["N/A"];
+  List<IAPItem> _items = [];
+  List<PurchasedItem> _purchases = [];
+  StreamSubscription _iapSubscription;
+  StreamSubscription _purchaseUpdatedSubscription;
+  StreamSubscription _purchaseErrorSubscription;
 
   bool _showCoinSheet = false;
 
@@ -78,7 +82,7 @@ class _ForgeState extends State<ForgePage> {
   int _transactionId = 0;
 
   // Admob variant 1 :(
-  AdmobReward? _admobAdvert;
+  AdmobReward _admobAdvert;
 
   bool _isLoading = false;
   bool _isRewarded = false;
@@ -176,6 +180,8 @@ class _ForgeState extends State<ForgePage> {
       name: widget.name,
       context: context,
     );
+
+    initPlatformState();
   }
 
   @override
@@ -183,6 +189,7 @@ class _ForgeState extends State<ForgePage> {
     _subscription?.cancel();
     BackButtonInterceptor.remove(myInterceptor);
     _admobAdvert?.dispose();
+    endPlatformState();
     super.dispose();
   }
 
@@ -199,6 +206,122 @@ class _ForgeState extends State<ForgePage> {
       }
     }
     return true;
+  }
+
+  // Platform messages are asynchronous, so we initialize in an async method.
+  Future<void> initPlatformState() async {
+    String platformVersion = "";
+    // Platform messages may fail, so we use a try/catch PlatformException.
+    try {
+      platformVersion = await FlutterInappPurchase.instance.platformVersion;
+    } on Exception {
+      platformVersion = 'platform version unknown';
+    }
+
+    // prepare
+    var result = await FlutterInappPurchase.instance.initConnection;
+    //print('IAP init: $result');
+
+    // If the widget was removed from the tree while the asynchronous platform
+    // message was in flight, we want to discard the reply rather than calling
+    // setState to update our non-existent appearance.
+    if (!mounted) return;
+
+    // refresh items for android
+    try {
+      String msg = await FlutterInappPurchase.instance.consumeAllItems;
+      print('consumeAllItems: $msg');
+    } on Exception catch (err) {
+      print('consumeAllItems error: $err');
+    }
+
+    _iapSubscription =
+        FlutterInappPurchase.connectionUpdated.listen((connected) {
+      //print('connected: $connected');
+    });
+
+    _purchaseUpdatedSubscription =
+        FlutterInappPurchase.purchaseUpdated.listen((productItem) {
+      if (productItem != null) {
+        _callbackPurchase(productItem.productId);
+      }
+    });
+
+    _purchaseErrorSubscription =
+        FlutterInappPurchase.purchaseError.listen((purchaseError) {
+      //print('purchase-error: $purchaseError');
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isLoading = false;
+        _isRewarded = false;
+      });
+    });
+
+    await _getProducts();
+    await _getPurchases();
+  }
+
+  void endPlatformState() async {
+    await FlutterInappPurchase.instance.endConnection;
+  }
+
+  Future _getProducts() async {
+    // ignore: omit_local_variable_types
+    List<IAPItem> items =
+        await FlutterInappPurchase.instance.getProducts(_productIds);
+    var idx = 0;
+    for (var item in items) {
+      _productPrices[idx] = item.localizedPrice;
+      _productDescriptions[idx] = item.description;
+      _productIds[idx] = item.productId;
+      idx++;
+    }
+
+    setState(() {
+      _items.addAll(items.toList());
+    });
+  }
+
+  Future _getPurchases() async {
+    // ignore: omit_local_variable_types
+    List<PurchasedItem> items =
+        await FlutterInappPurchase.instance.getAvailablePurchases();
+    // for (var item in items) {
+    //   print('${item.toString()}');
+    //   _purchases.add(item);
+    // }
+
+    setState(() {
+      _purchases.addAll(items.toList());
+    });
+  }
+
+  void _callbackPurchase(String productId) {
+    if (productId != _productIds[0]) {
+      _deleteReward();
+      setState(() {
+        _isLoading = false;
+        _isRewarded = false;
+      });
+      return;
+    }
+    _serverReward();
+    setState(() {
+      _isLoading = false;
+      _isRewarded = true;
+    });
+  }
+
+  void _requestPurchase(int idx) {
+    if (_items.length <= 0) {
+      return;
+    }
+    IAPItem item = _items[idx];
+    // log.d(item.productId);
+    FlutterInappPurchase.instance.requestPurchase(item.productId);
+    _goForReward(item.productId);
   }
 
   Widget blueprintPlace() {
@@ -323,7 +446,7 @@ class _ForgeState extends State<ForgePage> {
       elevation: 0.1,
       backgroundColor: Colors.transparent,
       title: Text(
-        _isIapAvailable ? "Open" : "Closed",
+        "Forge: ${((_items.length > 0) ? "Open" : "Closed")}",
         style: Style.topBar,
       ),
       actions: <Widget>[
@@ -500,7 +623,9 @@ class _ForgeState extends State<ForgePage> {
             ),
             side: BorderSide(width: 1, color: Colors.white),
           ),
-          onPressed: () {},
+          onPressed: () {
+            _requestPurchase(idx);
+          },
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
@@ -863,22 +988,22 @@ class _ForgeState extends State<ForgePage> {
     var secureStorage = await _storage.readAll();
     setState(() {
       if (secureStorage.containsKey("forgeBlueprintId")) {
-        _blueprintId = int.tryParse(secureStorage["forgeBlueprintId"]!) ?? 0;
+        _blueprintId = int.tryParse(secureStorage["forgeBlueprintId"]) ?? 0;
         _blueprintImg = secureStorage["forgeBlueprintImg"] ?? "nothing.png";
         _blueprintName = secureStorage["forgeBlueprintName"] ?? "Blueprint";
       }
       if (secureStorage.containsKey("forgeMaterial0Id")) {
-        _materialsId[0] = int.tryParse(secureStorage["forgeMaterial0Id"]!) ?? 0;
+        _materialsId[0] = int.tryParse(secureStorage["forgeMaterial0Id"]) ?? 0;
         _materialsImg[0] = secureStorage["forgeMaterial0Img"] ?? "nothing.png";
         _materialsName[0] = secureStorage["forgeMaterial0Name"] ?? "Material";
       }
       if (secureStorage.containsKey("forgeMaterial1Id")) {
-        _materialsId[1] = int.tryParse(secureStorage["forgeMaterial1Id"]!) ?? 0;
+        _materialsId[1] = int.tryParse(secureStorage["forgeMaterial1Id"]) ?? 0;
         _materialsImg[1] = secureStorage["forgeMaterial1Img"] ?? "nothing.png";
         _materialsName[1] = secureStorage["forgeMaterial1Name"] ?? "Material";
       }
       if (secureStorage.containsKey("forgeMaterial2Id")) {
-        _materialsId[2] = int.tryParse(secureStorage["forgeMaterial2Id"]!) ?? 0;
+        _materialsId[2] = int.tryParse(secureStorage["forgeMaterial2Id"]) ?? 0;
         _materialsImg[2] = secureStorage["forgeMaterial2Img"] ?? "nothing.png";
         _materialsName[2] = secureStorage["forgeMaterial2Name"] ?? "Material";
       }
@@ -1049,7 +1174,7 @@ class _ForgeState extends State<ForgePage> {
         showDialog(
           context: context,
           builder: (context) => CustomDialog(
-            title: AppLocalizations.of(context)!.translate('congrats'),
+            title: AppLocalizations.of(context).translate('congrats'),
             description: "You gained ${response['amount']} coins, "
                 "for a grand total of ${_user.details.coins.toString()} !",
             buttonText: "Okay",
