@@ -434,8 +434,6 @@ class _SettingsState extends State<SettingsPage> {
       _user.details.music,
     );
 
-    print('111');
-    print(_user.details);
     setState(() {
       /// update controller data
       musicLevel = _user.details.music;

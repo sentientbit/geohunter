@@ -123,6 +123,13 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
   void initState() {
     super.initState();
     loadUser();
+    WidgetsBinding.instance?.addPostFrameCallback(
+      (_){
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(_scrollController.position.maxScrollExtent, duration: Duration(milliseconds: 100), curve: Curves.easeInOut);
+        }
+      }
+    );
     BackButtonInterceptor.add(myInterceptor,
         name: widget.name, context: context);
   }
@@ -517,6 +524,7 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
     return SizedBox(
       height: szHeight / 4,
       child: SingleChildScrollView(
+        controller: _scrollController,
         child: Column(
           children: <Widget>[
             for (var i = 0; i < consoleStrings.length; i++)
