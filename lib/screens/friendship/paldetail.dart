@@ -238,6 +238,7 @@ class _PalDetailState extends State<PalDetailPage> {
 
     /// Application top Bar
     final topBar = AppBar(
+      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
@@ -579,6 +580,9 @@ class _PalDetailState extends State<PalDetailPage> {
   }
 
   void getMessages(int friendId) async {
+    /// populate initial data from cookies
+    _user = await ApiProvider().getStoredUser();
+
     var ravenSound = false;
     try {
       final response = await _apiProvider.get('/message/$friendId');
@@ -588,18 +592,24 @@ class _PalDetailState extends State<PalDetailPage> {
           // update local data
           _user.details.coins =
               double.tryParse(response["coins"].toString()) ?? 0.0;
+          _user.details.guildId = response["guild"]["id"];
           _user.details.xp = response["xp"];
           _user.details.unread = response["unread"];
+          _user.details.attack = response["attack"];
+          _user.details.defense = response["defense"];
+          _user.details.daily = response["daily"];
 
           // update global data
           _userdata.updateUserData(
             _user.details.coins,
             0,
-            response["guild"]["id"],
+            _user.details.guildId,
             _user.details.xp,
             _user.details.unread,
             _user.details.attack,
             _user.details.defense,
+            _user.details.daily,
+            _user.details.music,
           );
           ravenSound =
               (response["received_ack"] == 0 && response["received"].length > 0)

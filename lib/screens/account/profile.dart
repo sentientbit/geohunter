@@ -7,7 +7,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_offline/flutter_offline.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 
-// import 'package:logger/logger.dart';
+//import 'package:logger/logger.dart';
 
 ///
 import '../../app_localizations.dart';
@@ -58,9 +58,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
   String _currentSex = "1";
 
-  // final Logger log = Logger(
-  //     printer: PrettyPrinter(
-  //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
+  //final Logger log = Logger(
+  //    printer: PrettyPrinter(
+  //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
   /// Curent loggedin user
   User _user = User.blank();
@@ -309,6 +309,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     /// Application top Bar
     final topBar = AppBar(
+      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
@@ -1069,26 +1070,29 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     }
 
-    if (response.containsKey("coins")) {
-      // update local data
-      _user.details.coins =
-          double.tryParse(response["coins"].toString()) ?? 0.0;
-      _user.details.xp = response["xp"];
-      _user.details.unread = response["unread"];
-      _user.details.attack = response["attack"];
-      _user.details.defense = response["defense"];
+    // update local data
+    _user.details.coins = double.tryParse(response["coins"].toString()) ?? 0.0;
+    _user.details.guildId = response["guild"]["id"];
+    _user.details.xp = response["xp"];
+    _user.details.unread = response["unread"];
+    _user.details.attack = response["attack"];
+    _user.details.defense = response["defense"];
+    _user.details.daily = response["daily"];
 
-      // update global data
-      _userdata.updateUserData(
-        _user.details.coins,
-        0,
-        response["guild"]["id"],
-        _user.details.xp,
-        _user.details.unread,
-        _user.details.attack,
-        _user.details.defense,
-      );
-    }
+    //log.d(response);
+
+    // update global data
+    _userdata.updateUserData(
+      _user.details.coins,
+      0,
+      _user.details.guildId,
+      _user.details.xp,
+      _user.details.unread,
+      _user.details.attack,
+      _user.details.defense,
+      _user.details.daily,
+      _user.details.music,
+    );
 
     setState(() {
       /// update controller data

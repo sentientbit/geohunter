@@ -309,6 +309,7 @@ class _ForgeState extends State<ForgePage> {
 
     /// Application top Bar
     final topBar = AppBar(
+      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
@@ -430,7 +431,7 @@ class _ForgeState extends State<ForgePage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          Icon(RPGAwesome.anvil, color: Color(0xffe6a04e)),
+          Icon(RPGAwesome.forging, color: Color(0xffe6a04e)),
           Text(
             " Craft",
             style: TextStyle(
@@ -846,7 +847,7 @@ class _ForgeState extends State<ForgePage> {
         unselectedLabelStyle: TextStyle(fontSize: 14),
         items: [
           BottomNavigationBarItem(
-            icon: Icon(RPGAwesome.anvil, color: Colors.white),
+            icon: Icon(RPGAwesome.forging, color: Colors.white),
             label: 'Forge',
           ),
           BottomNavigationBarItem(
@@ -908,6 +909,9 @@ class _ForgeState extends State<ForgePage> {
   }
 
   void _craftItem() async {
+    /// populate initial data from cookies
+    _user = await ApiProvider().getStoredUser();
+
     if (_blueprintId <= 0) {
       _clearPlacements();
       setState(() {
@@ -949,16 +953,28 @@ class _ForgeState extends State<ForgePage> {
           FlameAudio.audioCache.play('sfx/anvil_1.mp3');
         }
 
+        // update local data
+        _user.details.coins =
+            double.tryParse(response["coins"].toString()) ?? 0.0;
+        _user.details.guildId = response["guild"]["id"];
+        _user.details.xp = response["xp"];
+        _user.details.unread = response["unread"];
+        _user.details.attack = response["attack"];
+        _user.details.defense = response["defense"];
+        _user.details.daily = response["daily"];
+
         if (response.containsKey("coins")) {
           //update global data
           _userdata.updateUserData(
-            double.tryParse(response["coins"].toString()) ?? 0.0,
+            _user.details.coins,
             0,
-            response["guild"]["id"],
-            response["xp"],
-            response["unread"],
-            response["defense"],
-            response["attack"],
+            _user.details.guildId,
+            _user.details.xp,
+            _user.details.unread,
+            _user.details.attack,
+            _user.details.defense,
+            _user.details.daily,
+            _user.details.music,
           );
         }
       }
@@ -967,6 +983,9 @@ class _ForgeState extends State<ForgePage> {
   }
 
   Future _serverReward() async {
+    /// populate initial data from cookies
+    _user = await ApiProvider().getStoredUser();
+
     dynamic response;
     try {
       response = await _apiProvider.post(
@@ -1001,14 +1020,26 @@ class _ForgeState extends State<ForgePage> {
           _isLoading = false;
         });
 
+        // update local data
+        _user.details.coins =
+            double.tryParse(response["coins"].toString()) ?? 0.0;
+        _user.details.guildId = response["guild"]["id"];
+        _user.details.xp = response["xp"];
+        _user.details.unread = response["unread"];
+        _user.details.attack = response["attack"];
+        _user.details.defense = response["defense"];
+        _user.details.daily = response["daily"];
+
         _userdata.updateUserData(
-          double.tryParse(response["coins"].toString()) ?? 0.0,
+          _user.details.coins,
           0,
-          response["guild"]["id"],
-          response["xp"],
-          response["unread"],
-          response["attack"],
-          response["defense"],
+          _user.details.guildId,
+          _user.details.xp,
+          _user.details.unread,
+          _user.details.attack,
+          _user.details.defense,
+          _user.details.daily,
+          _user.details.music,
         );
 
         /// Retain the current total funds

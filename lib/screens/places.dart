@@ -12,7 +12,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_offline/flutter_offline.dart';
 import 'package:encrypt/encrypt.dart' as enq;
 
-// import 'package:logger/logger.dart';
+//import 'package:logger/logger.dart';
 
 ///
 import '../app_localizations.dart';
@@ -227,6 +227,7 @@ class _PlacesState extends State<PlacesPage> {
     BackButtonInterceptor.remove(myInterceptor);
     _iapSubscription?.cancel();
     _admobAdvert?.dispose();
+    endPlatformState();
     super.dispose();
   }
 
@@ -247,7 +248,7 @@ class _PlacesState extends State<PlacesPage> {
 
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPlatformState() async {
-    String platformVersion;
+    String platformVersion = "";
     // Platform messages may fail, so we use a try/catch PlatformException.
     try {
       platformVersion = await FlutterInappPurchase.instance.platformVersion;
@@ -257,7 +258,7 @@ class _PlacesState extends State<PlacesPage> {
 
     // prepare
     var result = await FlutterInappPurchase.instance.initConnection;
-    print('result: $result');
+    //print('IAP init: $result');
 
     // If the widget was removed from the tree while the asynchronous platform
     // message was in flight, we want to discard the reply rather than calling
@@ -274,18 +275,22 @@ class _PlacesState extends State<PlacesPage> {
 
     _iapSubscription =
         FlutterInappPurchase.connectionUpdated.listen((connected) {
-      print('connected: $connected');
+      //print('connected: $connected');
     });
 
     _purchaseUpdatedSubscription =
         FlutterInappPurchase.purchaseUpdated.listen((productItem) {
-      print('new-purchase: $productItem');
-      _callbackPurchase(productItem.productId);
+      if (productItem != null) {
+        _callbackPurchase(productItem.productId);
+      }
     });
 
     _purchaseErrorSubscription =
         FlutterInappPurchase.purchaseError.listen((purchaseError) {
-      print('purchase-error: $purchaseError');
+      //print('purchase-error: $purchaseError');
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _isLoading = false;
         _isRewarded = false;
@@ -294,6 +299,10 @@ class _PlacesState extends State<PlacesPage> {
 
     await _getProducts();
     await _getPurchases();
+  }
+
+  void endPlatformState() async {
+    await FlutterInappPurchase.instance.endConnection;
   }
 
   Future _getProducts() async {
@@ -483,6 +492,7 @@ class _PlacesState extends State<PlacesPage> {
   Widget build(BuildContext context) {
     /// Application top Bar
     final topBar = AppBar(
+      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
@@ -765,6 +775,28 @@ class _PlacesState extends State<PlacesPage> {
       ],
     );
 
+    final trainingGrounds = OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        padding: EdgeInsets.all(16),
+        backgroundColor: GlobalConstants.appBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+        side: BorderSide(width: 1, color: Colors.white),
+      ),
+      onPressed: () {
+        getTutorialBattleGround();
+      },
+      child: Text(
+        "Battle Tutorial",
+        style: TextStyle(
+            color: Color(0xffe6a04e),
+            fontSize: 18,
+            fontFamily: 'Cormorant SC',
+            fontWeight: FontWeight.bold),
+      ),
+    );
+
     // final deviceSize = MediaQuery.of(context).size;
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -905,6 +937,23 @@ class _PlacesState extends State<PlacesPage> {
                               ),
                             ),
                           ),
+                          if (_places.length == 0)
+                            SliverList(
+                              delegate: SliverChildListDelegate(
+                                [
+                                  Padding(
+                                    padding: EdgeInsets.all(16),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: <Widget>[
+                                        trainingGrounds,
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -1275,6 +1324,42 @@ class _PlacesState extends State<PlacesPage> {
       // load Places after we get the current position
       loadPlaces();
     });
+  }
+
+  void getTutorialBattleGround() async {
+    try {
+      final response = await _apiProvider.post("/places", {"mine_id": "13"});
+      //log.d(response);
+      if (response.containsKey("success")) {
+        if (response["success"] == true) {
+          showDialog(
+            context: context,
+            builder: (context) => CustomDialog(
+              title: AppLocalizations.of(context).translate('congrats'),
+              description: 'You are now a fighter in the Battle grounds',
+              buttonText: "Okay",
+              images: [],
+              callback: () {
+                loadPlaces();
+              },
+            ),
+          );
+          return;
+        }
+      }
+    } on DioError catch (err) {
+      showDialog(
+        context: context,
+        builder: (context) => CustomDialog(
+          title: 'Error',
+          description: '${err.response?.data}',
+          buttonText: "Okay",
+          images: [],
+          callback: () {},
+        ),
+      );
+      return;
+    }
   }
 
   void _updateUserLocation(LtLn ltln) async {

@@ -159,7 +159,7 @@ class _JoinGroupState extends State<JoinGroup> {
           Container(
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assets/images/bar.jpg'),
+                image: AssetImage('assets/images/inn.jpg'),
                 fit: BoxFit.fill,
               ),
             ),

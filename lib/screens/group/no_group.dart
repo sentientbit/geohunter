@@ -273,6 +273,7 @@ class _NoGroupState extends State<NoGroup> {
 
     /// Application top Bar
     final topBar = AppBar(
+      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
@@ -298,7 +299,7 @@ class _NoGroupState extends State<NoGroup> {
           Container(
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assets/images/bar.jpg'),
+                image: AssetImage('assets/images/inn.jpg'),
                 fit: BoxFit.fill,
               ),
             ),

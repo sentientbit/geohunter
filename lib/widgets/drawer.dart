@@ -13,6 +13,7 @@ import 'package:image_picker/image_picker.dart';
 
 ///
 import '../app_localizations.dart';
+import '../fonts/rpg_awesome_icons.dart';
 import '../libraries/pk_skeleton.dart';
 import '../models/user.dart';
 import '../providers/api_provider.dart';
@@ -68,6 +69,23 @@ class _DrawerPageState extends State<DrawerPage> {
     loadUser();
   }
 
+  Widget dailyQuests() {
+    if (_user.details.daily == null) {
+      return SizedBox();
+    }
+    // log.d(_user.details.unread);
+    if (_user.details.daily > 86400) {
+      return Chip(
+        backgroundColor: Colors.red,
+        label: Text(
+          "1",
+          style: TextStyle(color: Colors.white),
+        ),
+      );
+    }
+    return SizedBox();
+  }
+
   ///
   Widget numberOfUnreadMessages() {
     // log.d(_user.details.unread);
@@ -80,17 +98,11 @@ class _DrawerPageState extends State<DrawerPage> {
         ),
       );
     }
-    return Text("");
+    return SizedBox();
   }
 
   ///
   Widget build(BuildContext context) {
-    ///
-    var username = 'Guest';
-
-    ///
-    //var status = 'Undefined';
-
     ///
     var percentage = 0.0;
 
@@ -103,7 +115,6 @@ class _DrawerPageState extends State<DrawerPage> {
     ///
     var currentExperience = 0;
 
-    username = _user.details.username;
     currentExperience = _user.details.xp;
     currentLevel = expToLevel(currentExperience);
     nextExperienceLevel = levelToExp(currentLevel + 1);
@@ -185,7 +196,7 @@ class _DrawerPageState extends State<DrawerPage> {
                                 Row(
                                   children: <Widget>[
                                     Text(
-                                      username,
+                                      _user.details.username,
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 16.0,
@@ -288,7 +299,8 @@ class _DrawerPageState extends State<DrawerPage> {
                   },
                 ),
                 ListTile(
-                  leading: Icon(Icons.gavel, color: GlobalConstants.appFg),
+                  leading:
+                      Icon(RPGAwesome.forging, color: GlobalConstants.appFg),
                   title: Text('Forge', style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
@@ -298,9 +310,18 @@ class _DrawerPageState extends State<DrawerPage> {
                 ),
                 ListTile(
                   leading: Icon(Icons.assignment, color: GlobalConstants.appFg),
-                  title: Text(
-                      AppLocalizations.of(context)!.translate('drawer_quests'),
-                      style: Style.menuTextStyle),
+                  title: Row(
+                    children: <Widget>[
+                      Text(
+                          AppLocalizations.of(context)!
+                              .translate('drawer_quests'),
+                          style: Style.menuTextStyle),
+                      SizedBox(
+                        width: 20,
+                      ),
+                      dailyQuests(),
+                    ],
+                  ),
                   onTap: () {
                     playClick();
                     Navigator.of(context).pop();
@@ -367,6 +388,16 @@ class _DrawerPageState extends State<DrawerPage> {
                   indent: 0,
                 ),
                 ListTile(
+                  leading: Icon(RPGAwesome.crossed_swords,
+                      color: GlobalConstants.appFg),
+                  title: Text('Battle Training', style: Style.menuTextStyle),
+                  onTap: () {
+                    playClick();
+                    Navigator.of(context).pop();
+                    Navigator.of(context).pushReplacementNamed('/battle');
+                  },
+                ),
+                ListTile(
                   leading:
                       Icon(Icons.help_outline, color: GlobalConstants.appFg),
                   title: Text(AppLocalizations.of(context)!.translate('help'),
@@ -375,6 +406,16 @@ class _DrawerPageState extends State<DrawerPage> {
                     playClick();
                     Navigator.of(context).pop();
                     Navigator.of(context).pushReplacementNamed('/help');
+                  },
+                ),
+                ListTile(
+                  leading:
+                      Icon(RPGAwesome.repair, color: GlobalConstants.appFg),
+                  title: Text("Settings", style: Style.menuTextStyle),
+                  onTap: () {
+                    playClick();
+                    Navigator.of(context).pop();
+                    Navigator.of(context).pushNamed('/settings');
                   },
                 ),
                 ListTile(
