@@ -168,6 +168,7 @@ class _BlueprintListState extends State<BlueprintListPage> {
 
     /// Application top Bar
     final topBar = AppBar(
+      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
@@ -275,7 +276,7 @@ class _BlueprintListState extends State<BlueprintListPage> {
           Container(
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assets/images/ruins_shadow.jpg'),
+                image: AssetImage('assets/images/research_study.jpg'),
                 fit: BoxFit.fill,
               ),
             ),

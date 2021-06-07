@@ -1,4 +1,4 @@
-///
+/// Used in Profile to display two texts on the same card
 import 'package:flutter/material.dart';
 
 ///

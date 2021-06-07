@@ -5,7 +5,6 @@ import 'dart:ui';
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-// import 'package:logger/logger.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_countdown_timer/current_remaining_time.dart';
 import 'package:flutter_countdown_timer/flutter_countdown_timer.dart';
@@ -13,11 +12,14 @@ import 'package:flutter_offline/flutter_offline.dart';
 import 'package:intl/intl.dart';
 import 'package:loading_overlay/loading_overlay.dart';
 
+// import 'package:logger/logger.dart';
+
 ///
 import '../../app_localizations.dart';
 import '../../models/dailyreward.dart';
-import '../../models/quest.dart';
+import '../../models/user.dart';
 import '../../providers/api_provider.dart';
+import '../../providers/stream_userdata.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
@@ -39,6 +41,11 @@ class QuestLinePage extends StatefulWidget {
 }
 
 class _QuestLinePageState extends State<QuestLinePage> {
+  /// Curent loggedin user
+  User _user = User.blank();
+
+  final _userdata = getIt.get<StreamUserData>();
+
   // final Logger log = Logger(
   //     printer: PrettyPrinter(
   //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
@@ -581,6 +588,7 @@ class _QuestLinePageState extends State<QuestLinePage> {
 
     /// Application top Bar
     final topBar = AppBar(
+      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
@@ -719,6 +727,9 @@ class _QuestLinePageState extends State<QuestLinePage> {
   }
 
   void _getPastRewards() async {
+    /// populate initial data from cookies
+    _user = await ApiProvider().getStoredUser();
+
     final response = await _apiProvider.get('/dailyrewards');
 
     var past = [];
@@ -732,12 +743,34 @@ class _QuestLinePageState extends State<QuestLinePage> {
           }
         }
         if (response.containsKey("next_reward")) {
-          print(response["seconds_elapsed"]);
           setState(() {
             secs = int.tryParse(response["seconds_elapsed"].toString()) ?? 0;
             _nextReward = DailyReward.fromJson(response["next_reward"]);
           });
         }
+
+        // update local data
+        _user.details.coins =
+            double.tryParse(response["coins"].toString()) ?? 0.0;
+        _user.details.guildId = response["guild"]["id"];
+        _user.details.xp = response["xp"];
+        _user.details.unread = response["unread"];
+        _user.details.attack = response["attack"];
+        _user.details.defense = response["defense"];
+        _user.details.daily = response["daily"];
+
+        // update global data
+        _userdata.updateUserData(
+          _user.details.coins,
+          0,
+          _user.details.guildId,
+          _user.details.xp,
+          _user.details.unread,
+          _user.details.attack,
+          _user.details.defense,
+          _user.details.daily,
+          _user.details.music,
+        );
       }
     }
 

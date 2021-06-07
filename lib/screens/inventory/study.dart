@@ -2,13 +2,15 @@
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-//import 'package:logger/logger.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
+
+//import 'package:logger/logger.dart';
 
 ///
 import '../../app_localizations.dart';
 import '../../fonts/rpg_awesome_icons.dart';
 import '../../models/research.dart';
+import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/stream_userdata.dart';
 import '../../shared/constants.dart';
@@ -51,6 +53,9 @@ class _StudyDetailState extends State<StudyDetailPage> {
   int _lowerPoints = 0;
   int _nrAvailBlueprints = 0;
   int _maxNr = 0;
+
+  /// Curent loggedin user
+  User _user = User.blank();
 
   // final Logger log = Logger(
   //     printer: PrettyPrinter(
@@ -123,6 +128,7 @@ class _StudyDetailState extends State<StudyDetailPage> {
 
     /// Application top Bar
     final topBar = AppBar(
+      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
@@ -433,6 +439,9 @@ class _StudyDetailState extends State<StudyDetailPage> {
   }
 
   void _studyResearch(context, researchId) async {
+    /// populate initial data from cookies
+    _user = await ApiProvider().getStoredUser();
+
     var nrBlp = _nrInvBlueprints.toInt();
 
     if (nrBlp <= 0) {
@@ -455,31 +464,44 @@ class _StudyDetailState extends State<StudyDetailPage> {
       );
       return;
     }
-    if (response["success"] == true) {
-      if (response.containsKey("coins")) {
+    if (response.containsKey("success")) {
+      if (response["success"] == true) {
+        // update local data
+        _user.details.coins =
+            double.tryParse(response["coins"].toString()) ?? 0.0;
+        _user.details.guildId = response["guild"]["id"];
+        _user.details.xp = response["xp"];
+        _user.details.unread = response["unread"];
+        _user.details.attack = response["attack"];
+        _user.details.defense = response["defense"];
+        _user.details.daily = response["daily"];
+
         _userdata.updateUserData(
-          double.tryParse(response["coins"].toString()) ?? 0.0,
+          _user.details.coins,
           0,
-          response["guild"]["id"],
-          response["xp"],
-          response["unread"],
-          response["attack"],
-          response["defense"],
+          _user.details.guildId,
+          _user.details.xp,
+          _user.details.unread,
+          _user.details.attack,
+          _user.details.defense,
+          _user.details.daily,
+          _user.details.music,
+        );
+
+        showDialog(
+          context: context,
+          builder: (context) => CustomDialog(
+            title: AppLocalizations.of(context)!.translate('congrats'),
+            description: response["message"],
+            buttonText: "Okay",
+            images: [],
+            callback: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pushNamed('/research');
+            },
+          ),
         );
       }
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: AppLocalizations.of(context)!.translate('congrats'),
-          description: response["message"],
-          buttonText: "Okay",
-          images: [],
-          callback: () {
-            Navigator.of(context).pop();
-            Navigator.of(context).pushNamed('/research');
-          },
-        ),
-      );
     }
     return;
   }

@@ -14,6 +14,8 @@ class StreamUserData {
       unread: [],
       attack: [],
       defense: [],
+      daily: 0,
+      music: 100,
     ),
   );
 
@@ -32,6 +34,8 @@ class StreamUserData {
     List<dynamic> unread,
     List<dynamic> attack,
     List<dynamic> defense,
+    int daily,
+    int music,
   ) {
     _userdata.add(
       UserData(
@@ -42,6 +46,8 @@ class StreamUserData {
         unread: unread,
         attack: attack,
         defense: defense,
+        daily: daily,
+        music: music,
       ),
     );
   }
