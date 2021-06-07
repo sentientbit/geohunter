@@ -196,6 +196,7 @@ class _ResearchState extends State<ResearchPage> {
 
     /// Application top Bar
     final topBar = AppBar(
+      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
@@ -262,7 +263,7 @@ class _ResearchState extends State<ResearchPage> {
         unselectedLabelStyle: TextStyle(fontSize: 14),
         items: [
           BottomNavigationBarItem(
-            icon: Icon(RPGAwesome.anvil, color: Colors.white),
+            icon: Icon(RPGAwesome.forging, color: Colors.white),
             label: 'Forge',
           ),
           BottomNavigationBarItem(

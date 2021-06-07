@@ -1,7 +1,7 @@
 ///
 import 'package:flutter/material.dart';
 
-import 'package:logger/logger.dart';
+//import 'package:logger/logger.dart';
 
 ///
 import '../shared/constants.dart';
@@ -38,9 +38,9 @@ class CustomAppBar extends StatelessWidget {
     ),
   }) : super(key: key);
 
-  final Logger log = Logger(
-      printer: PrettyPrinter(
-          colors: true, printEmojis: true, printTime: true, lineLength: 80));
+  // final Logger log = Logger(
+  //     printer: PrettyPrinter(
+  //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
   @override
   Widget build(BuildContext context) {

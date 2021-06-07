@@ -18,16 +18,19 @@ import 'package:image_picker/image_picker.dart';
 //import 'package:user_location/user_location.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:logger/logger.dart';
+//import 'package:logger/logger.dart';
 
 ///
 import '../app_localizations.dart';
 import '../models/location.dart';
 import '../models/mine.dart';
 import '../models/user.dart';
+import '../models/visitevent.dart';
 import '../providers/api_provider.dart';
 import '../providers/stream_location.dart';
 import '../providers/stream_mines.dart';
+import '../providers/stream_visit.dart';
+import '../screens/battle/rock_paper_scissors.dart';
 import '../shared/constants.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_dialog.dart';
@@ -66,9 +69,9 @@ class PoiMap extends StatefulWidget {
 
 class _PoiMapState extends State<PoiMap>
     with SingleTickerProviderStateMixin<PoiMap> {
-  final Logger log = Logger(
-      printer: PrettyPrinter(
-          colors: true, printEmojis: true, printTime: true, lineLength: 80));
+  // final Logger log = Logger(
+  //     printer: PrettyPrinter(
+  //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
   ///
   String _mapStyle = '';
@@ -137,7 +140,7 @@ class _PoiMapState extends State<PoiMap>
   /// Curent loggedin user
   User _user = User.blank();
 
-  String mapType = "outdoors-v11";
+  String mapType = "outdoors";
 
   // Map<MarkerId, Marker> markers = <MarkerId, Marker>{};
 
@@ -158,16 +161,16 @@ class _PoiMapState extends State<PoiMap>
       }
 
       final neLat = _displayWindowCenter.latitude +
-          radianToDeg(d / earthRadius); /* max lat */
+          ((d / terraRadius) * (180.0 / math.pi)); /* max lat */
       final swLat = _displayWindowCenter.latitude -
-          radianToDeg(d / earthRadius); /* min lat */
+          ((d / terraRadius) * (180.0 / math.pi)); /* min lat */
 
       final neLng = _displayWindowCenter.longitude +
-          radianToDeg(math.asin(d / earthRadius) /
+          radianToDeg(math.asin(d / terraRadius) /
               math.cos(
                   degToRadian(_displayWindowCenter.latitude))); /* max lng */
       final swLng = _displayWindowCenter.longitude -
-          radianToDeg(math.asin(d / earthRadius) /
+          radianToDeg(math.asin(d / terraRadius) /
               math.cos(
                   degToRadian(_displayWindowCenter.latitude))); /* min lng */
       // await _storage.write(key: 'swLng', value: swLng.toString());
@@ -366,8 +369,14 @@ class _PoiMapState extends State<PoiMap>
 
   final _minesStreamBus = getIt.get<StreamMines>();
   StreamSubscription<List<Mine>>? _minesStreamSubscription;
+
+  /// Receive GPS updates from main.dart
   final _locationStreamBus = getIt.get<StreamLocation>();
   StreamSubscription<LtLn>? _locationStreamSubscription;
+
+  /// Receive battle wins / looses from other screens
+  final _visitStreamBus = getIt.get<StreamVisit>();
+  StreamSubscription<VisitEvent>? _visitStreamSubscription;
 
   @override
   void didChangeDependencies() {
@@ -387,6 +396,8 @@ class _PoiMapState extends State<PoiMap>
     _minesStreamSubscription = _minesStreamBus.stream$.listen(_loadMines);
     _locationStreamSubscription =
         _locationStreamBus.stream$.listen(_updateUserLocation);
+    _visitStreamSubscription =
+        _visitStreamBus.stream$.listen(_updateVisitEvent);
 
     timer = Timer.periodic(
       Duration(minutes: 30),
@@ -413,6 +424,7 @@ class _PoiMapState extends State<PoiMap>
     _pois.clear();
     _minesStreamSubscription?.cancel();
     _locationStreamSubscription?.cancel();
+    _visitStreamSubscription?.cancel();
     //if (mapController != null) { mapController.removeListener(_onMapChanged); }
     super.dispose();
   }
@@ -487,14 +499,14 @@ class _PoiMapState extends State<PoiMap>
             _customAppBarTextColor = Colors.black,
             _customAppBarIconColor = Colors.black,
             _systemHeaderBrightness = Brightness.light,
-            mapType = 'outdoors-v11',
+            mapType = 'outdoors',
           });
     } else if (_mapStyleState == 1 /* night */) {
       setState(() => {
             _customAppBarTextColor = Colors.white,
             _customAppBarIconColor = Colors.white,
             _systemHeaderBrightness = Brightness.dark,
-            mapType = 'dark-v10',
+            mapType = 'dark',
           });
     } else if (_mapStyleState == 2 /* auto */) {
       if (isDayTime == true) {
@@ -503,7 +515,7 @@ class _PoiMapState extends State<PoiMap>
               _customAppBarTextColor = Colors.black,
               _customAppBarIconColor = Colors.black,
               _systemHeaderBrightness = Brightness.light,
-              mapType = 'outdoors-v11',
+              mapType = 'outdoors',
             });
       } else {
         /// Night
@@ -511,9 +523,17 @@ class _PoiMapState extends State<PoiMap>
               _customAppBarTextColor = Colors.white,
               _customAppBarIconColor = Colors.white,
               _systemHeaderBrightness = Brightness.dark,
-              mapType = 'dark-v10',
+              mapType = 'dark',
             });
       }
+    } else if (_mapStyleState == 3 /* terrain */) {
+      /// Night
+      setState(() => {
+            _customAppBarTextColor = Colors.white,
+            _customAppBarIconColor = Colors.white,
+            _systemHeaderBrightness = Brightness.dark,
+            mapType = 'terrain',
+          });
     }
   }
 
@@ -571,7 +591,7 @@ class _PoiMapState extends State<PoiMap>
   _onMapTypeButtonPressed() {
     setState(() {
       _mapStyleState++;
-      if (_mapStyleState >= 3) {
+      if (_mapStyleState >= 4) {
         _mapStyleState = 0;
       }
       dayAndNight(_userLocation);
@@ -605,10 +625,10 @@ class _PoiMapState extends State<PoiMap>
   }
 
   ///
-  Future _goMine(int _mineIdx) async {
+  Future _goMine(int idx) async {
     dynamic response;
-    var mineId = _pois[_mineIdx].id;
-    var mineComment = _pois[_mineIdx]?.properties?.comment;
+    var mineId = _pois[idx].id;
+    var mineComment = _pois[idx]?.properties?.comment;
     if (mineId < 1) {
       return;
     }
@@ -649,8 +669,8 @@ class _PoiMapState extends State<PoiMap>
         }
 
         // Show this mine as already mined
-        _pois[_mineIdx].properties.ico = "0";
-        _pois[_mineIdx].lastVisited =
+        _pois[idx].properties.ico = "0";
+        _pois[idx].lastVisited =
             DateTime.parse(DateTime.now().toUtc().toIso8601String())
                 .toLocal()
                 .toString();
@@ -750,7 +770,7 @@ class _PoiMapState extends State<PoiMap>
       } else if (_pois[_mineIdx].properties.ico ==
           GlobalConstants.pointBattle) {
         actionText = "Fight";
-        actionIcon = RPGAwesome.bowie_knife;
+        actionIcon = RPGAwesome.broadsword;
       } else if (_pois[_mineIdx].properties.ico == GlobalConstants.pointBoy) {
         actionText = "Campfire";
         actionIcon = RPGAwesome.campfire;
@@ -785,7 +805,38 @@ class _PoiMapState extends State<PoiMap>
               side: BorderSide(width: 1, color: Colors.white),
             ),
             onPressed: () {
-              _goMine(_mineIdx);
+              if (_pois[_mineIdx].properties.ico == GlobalConstants.pointMine) {
+                _goMine(_mineIdx);
+              } else if (_pois[_mineIdx].properties.ico ==
+                  GlobalConstants.pointWood) {
+                _goMine(_mineIdx);
+              } else if (_pois[_mineIdx].properties.ico ==
+                  GlobalConstants.pointBattle) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => RockPaperScissorsPage(
+                      mineId: _pois[_mineIdx].id,
+                      rndMap: (math.Random.secure().nextInt(2) + 1),
+                    ),
+                  ),
+                );
+              } else if (_pois[_mineIdx].properties.ico ==
+                  GlobalConstants.pointBoy) {
+                _goMine(_mineIdx);
+              } else if (_pois[_mineIdx].properties.ico ==
+                  GlobalConstants.pointGirl) {
+                _goMine(_mineIdx);
+              } else if (_pois[_mineIdx].properties.ico ==
+                  GlobalConstants.pointRuins) {
+                _goMine(_mineIdx);
+              } else if (_pois[_mineIdx].properties.ico ==
+                  GlobalConstants.pointLibrary) {
+                _goMine(_mineIdx);
+              } else if (_pois[_mineIdx].properties.ico ==
+                  GlobalConstants.pointTrader) {
+                _goMine(_mineIdx);
+              }
             },
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1230,13 +1281,29 @@ class _PoiMapState extends State<PoiMap>
     //var szWidth = MediaQuery.of(context).size.width;
 
     _createMap() {
+      print(mapType);
+      if (mapType == 'outdoors') {
+        return TileLayerOptions(
+          urlTemplate: "https://api.mapbox.com/styles/v1/"
+              "{id}/tiles/{z}/{x}/{y}?access_token={accessToken}",
+          additionalOptions: {
+            'accessToken': GlobalConstants.mapboxToken,
+            'id': "mapbox/outdoors-v11",
+          },
+        );
+      } else if (mapType == 'dark') {
+        return TileLayerOptions(
+          urlTemplate: "https://api.mapbox.com/styles/v1/"
+              "{id}/tiles/{z}/{x}/{y}?access_token={accessToken}",
+          additionalOptions: {
+            'accessToken': GlobalConstants.mapboxToken,
+            'id': "mapbox/dark-v10",
+          },
+        );
+      }
       return TileLayerOptions(
-        urlTemplate: "https://api.mapbox.com/styles/v1/"
-            "{id}/tiles/{z}/{x}/{y}?access_token={accessToken}",
-        additionalOptions: {
-          'accessToken': GlobalConstants.mapboxToken,
-          'id': "mapbox/$mapType",
-        },
+        urlTemplate: "https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
       );
     }
 
@@ -1257,16 +1324,16 @@ class _PoiMapState extends State<PoiMap>
                   setState(() {
                     _showRecenterBtn = false;
                     _recenterBtnPressed = false;
-                    _displayWindowCenter = mapPosition.center;
-                    _mapZoom = mapPosition.zoom;
+                    _displayWindowCenter = mapPosition.center!;
+                    _mapZoom = mapPosition.zoom!;
                   })
                 }
               else
                 {
                   setState(() {
                     _showRecenterBtn = true;
-                    _displayWindowCenter = mapPosition.center;
-                    _mapZoom = mapPosition.zoom;
+                    _displayWindowCenter = mapPosition.center!;
+                    _mapZoom = mapPosition.zoom!;
                   })
                 },
               _loadPois(_userLocation)
@@ -1337,7 +1404,9 @@ class _PoiMapState extends State<PoiMap>
                           ? Icons.brightness_7
                           : ((_mapStyleState == 1)
                               ? Icons.brightness_3
-                              : Icons.timelapse)),
+                              : ((_mapStyleState == 2)
+                                  ? Icons.timelapse
+                                  : Icons.layers_outlined))),
                   SizedBox(
                     height: 16.0,
                   ),
@@ -1479,6 +1548,18 @@ class _PoiMapState extends State<PoiMap>
     });
     if (!_showRecenterBtn) {
       _moveCameraToUserLocation();
+    }
+  }
+
+  void _updateVisitEvent(VisitEvent event) async {
+    if (!isInPoisList(_mineIdx)) {
+      return;
+    }
+    if (_pois[_mineIdx].id == event.mineId) {
+      print('Battle for point ${event.mineId} is ${event.outcome}');
+      if (event.outcome == 1) {
+        _goMine(_mineIdx);
+      }
     }
   }
 

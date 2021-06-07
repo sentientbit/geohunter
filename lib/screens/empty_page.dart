@@ -49,7 +49,7 @@ class _EmptyPageState extends State<EmptyPage> {
           Container(
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assets/images/city_birds.jpg'),
+                image: AssetImage('assets/images/tools.jpg'),
                 fit: BoxFit.fill,
               ),
             ),
