@@ -38,8 +38,8 @@ import 'package:geohunter/models/materialmodel.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   test('Murmur32 Hash Test', () {
-    final hash =
-        hashStringMurmur("The quick brown fox jumps over the lazy dog");
+    final hash = hashStringMurmur("The quick brown fox jumps over the lazy dog")
+        .toString();
     expect(hash, "2186537283");
   });
 
@@ -89,14 +89,13 @@ void main() {
   });
 
   test('Material model test 1', () async {
-    final json1 =
-        r'''
+    final json1 = r'''
       {
         "id": 1,
         "name": "Tin Ingot",
         "img": "ingot_tin.png",
         "nr": "3",
-        "level": 1,
+        "level": 1
       }
   ''';
     final test1 = Materialmodel.fromJson(jsonDecode(json1));

@@ -14,7 +14,7 @@ import '../../models/friends.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/stream_userdata.dart';
-import '../../screens/map_explore.dart' show PoiMap;
+import '../../screens/map/map_explore.dart' show PoiMap;
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
@@ -593,16 +593,18 @@ class _PalDetailState extends State<PalDetailPage> {
           _user.details.coins =
               double.tryParse(response["coins"].toString()) ?? 0.0;
           _user.details.guildId = response["guild"]["id"];
+          _user.details.mining = response["mining"];
           _user.details.xp = response["xp"];
           _user.details.unread = response["unread"];
           _user.details.attack = response["attack"];
           _user.details.defense = response["defense"];
           _user.details.daily = response["daily"];
+          _user.details.costs = response["costs"];
 
           // update global data
           _userdata.updateUserData(
             _user.details.coins,
-            0,
+            _user.details.mining,
             _user.details.guildId,
             _user.details.xp,
             _user.details.unread,
@@ -610,6 +612,7 @@ class _PalDetailState extends State<PalDetailPage> {
             _user.details.defense,
             _user.details.daily,
             _user.details.music,
+            _user.details.costs,
           );
           ravenSound =
               (response["received_ack"] == 0 && response["received"].length > 0)
