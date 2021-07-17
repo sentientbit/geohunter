@@ -127,33 +127,89 @@ class GuildUser {
   int id = 0;
 
   ///
-  String permissions = "";
+  String sex = "0";
+
+  ///
+  int permissions = 0;
 
   ///
   DateTime created = DateTime.now();
 
+  ///
+  String username = "Unknown";
+
+  ///
+  String status = "";
+
+  ///
+  int xp = 0;
+
+  ///
+  int privacy = 0;
+
+  ///
+  String thumbnail = "/img/avatar/default01.jpg";
+
+  /// Latitude
+  double lat = 51.5;
+
+  /// Longitude
+  double lng = 0.0;
+
   /// constructor
   GuildUser({
     required this.id,
+    required this.sex,
+    required this.username,
+    required this.status,
+    required this.xp,
+    required this.privacy,
+    required this.thumbnail,
     required this.permissions,
     required this.created,
+    required this.lat,
+    required this.lng,
   });
 
   ///
   factory GuildUser.blank() {
     return GuildUser(
       id: 0,
-      permissions: "",
+      sex: "0",
+      username: "Unknown",
+      status: "",
+      xp: 0,
+      privacy: 0,
+      thumbnail: "/img/avatar/default01.jpg",
+      permissions: 0,
       created: DateTime.now(),
+      lat: 51.5,
+      lng: 0.0,
     );
   }
 
   ///
   GuildUser.fromJson(dynamic json) {
     id = int.parse(json["user_id"].toString());
-    permissions = json["permissions"].toString();
+    sex = json["sex"];
+    username = json["username"];
+    status = json["status"];
+    xp = json["xp"];
+    privacy = json["privacy"];
+    thumbnail = json["thumbnail"];
+    permissions = int.tryParse(json["permissions"]) ?? 0;
     created = json["created"] != null
         ? DateTime.parse(json["created"])
         : DateTime.parse('2020-01-01 01:01:01');
+  }
+
+  ///
+  String role() {
+    if (permissions == 0) {
+      return 'Guest';
+    } else if (permissions == 1) {
+      return 'Member';
+    }
+    return 'Unknown';
   }
 }

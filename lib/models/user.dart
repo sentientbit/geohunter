@@ -56,7 +56,7 @@ class User {
       "user": {
         "user_id": details.id,
         "username": details.username,
-        "mining_speed": details.miningSpeed,
+        "mining_speed": details.mining,
         "unapproved_members": details.unnaprovedMembers,
         "guild": {"id": details.guildId, "permissions": 0, "guid": "0"},
         "status": details.status,
@@ -169,7 +169,7 @@ class UserData {
   double coins = 0.0;
 
   ///
-  int miningSpeed = 0;
+  int mining = 3600;
 
   ///
   int unnaprovedMembers = 0;
@@ -192,13 +192,16 @@ class UserData {
   /// Music default volume
   int music = 100;
 
+  ///
+  List<dynamic> costs = [0.1, 0.1, 0.1];
+
   /// constructor
   UserData({
     this.username = "",
     this.sex = "0",
     this.locationPrivacy = "0",
     this.coins = 0.0,
-    this.miningSpeed = 0,
+    this.mining = 0,
     this.guildId = "",
     this.unnaprovedMembers = 0,
     this.xp = 0,
@@ -207,6 +210,7 @@ class UserData {
     required this.defense,
     required this.daily,
     this.music = 100,
+    required this.costs,
   });
 
   ///
@@ -216,7 +220,7 @@ class UserData {
       sex: "0",
       locationPrivacy: "0",
       coins: 0.0,
-      miningSpeed: 0,
+      mining: 3600,
       guildId: "",
       unnaprovedMembers: 0,
       xp: 0,
@@ -225,6 +229,7 @@ class UserData {
       defense: [],
       daily: 0,
       music: 100,
+      costs: [0.1, 0.1, 0.1],
     );
   }
 
@@ -243,11 +248,10 @@ class UserData {
     language = json["language"];
     locationPrivacy = json["location_privacy"].toString();
     status = json["status"].toString();
-    // currentQuests = json["current_quests"];
     level = double.tryParse(json["level"].toString()) ?? 0.0;
     percentage = int.parse(json["percentage"].toString());
     coins = double.tryParse(json["coins"].toString()) ?? 0.0;
-    miningSpeed = int.parse(json["mining_speed"].toString());
+    mining = json["mining"] ?? 3600;
     unnaprovedMembers = (json["unapproved_members"] != null)
         ? int.parse(json["unapproved_members"].toString())
         : 0;
@@ -257,13 +261,14 @@ class UserData {
     defense = json["defense"] ?? [];
     daily = json["daily"] ?? 0;
     music = json["music"] ?? 100;
+    costs = json["costs"] ?? [0.1, 0.1, 0.1];
   }
 
   ///
   Map<String, dynamic> toJson() => {
         'percentage': percentage,
         'level': level,
-        'miningSpeed': miningSpeed,
+        'mining_speed': mining,
         'coins': coins,
         'unnaprovedMembers': unnaprovedMembers,
         'xp': xp,
@@ -272,11 +277,12 @@ class UserData {
         'defense': defense,
         'daily': daily,
         'music': music,
+        'costs': costs,
       };
 
   /// Override toString to have a beautiful log of student object
   @override
   String toString() {
-    return 'UserData({level: $level, coins: $coins, daily: $daily, music: $music})';
+    return 'UserData({level: $level, coins: $coins, mining: $mining, daily: $daily, music: $music, costs: $costs})';
   }
 }

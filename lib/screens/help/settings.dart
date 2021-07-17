@@ -172,10 +172,6 @@ class _SettingsState extends State<SettingsPage> {
                           Row(
                             children: <Widget>[
                               Expanded(
-                                flex: 1,
-                                child: SizedBox(),
-                              ),
-                              Expanded(
                                 flex: 10,
                                 child: SwitchListTile(
                                   activeTrackColor: Colors.black,
@@ -217,10 +213,6 @@ class _SettingsState extends State<SettingsPage> {
                           Row(
                             children: <Widget>[
                               Expanded(
-                                flex: 1,
-                                child: SizedBox(),
-                              ),
-                              Expanded(
                                 flex: 10,
                                 child: SwitchListTile(
                                   activeTrackColor: Colors.black,
@@ -260,10 +252,6 @@ class _SettingsState extends State<SettingsPage> {
                           SizedBox(height: 18),
                           Row(
                             children: <Widget>[
-                              Expanded(
-                                flex: 1,
-                                child: SizedBox(),
-                              ),
                               Expanded(
                                 flex: 10,
                                 child: SwitchListTile(
@@ -307,10 +295,6 @@ class _SettingsState extends State<SettingsPage> {
                           SizedBox(height: 18),
                           Row(
                             children: <Widget>[
-                              Expanded(
-                                flex: 1,
-                                child: SizedBox(),
-                              ),
                               Expanded(
                                 flex: 10,
                                 child: SwitchListTile(
@@ -377,7 +361,7 @@ class _SettingsState extends State<SettingsPage> {
     // update global data
     _userdata.updateUserData(
       _user.details.coins,
-      0,
+      _user.details.mining,
       _user.details.guildId,
       _user.details.xp,
       _user.details.unread,
@@ -385,6 +369,7 @@ class _SettingsState extends State<SettingsPage> {
       _user.details.defense,
       _user.details.daily,
       _user.details.music,
+      _user.details.costs,
     );
 
     Navigator.of(context).pop();
@@ -415,16 +400,18 @@ class _SettingsState extends State<SettingsPage> {
     // update local data
     _user.details.coins = double.tryParse(response["coins"].toString()) ?? 0.0;
     _user.details.guildId = response["guild"]["id"];
+    _user.details.mining = response["mining"];
     _user.details.xp = response["xp"];
     _user.details.unread = response["unread"];
     _user.details.attack = response["attack"];
     _user.details.defense = response["defense"];
     _user.details.daily = response["daily"];
+    _user.details.costs = response["costs"];
 
     // update global data
     _userdata.updateUserData(
       _user.details.coins,
-      0,
+      _user.details.mining,
       _user.details.guildId,
       _user.details.xp,
       _user.details.unread,
@@ -432,6 +419,7 @@ class _SettingsState extends State<SettingsPage> {
       _user.details.defense,
       _user.details.daily,
       _user.details.music,
+      _user.details.costs,
     );
 
     setState(() {

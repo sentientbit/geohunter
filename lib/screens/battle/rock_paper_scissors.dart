@@ -123,13 +123,12 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
   void initState() {
     super.initState();
     loadUser();
-    WidgetsBinding.instance?.addPostFrameCallback(
-      (_){
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(_scrollController.position.maxScrollExtent, duration: Duration(milliseconds: 100), curve: Curves.easeInOut);
-        }
+    WidgetsBinding.instance?.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(_scrollController.position.maxScrollExtent,
+            duration: Duration(milliseconds: 100), curve: Curves.easeInOut);
       }
-    );
+    });
     BackButtonInterceptor.add(myInterceptor,
         name: widget.name, context: context);
   }
@@ -766,11 +765,13 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
       _user.details.coins =
           double.tryParse(response["coins"].toString()) ?? 0.0;
       _user.details.guildId = response["guild"]["id"];
+      _user.details.mining = response["mining"];
       _user.details.xp = response["xp"];
       _user.details.unread = response["unread"];
       _user.details.attack = response["attack"];
       _user.details.defense = response["defense"];
       _user.details.daily = response["daily"];
+      _user.details.costs = response["costs"];
 
       if (_user.details.attack.length > 1) {
         myAtk = rndBattleNumber.nextDouble() *
@@ -787,7 +788,7 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
       // update global data
       _userdata.updateUserData(
         _user.details.coins,
-        0,
+        _user.details.mining,
         _user.details.guildId,
         _user.details.xp,
         _user.details.unread,
@@ -795,6 +796,7 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
         _user.details.defense,
         _user.details.daily,
         _user.details.music,
+        _user.details.costs,
       );
     }
 

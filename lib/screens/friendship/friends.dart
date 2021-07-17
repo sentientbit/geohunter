@@ -4,11 +4,8 @@ import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-//import 'package:qrscan/qrscan.dart' as scanner;
-// import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter_offline/flutter_offline.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:qrcode_flutter/qrcode_flutter.dart';
 
 //import 'package:logger/logger.dart';
@@ -26,8 +23,6 @@ import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
 import '../../widgets/friends_summary.dart';
 import '../../widgets/network_status_message.dart';
-
-final _debouncer = Debouncer(milliseconds: 500);
 
 ///
 enum PopupMenuChoice {
@@ -147,46 +142,49 @@ class _FriendsPageState extends State<FriendsPage> {
       var privacy = 0;
       var lat = 51.5;
       var lng = 0.0;
-      if (response["success"] == true) {
-        for (dynamic elem in response["friends"]) {
-          privacy = 0;
-          if (elem.containsKey("privacy")) {
-            privacy = int.tryParse(elem["privacy"].toString()) ?? 0;
-            lat = double.parse(elem["lat"].toString());
-            lng = double.parse(elem["lng"].toString());
+      if (response.containsKey("success")) {
+        if (response["success"] == true) {
+          for (dynamic elem in response["friends"]) {
+            privacy = 0;
+            if (elem.containsKey("privacy")) {
+              privacy = int.tryParse(elem["privacy"].toString()) ?? 0;
+              lat = double.parse(elem["lat"].toString());
+              lng = double.parse(elem["lng"].toString());
+            }
+            friends.add(
+              Friend(
+                id: (int.tryParse(elem["id"].toString()) ?? 0),
+                sex: elem["sex"],
+                username: elem["username"],
+                status: elem["status"],
+                locationPrivacy: privacy,
+                xp: (int.tryParse(elem["xp"].toString()) ?? 0),
+                thumbnail: elem["thumbnail"],
+                isReq: elem["is_req"].toString(),
+                lat: lat,
+                lng: lng,
+              ),
+            );
           }
-          friends.add(
-            Friend(
-              id: (int.tryParse(elem["id"].toString()) ?? 0),
-              sex: elem["sex"],
-              username: elem["username"],
-              status: elem["status"],
-              locationPrivacy: privacy,
-              xp: (int.tryParse(elem["xp"].toString()) ?? 0),
-              thumbnail: elem["thumbnail"],
-              isReq: elem["is_req"].toString(),
-              lat: lat,
-              lng: lng,
-            ),
-          );
-        }
-        if (response.containsKey("coins")) {
+
           // update local data
           _user.details.coins =
               double.tryParse(response["coins"].toString()) ?? 0.0;
           _user.details.guildId = response["guild"]["id"];
+          _user.details.mining = response["mining"];
           _user.details.xp = response["xp"];
           _user.details.unread = response["unread"];
           _user.details.attack = response["attack"];
           _user.details.defense = response["defense"];
           _user.details.daily = response["daily"];
+          _user.details.costs = response["costs"];
           // log.d(_user.details.unread);
           ravens = _user.details.unread.asMap();
 
           // update global data
           _userdata.updateUserData(
             _user.details.coins,
-            0,
+            _user.details.mining,
             _user.details.guildId,
             _user.details.xp,
             _user.details.unread,
@@ -194,6 +192,7 @@ class _FriendsPageState extends State<FriendsPage> {
             _user.details.defense,
             _user.details.daily,
             _user.details.music,
+            _user.details.costs,
           );
         }
       }
@@ -328,20 +327,81 @@ class _FriendsPageState extends State<FriendsPage> {
     );
   }
 
+  Widget leadingIcon(BuildContext context) {
+    //print(" ${_user.details.daily}");
+    if (!GlobalConstants.menuHasNotification(_user.details)) {
+      return IconButton(
+        color: Colors.white,
+        icon: Icon(
+          Icons.menu,
+          color: Colors.white,
+        ),
+        onPressed: () {
+          if (_scaffoldKey.currentState != null) {
+            _scaffoldKey.currentState?.openDrawer();
+          } else {
+            Navigator.of(context).pop();
+          }
+        },
+      );
+    }
+
+    return InkWell(
+      splashColor: Colors.lightBlue,
+      onTap: () {
+        if (_scaffoldKey.currentState != null) {
+          _scaffoldKey.currentState?.openDrawer();
+        } else {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Center(
+        child: Container(
+          margin: EdgeInsets.only(left: 10),
+          width: 40,
+          height: 25,
+          child: Stack(
+            children: [
+              Icon(
+                Icons.menu,
+                color: Colors.white,
+              ),
+              Positioned(
+                left: 25,
+                top: 0,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.red,
+                      ),
+                      width: 10,
+                      height: 10,
+                    ),
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget build(BuildContext context) {
     // final deviceSize = MediaQuery.of(context).size;
 
     /// Application top Bar
     final topBar = AppBar(
       brightness: Brightness.dark,
-      leading: IconButton(
-        color: GlobalConstants.appFg,
-        icon: Icon(
-          Icons.menu,
-          // size: 32,
-        ),
-        onPressed: () => Navigator.of(context).pop(),
-      ),
+      leading: leadingIcon(context),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
       title: Text("Friends", style: Style.topBar),

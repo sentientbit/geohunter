@@ -4,7 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_offline/flutter_offline.dart';
-import 'package:geohunter/screens/group/no_group.dart';
+import 'package:geohunter/models/friends.dart';
 
 //import 'package:logger/logger.dart';
 
@@ -14,6 +14,8 @@ import '../../models/guild.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/custom_interceptors.dart';
+import '../../screens/friendship/paldetail.dart';
+import '../../screens/group/no_group.dart';
 import '../../shared/constants.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
@@ -83,6 +85,8 @@ class _InGroupState extends State<InGroup> {
   /// Curent loggedin user
   User _user = User.blank();
 
+  List<dynamic> members = [];
+
   //final Logger log = Logger(
   //    printer: PrettyPrinter(
   //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
@@ -114,6 +118,177 @@ class _InGroupState extends State<InGroup> {
       }
     }
     return true;
+  }
+
+  Widget _makeCard(BuildContext context, int index) {
+    if (members.isEmpty) {
+      return SizedBox(width: 1);
+    }
+    return Card(
+      color: Color.fromRGBO(19, 21, 20, 0.8),
+      elevation: 8.0,
+      margin: EdgeInsets.symmetric(
+        horizontal: 10.0,
+        vertical: 6.0,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          //color: Color.fromRGBO(19, 21, 20, 0.7),
+          borderRadius: BorderRadius.circular(8.0),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 33.0,
+              offset: Offset(0.0, 10.0),
+            ),
+          ],
+        ),
+        child: _makeListTile(context, index),
+      ),
+    );
+  }
+
+  Widget _makeListTile(BuildContext context, int index) {
+    var netImg = Image(
+      image: NetworkImage(
+          'https://${GlobalConstants.apiHostUrl}${members[index].thumbnail}'),
+      height: 76.0,
+      width: 76.0,
+    );
+
+    var seniority = timeAgoSinceDate(members[index].created);
+
+    var friend = Friend.fromGuildUser(members[index]);
+
+    return ListTile(
+      contentPadding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
+      leading: Container(
+        padding: EdgeInsets.only(right: 12.0),
+        decoration: BoxDecoration(
+          border: Border(
+            right: BorderSide(
+              width: 1.0,
+              color: Color(0xff333333),
+            ),
+          ),
+        ),
+        child: Stack(
+          children: <Widget>[
+            netImg,
+            Positioned(
+              right: 0.0,
+              bottom: 0.0,
+              child: Text(
+                '123',
+              ),
+            ),
+          ],
+        ),
+      ),
+      title: Text(
+        members[index].username,
+        style: TextStyle(
+          color: Color(0xffe6a04e),
+          fontFamily: "Cormorant SC",
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      subtitle: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          SizedBox(height: 10.0),
+          Text(
+            "${members[index].role()}",
+            style: TextStyle(color: Colors.white),
+          ),
+          SizedBox(height: 10.0),
+          Text(
+            "Seniority: $seniority",
+            style: TextStyle(color: Colors.white),
+          )
+        ],
+      ),
+      trailing:
+          Icon(Icons.keyboard_arrow_right, color: Colors.white, size: 30.0),
+      onTap: () {
+        //Navigator.of(context).pop();
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PalDetailPage(friend: friend),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget leadingIcon(BuildContext context) {
+    // print(" ${_user.details.daily}");
+    if (!GlobalConstants.menuHasNotification(_user.details)) {
+      return IconButton(
+        color: Colors.white,
+        icon: Icon(
+          Icons.menu,
+          color: Colors.white,
+        ),
+        onPressed: () {
+          if (_scaffoldKey.currentState != null) {
+            _scaffoldKey.currentState?.openDrawer();
+          } else {
+            Navigator.of(context).pop();
+          }
+        },
+      );
+    }
+
+    return InkWell(
+      splashColor: Colors.lightBlue,
+      onTap: () {
+        if (_scaffoldKey.currentState != null) {
+          _scaffoldKey.currentState?.openDrawer();
+        } else {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Center(
+        child: Container(
+          margin: EdgeInsets.only(left: 10),
+          width: 40,
+          height: 25,
+          child: Stack(
+            children: [
+              Icon(
+                Icons.menu,
+                color: Colors.white,
+              ),
+              Positioned(
+                left: 25,
+                top: 0,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.red,
+                      ),
+                      width: 10,
+                      height: 10,
+                    ),
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget build(BuildContext context) {
@@ -251,19 +426,10 @@ class _InGroupState extends State<InGroup> {
     /// Application top Bar
     final topBar = AppBar(
       brightness: Brightness.dark,
-      leading: IconButton(
-        color: GlobalConstants.appFg,
-        icon: Icon(
-          Icons.menu,
-          // size: 32,
-        ),
-        onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState?.openDrawer()
-            : Navigator.of(context).pop(),
-      ),
+      leading: leadingIcon(context),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
-      title: Text("Guild - ${guildUid}",
+      title: Text("Guild - $guildUid",
           style: TextStyle(
             color: Colors.white,
             fontFamily: "Cormorant SC",
@@ -556,6 +722,28 @@ class _InGroupState extends State<InGroup> {
                                 )
                             ],
                           ),
+                          Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text(
+                              'Members',
+                              textAlign: TextAlign.left,
+                              style: TextStyle(
+                                color: Color(0xffe6a04e),
+                                fontSize: 24,
+                                fontFamily: 'Cormorant SC',
+                                fontWeight: FontWeight.bold,
+                                shadows: <Shadow>[
+                                  Shadow(
+                                    offset: Offset(1.0, 1.0),
+                                    blurRadius: 3.0,
+                                    color: Color.fromARGB(255, 0, 0, 0),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          for (var i = 0; i < members.length; i++)
+                            _makeCard(context, i),
                         ],
                       ),
                     ),
@@ -579,6 +767,8 @@ class _InGroupState extends State<InGroup> {
       return;
     }
 
+    var tmp = [];
+
     try {
       dynamic response =
           await _apiProvider.get("/guild/${user.details.guildId}");
@@ -589,7 +779,13 @@ class _InGroupState extends State<InGroup> {
         await CustomInterceptors.setStoredCookies(
             GlobalConstants.apiHostUrl, _user.toMap());
       } else if (response["guilds"][0] != null) {
+        for (dynamic member in response["guilds"][0]["users"]) {
+          final u = GuildUser.fromJson(member);
+          tmp.add(u);
+        }
         setState(() {
+          members.clear();
+          members.addAll(tmp);
           _user = user;
           currentGuild = Guild.fromJson(response["guilds"][0]);
           guildUid = currentGuild.guid;
@@ -604,8 +800,8 @@ class _InGroupState extends State<InGroup> {
       showDialog(
         context: context,
         builder: (context) => CustomDialog(
-          title: 'Forgot password',
-          description: err.response?.data["message"],
+          title: 'Error',
+          description: err.response?.data?["message"],
           buttonText: "Okay",
           images: [],
           callback: () {},
