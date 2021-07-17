@@ -426,6 +426,76 @@ class _ForgeState extends State<ForgePage> {
     }
   }
 
+  ///
+  Widget leadingIcon(BuildContext context) {
+    // print(" ${_user.details.daily}");
+    if (!GlobalConstants.menuHasNotification(_user.details)) {
+      return IconButton(
+        color: Colors.white,
+        icon: Icon(
+          Icons.menu,
+          color: Colors.white,
+        ),
+        onPressed: () {
+          if (_scaffoldKey.currentState != null) {
+            _scaffoldKey.currentState?.openDrawer();
+          } else {
+            Navigator.of(context).pop();
+          }
+        },
+      );
+    }
+
+    return InkWell(
+      splashColor: Colors.lightBlue,
+      onTap: () {
+        if (_scaffoldKey.currentState != null) {
+          _scaffoldKey.currentState?.openDrawer();
+        } else {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Center(
+        child: Container(
+          margin: EdgeInsets.only(left: 10),
+          width: 40,
+          height: 25,
+          child: Stack(
+            children: [
+              Icon(
+                Icons.menu,
+                color: Colors.white,
+              ),
+              Positioned(
+                left: 25,
+                top: 0,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.red,
+                      ),
+                      width: 10,
+                      height: 10,
+                    ),
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  ///
   Widget build(BuildContext context) {
     //ignore: omit_local_variable_types
     int currentTabIndex = 0;
@@ -433,16 +503,7 @@ class _ForgeState extends State<ForgePage> {
     /// Application top Bar
     final topBar = AppBar(
       brightness: Brightness.dark,
-      leading: IconButton(
-        color: GlobalConstants.appFg,
-        icon: Icon(
-          Icons.menu,
-          // size: 32,
-        ),
-        onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState?.openDrawer()
-            : Navigator.of(context).pop(),
-      ),
+      leading: leadingIcon(context),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
       title: Text(
@@ -774,7 +835,7 @@ class _ForgeState extends State<ForgePage> {
                               "No bonus",
                               style: TextStyle(
                                 color: GlobalConstants.appFg,
-                                fontSize: 18.0,
+                                fontSize: 16.0,
                                 backgroundColor: Colors.black,
                               ),
                             ),
@@ -911,10 +972,10 @@ class _ForgeState extends State<ForgePage> {
                               color: Colors.black,
                             ),
                             child: Text(
-                              "${GlobalConstants.craftingCost.toString()} Coins",
+                              "${_user.details.costs[2].toString()} Coins",
                               style: TextStyle(
                                 color: GlobalConstants.appFg,
-                                fontSize: 18.0,
+                                fontSize: 16.0,
                                 backgroundColor: Colors.black,
                               ),
                             ),
@@ -1082,17 +1143,19 @@ class _ForgeState extends State<ForgePage> {
         _user.details.coins =
             double.tryParse(response["coins"].toString()) ?? 0.0;
         _user.details.guildId = response["guild"]["id"];
+        _user.details.mining = response["mining"];
         _user.details.xp = response["xp"];
         _user.details.unread = response["unread"];
         _user.details.attack = response["attack"];
         _user.details.defense = response["defense"];
         _user.details.daily = response["daily"];
+        _user.details.costs = response["costs"];
 
         if (response.containsKey("coins")) {
           //update global data
           _userdata.updateUserData(
             _user.details.coins,
-            0,
+            _user.details.mining,
             _user.details.guildId,
             _user.details.xp,
             _user.details.unread,
@@ -1100,6 +1163,7 @@ class _ForgeState extends State<ForgePage> {
             _user.details.defense,
             _user.details.daily,
             _user.details.music,
+            _user.details.costs,
           );
         }
       }
@@ -1137,27 +1201,27 @@ class _ForgeState extends State<ForgePage> {
     if (response.containsKey("success")) {
       if (response["success"] == true) {
         _validationToken = "";
-        _user.details.coins =
-            double.tryParse(response["coins"].toString()) ?? 0.0;
         _transactionId = 0;
 
         setState(() {
           _isLoading = false;
-        });
 
-        // update local data
-        _user.details.coins =
-            double.tryParse(response["coins"].toString()) ?? 0.0;
-        _user.details.guildId = response["guild"]["id"];
-        _user.details.xp = response["xp"];
-        _user.details.unread = response["unread"];
-        _user.details.attack = response["attack"];
-        _user.details.defense = response["defense"];
-        _user.details.daily = response["daily"];
+          // update local data
+          _user.details.coins =
+              double.tryParse(response["coins"].toString()) ?? 0.0;
+          _user.details.guildId = response["guild"]["id"];
+          _user.details.mining = response["mining"];
+          _user.details.xp = response["xp"];
+          _user.details.unread = response["unread"];
+          _user.details.attack = response["attack"];
+          _user.details.defense = response["defense"];
+          _user.details.daily = response["daily"];
+          _user.details.costs = response["costs"];
+        });
 
         _userdata.updateUserData(
           _user.details.coins,
-          0,
+          _user.details.mining,
           _user.details.guildId,
           _user.details.xp,
           _user.details.unread,
@@ -1165,6 +1229,7 @@ class _ForgeState extends State<ForgePage> {
           _user.details.defense,
           _user.details.daily,
           _user.details.music,
+          _user.details.costs,
         );
 
         /// Retain the current total funds
@@ -1263,10 +1328,56 @@ class _ForgeState extends State<ForgePage> {
     return;
   }
 
+  ///
   void _getUserDetails() async {
-    final user = await _apiProvider.getStoredUser();
+    /// populate initial data from cookies
+    _user = await ApiProvider().getStoredUser();
+
+    dynamic response;
+    try {
+      response = await _apiProvider.get("/equipment");
+    } on DioError catch (err) {
+      showDialog(
+        context: context,
+        builder: (context) => CustomDialog(
+          title: 'Error',
+          description: err.response?.data["message"],
+          buttonText: "Okay",
+          images: [],
+          callback: () {},
+        ),
+      );
+      return;
+    }
+
     setState(() {
-      _user = user;
+      // update local data
+      _user.details.coins =
+          double.tryParse(response["coins"].toString()) ?? 0.0;
+      _user.details.guildId = response["guild"]["id"];
+      _user.details.mining = response["mining"];
+      _user.details.xp = response["xp"];
+      _user.details.unread = response["unread"];
+      _user.details.attack = response["attack"];
+      _user.details.defense = response["defense"];
+      _user.details.daily = response["daily"];
+      _user.details.costs = response["costs"];
     });
+
+    // update global data
+    _userdata.updateUserData(
+      _user.details.coins,
+      _user.details.mining,
+      _user.details.guildId,
+      _user.details.xp,
+      _user.details.unread,
+      _user.details.attack,
+      _user.details.defense,
+      _user.details.daily,
+      _user.details.music,
+      _user.details.costs,
+    );
+
+    return;
   }
 }

@@ -50,6 +50,7 @@ class CustomInterceptors extends Interceptor {
   static Future<Map<String, dynamic>> getStoredCookies(String hostname) async {
     try {
       final hostnameHash = hashStringMurmur(hostname);
+      //print(StackTrace.current.toString());
       final cookiesJson = await storageGet('$prefix-$hostnameHash');
       var cookies = fromJson(cookiesJson);
       return Map<String, dynamic>.from(cookies);

@@ -139,21 +139,23 @@ class _LoginPageState extends State<LoginPage> {
 
   Future getUserDetails() async {
     //print('--- log. getUserDetails ---');
-    final response = await _apiProvider.get('/profile');
+    final tmp =
+        await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
     try {
-      final tmp =
-          await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
-      if (response["success"] == true) {
-        tmp["jwt"] = response["jwt"];
-        tmp["user"] = response["user"];
-        Map jwtdata = parseJwt(response["jwt"]);
+      final response = await _apiProvider.get('/profile');
+      if (response.containsKey("success")) {
+        if (response["success"] == true) {
+          tmp["jwt"] = response["jwt"];
+          tmp["user"] = response["user"];
+          Map jwtdata = parseJwt(response["jwt"]);
 
-        // Todo: better user validation
-        if (jwtdata.containsKey("usr")) {
-          if (jwtdata["usr"] != null) {
-            await CustomInterceptors.setStoredCookies(
-                GlobalConstants.apiHostUrl, tmp);
-            return true;
+          // Todo: better user validation
+          if (jwtdata.containsKey("usr")) {
+            if (jwtdata["usr"] != null) {
+              await CustomInterceptors.setStoredCookies(
+                  GlobalConstants.apiHostUrl, tmp);
+              return true;
+            }
           }
         }
       }

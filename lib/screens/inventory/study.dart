@@ -333,7 +333,7 @@ class _StudyDetailState extends State<StudyDetailPage> {
                       width: 80.0,
                     ),
                     Text(
-                      "${(_nrInvBlueprints * GlobalConstants.researchCost).toString()} Coins needed",
+                      "${(_nrInvBlueprints * _user.details.costs[1]).toString()} Coins needed",
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -470,15 +470,17 @@ class _StudyDetailState extends State<StudyDetailPage> {
         _user.details.coins =
             double.tryParse(response["coins"].toString()) ?? 0.0;
         _user.details.guildId = response["guild"]["id"];
+        _user.details.mining = response["mining"];
         _user.details.xp = response["xp"];
         _user.details.unread = response["unread"];
         _user.details.attack = response["attack"];
         _user.details.defense = response["defense"];
         _user.details.daily = response["daily"];
+        _user.details.costs = response["costs"];
 
         _userdata.updateUserData(
           _user.details.coins,
-          0,
+          _user.details.mining,
           _user.details.guildId,
           _user.details.xp,
           _user.details.unread,
@@ -486,6 +488,7 @@ class _StudyDetailState extends State<StudyDetailPage> {
           _user.details.defense,
           _user.details.daily,
           _user.details.music,
+          _user.details.costs,
         );
 
         showDialog(

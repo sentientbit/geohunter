@@ -1,3 +1,5 @@
+import 'package:geohunter/models/guild.dart';
+
 ///
 class Friend {
   ///
@@ -19,7 +21,7 @@ class Friend {
   int locationPrivacy = 0;
 
   ///
-  String thumbnail = "";
+  String thumbnail = "/img/avatar/default01.jpg";
 
   /// is friendship requested
   String isReq = "";
@@ -43,6 +45,32 @@ class Friend {
     required this.lat,
     required this.lng,
   });
+
+  ///
+  Friend.fromJson(dynamic json) {
+    id = int.parse(json["id"].toString());
+    sex = json["sex"];
+    username = json["username"];
+    status = json["status"];
+    xp = json["xp"];
+    locationPrivacy = json['privacy'];
+    thumbnail = json["thumbnail"];
+    lat = json["lat"];
+    lng = json["lng"];
+  }
+
+  ///
+  Friend.fromGuildUser(GuildUser gu) {
+    id = gu.id;
+    sex = gu.sex;
+    username = gu.username;
+    status = gu.status;
+    xp = gu.xp;
+    locationPrivacy = gu.privacy;
+    thumbnail = gu.thumbnail;
+    lat = gu.lat;
+    lng = gu.lng;
+  }
 
   ///
   factory Friend.blank() {

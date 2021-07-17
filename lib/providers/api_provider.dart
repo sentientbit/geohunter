@@ -1,6 +1,7 @@
 ///
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 
 // import 'package:logger/logger.dart';
 
@@ -37,7 +38,7 @@ class ApiProvider {
     return (status == 200);
   }
 
-  ///
+  /// Read
   Future get(String endpoint, {dynamic headers}) async {
     if (headers != null) {
       api.options.headers = headers;
@@ -53,7 +54,7 @@ class ApiProvider {
     }
   }
 
-  ///
+  /// Create
   Future post(String endpoint, dynamic body, {dynamic headers}) async {
     if (headers != null) {
       api.options.headers = headers;
@@ -67,7 +68,7 @@ class ApiProvider {
     }
   }
 
-  /// PUT [body] on [endpoint]
+  /// Update
   Future put(String endpoint, dynamic body) async {
     final response = await api.put(endpoint, data: body);
     try {
@@ -86,7 +87,7 @@ class ApiProvider {
     return put(endpoint, body);
   }
 
-  /// DELETE [body] on [endpoint]
+  /// Delete
   Future delete(String endpoint, dynamic body) async {
     final response = await api.delete(endpoint, data: body);
     try {
@@ -101,11 +102,16 @@ class ApiProvider {
   Future<User> getStoredUser() async {
     //ignore: omit_local_variable_types
     User tmp = User.blank();
-    final userDatastored =
-        await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
+
+    // ignore: omit_local_variable_types
+    Map<String, dynamic> userDatastored = {"user": null};
+
     // print('--- log. getStoredUser() ---');
     // log.d(userDatastored);
     try {
+      userDatastored =
+          await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
+
       if (userDatastored["user"] != null) {
         tmp = User.fromJson(userDatastored);
       }

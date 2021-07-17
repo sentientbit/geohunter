@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:geohunter/models/user.dart';
 
 ///
 class LtLn {
@@ -44,7 +45,7 @@ class GlobalConstants {
   static const String appNamespace = "com.apsoni.geocraft";
 
   ///
-  static const String appVersion = "1.1.74";
+  static const String appVersion = "1.1.76";
 
   ///
 
@@ -78,11 +79,8 @@ class GlobalConstants {
   ///
   static const double avatarRadius = 36.0;
 
-  ///
-  static const double researchCost = 0.9;
-
-  ///
-  static const double craftingCost = 0.9;
+  /// Daily reward 24hrs
+  static const int dailyGiftFreq = 84000;
 
   ///
   static String backButtonPage = '/poi-map';
@@ -110,6 +108,56 @@ class GlobalConstants {
 
   ///
   static const pointTrader = "8";
+
+  ///
+  static bool menuHasNotification(UserData ud) {
+    if (ud.daily > dailyGiftFreq) {
+      return true;
+    }
+    if (ud.unread.isNotEmpty) {
+      return true;
+    }
+    return false;
+  }
+}
+
+///
+String timeAgoSinceDate(DateTime date, {bool numericDates = true}) {
+  //final date = DateTime.parse(string);
+  final now = DateTime.parse(
+    DateTime.now().toUtc().toIso8601String(),
+  ).toLocal();
+  final difference = now.difference(date);
+
+  if ((difference.inDays / 365).floor() >= 2) {
+    return '${(difference.inDays / 365).floor()} years ago';
+  } else if ((difference.inDays / 365).floor() >= 1) {
+    return (numericDates) ? '1 year ago' : 'Last year';
+  } else if ((difference.inDays / 30).floor() >= 2) {
+    return '${(difference.inDays / 365).floor()} months ago';
+  } else if ((difference.inDays / 30).floor() >= 1) {
+    return (numericDates) ? '1 month ago' : 'Last month';
+  } else if ((difference.inDays / 7).floor() >= 2) {
+    return '${(difference.inDays / 7).floor()} weeks ago';
+  } else if ((difference.inDays / 7).floor() >= 1) {
+    return (numericDates) ? '1 week ago' : 'Last week';
+  } else if (difference.inDays >= 2) {
+    return '${difference.inDays} days ago';
+  } else if (difference.inDays >= 1) {
+    return (numericDates) ? '1 day ago' : 'Yesterday';
+  } else if (difference.inHours >= 2) {
+    return '${difference.inHours} hours ago';
+  } else if (difference.inHours >= 1) {
+    return (numericDates) ? '1 hour ago' : 'An hour ago';
+  } else if (difference.inMinutes >= 2) {
+    return '${difference.inMinutes} minutes ago';
+  } else if (difference.inMinutes >= 1) {
+    return (numericDates) ? '1 minute ago' : 'A minute ago';
+  } else if (difference.inSeconds >= 3) {
+    return '${difference.inSeconds} seconds ago';
+  } else {
+    return 'Just now';
+  }
 }
 
 /// Distance to dig for treasure in meters
@@ -124,6 +172,18 @@ const double terraRadius = 6367444.0;
 /// one radian is equal to 180/π degrees
 /// To convert from degrees to radians, multiply by π/180.
 const double oneRad = math.pi / 180;
+
+///
+bool isInList(int i, List<int> list) {
+  var isIn = false;
+
+  for (dynamic elem in list) {
+    if (elem == i) {
+      isIn = true;
+    }
+  }
+  return isIn;
+}
 
 /// Convert Spherical coordinates to Cartesian system
 List<double> sphericalToCartesian(final double lat, final double lng) {
@@ -357,11 +417,11 @@ double damageHealth(double atk, double def) {
 /// String hashStringSHA256(String input) { var digest = sha256.convert(utf8.encode(input)); print("Digest as hex string: $digest"); return base64.encode(digest.bytes); }
 
 ///
-String hashStringMurmur(String input) {
+int hashStringMurmur(String input) {
   var mmh = Murmur32(1083920835);
   var val = mmh.computeHashFromString(input);
   var byteData = ByteData.sublistView(val);
-  return byteData.getUint32(0).toString();
+  return byteData.getUint32(0);
 }
 
 ///

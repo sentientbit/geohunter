@@ -9,6 +9,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_countdown_timer/current_remaining_time.dart';
 import 'package:flutter_countdown_timer/flutter_countdown_timer.dart';
 import 'package:flutter_offline/flutter_offline.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
 import 'package:loading_overlay/loading_overlay.dart';
 
@@ -66,6 +67,8 @@ class _QuestLinePageState extends State<QuestLinePage> {
 
   ///
   int _elapsedSeconds = 0;
+
+  final _storage = FlutterSecureStorage();
 
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -300,9 +303,8 @@ class _QuestLinePageState extends State<QuestLinePage> {
             ),
             CountdownTimer(
               endTime: DateTime.now().millisecondsSinceEpoch +
-                  (86400 - _elapsedSeconds) * 1000,
-              widgetBuilder:
-                  (BuildContext context, CurrentRemainingTime? time) {
+                  (GlobalConstants.dailyGiftFreq - _elapsedSeconds) * 1000,
+              widgetBuilder: (context, time) {
                 if (time != null) {
                   return countDownTimer(time);
                 }
@@ -583,34 +585,90 @@ class _QuestLinePageState extends State<QuestLinePage> {
     );
   }
 
-  Widget build(BuildContext context) {
-    // final deviceSize = MediaQuery.of(context).size;
-
-    /// Application top Bar
-    final topBar = AppBar(
-      brightness: Brightness.dark,
-      leading: IconButton(
-        color: GlobalConstants.appFg,
+  Widget leadingIcon(BuildContext context) {
+    // print(" ${_user.details.daily}");
+    if (!GlobalConstants.menuHasNotification(_user.details)) {
+      return IconButton(
+        color: Colors.white,
         icon: Icon(
           Icons.menu,
-          // size: 32,
+          color: Colors.white,
         ),
-        onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState?.openDrawer()
-            : Navigator.of(context).pop(),
-      ),
-      elevation: 0.1,
-      backgroundColor: Colors.transparent,
-      title: Text(
-        "Quests",
-        style: Style.topBar,
+        onPressed: () {
+          if (_scaffoldKey.currentState != null) {
+            _scaffoldKey.currentState?.openDrawer();
+          } else {
+            Navigator.of(context).pop();
+          }
+        },
+      );
+    }
+
+    return InkWell(
+      splashColor: Colors.lightBlue,
+      onTap: () {
+        if (_scaffoldKey.currentState != null) {
+          _scaffoldKey.currentState?.openDrawer();
+        } else {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Center(
+        child: Container(
+          margin: EdgeInsets.only(left: 10),
+          width: 40,
+          height: 25,
+          child: Stack(
+            children: [
+              Icon(
+                Icons.menu,
+                color: Colors.white,
+              ),
+              Positioned(
+                left: 25,
+                top: 0,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.red,
+                      ),
+                      width: 10,
+                      height: 10,
+                    ),
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
       ),
     );
+  }
+
+  Widget build(BuildContext context) {
+    // final deviceSize = MediaQuery.of(context).size;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       //resizeToAvoidBottomPadding: false,
-      appBar: topBar,
+      appBar: AppBar(
+        brightness: Brightness.dark,
+        leading: leadingIcon(context),
+        elevation: 0.1,
+        backgroundColor: Colors.transparent,
+        title: Text(
+          "Quests",
+          style: Style.topBar,
+        ),
+      ),
       //extendBodyBehindAppBar: true,
       body: OfflineBuilder(
         connectivityBuilder: (
@@ -753,16 +811,18 @@ class _QuestLinePageState extends State<QuestLinePage> {
         _user.details.coins =
             double.tryParse(response["coins"].toString()) ?? 0.0;
         _user.details.guildId = response["guild"]["id"];
+        _user.details.mining = response["mining"];
         _user.details.xp = response["xp"];
         _user.details.unread = response["unread"];
         _user.details.attack = response["attack"];
         _user.details.defense = response["defense"];
         _user.details.daily = response["daily"];
+        _user.details.costs = response["costs"];
 
         // update global data
         _userdata.updateUserData(
           _user.details.coins,
-          0,
+          _user.details.mining,
           _user.details.guildId,
           _user.details.xp,
           _user.details.unread,
@@ -770,6 +830,7 @@ class _QuestLinePageState extends State<QuestLinePage> {
           _user.details.defense,
           _user.details.daily,
           _user.details.music,
+          _user.details.costs,
         );
       }
     }
@@ -849,6 +910,10 @@ class _QuestLinePageState extends State<QuestLinePage> {
             }
           }
         }
+
+        _storage.delete(
+          key: "dailyrewardsIds",
+        );
 
         showDialog(
           context: context,

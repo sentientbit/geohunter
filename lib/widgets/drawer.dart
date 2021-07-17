@@ -55,7 +55,6 @@ class _DrawerPageState extends State<DrawerPage> {
 
     _user = tmp;
     setState(() {
-      _user = tmp;
       _user.details.coins = tmp.details.coins;
       _user.details.xp = tmp.details.xp;
       _user.details.unread = tmp.details.unread;
@@ -70,11 +69,11 @@ class _DrawerPageState extends State<DrawerPage> {
   }
 
   Widget dailyQuests() {
+    // for some reason we still get null from time to time
     if (_user.details.daily == null) {
       return SizedBox();
     }
-    // log.d(_user.details.unread);
-    if (_user.details.daily > 86400) {
+    if (_user.details.daily > GlobalConstants.dailyGiftFreq) {
       return Chip(
         backgroundColor: Colors.red,
         label: Text(
@@ -124,9 +123,6 @@ class _DrawerPageState extends State<DrawerPage> {
     _avatar = NetworkImage(
         'https://${GlobalConstants.apiHostUrl}${_user.details.picture}');
 
-    // Add a ListView to the drawer. This ensures the user can scroll
-    // through the options in the drawer if there isn't enough vertical
-    // space to fit everything.
     return Stack(
       children: <Widget>[
         CustomAppBar(Colors.red, Colors.red, _scaffoldKey),

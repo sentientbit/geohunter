@@ -22,7 +22,7 @@ import '../models/user.dart';
 import '../providers/api_provider.dart';
 import '../providers/custom_interceptors.dart';
 import '../providers/stream_location.dart';
-import '../screens/map_explore.dart' show PoiMap;
+import '../screens/map/map_explore.dart' show PoiMap;
 import '../shared/constants.dart';
 import '../text_style.dart';
 import '../widgets/custom_dialog.dart';
@@ -489,20 +489,79 @@ class _PlacesState extends State<PlacesPage> {
     );
   }
 
+  Widget leadingIcon(BuildContext context) {
+    // print(" ${_user.details.daily}");
+    if (!GlobalConstants.menuHasNotification(_user.details)) {
+      return IconButton(
+        color: Colors.white,
+        icon: Icon(
+          Icons.menu,
+          color: Colors.white,
+        ),
+        onPressed: () {
+          if (_scaffoldKey.currentState != null) {
+            _scaffoldKey.currentState?.openDrawer();
+          } else {
+            Navigator.of(context).pop();
+          }
+        },
+      );
+    }
+
+    return InkWell(
+      splashColor: Colors.lightBlue,
+      onTap: () {
+        if (_scaffoldKey.currentState != null) {
+          _scaffoldKey.currentState?.openDrawer();
+        } else {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Center(
+        child: Container(
+          margin: EdgeInsets.only(left: 10),
+          width: 40,
+          height: 25,
+          child: Stack(
+            children: [
+              Icon(
+                Icons.menu,
+                color: Colors.white,
+              ),
+              Positioned(
+                left: 25,
+                top: 0,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.red,
+                      ),
+                      width: 10,
+                      height: 10,
+                    ),
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget build(BuildContext context) {
     /// Application top Bar
     final topBar = AppBar(
       brightness: Brightness.dark,
-      leading: IconButton(
-        color: GlobalConstants.appFg,
-        icon: Icon(
-          Icons.menu,
-          // size: 32,
-        ),
-        onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState?.openDrawer()
-            : Navigator.of(context).pop(),
-      ),
+      leading: leadingIcon(context),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
       title: Text(

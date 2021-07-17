@@ -1,13 +1,16 @@
 /// based on https://medium.com/@afegbua/this-is-the-second-part-of-the-beautiful-list-ui-and-detail-page-article-ecb43e203915
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:flutter/material.dart';
-import 'package:geohunter/fonts/rpg_awesome_icons.dart';
+
 //import 'package:logger/logger.dart';
-import '../../models/blueprint.dart';
 
 ///
+import '../../fonts/rpg_awesome_icons.dart';
+import '../../models/blueprint.dart';
 import '../../models/research.dart';
+import '../../models/user.dart';
 import '../../providers/api_provider.dart';
+import '../../providers/stream_userdata.dart';
 import '../../screens/inventory/study.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
@@ -24,6 +27,11 @@ class ResearchPage extends StatefulWidget {
 
 ///
 class _ResearchState extends State<ResearchPage> {
+  final _userdata = getIt.get<StreamUserData>();
+
+  /// Curent loggedin user
+  User _user = User.blank();
+
   // final Logger log = Logger(
   //     printer: PrettyPrinter(
   //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
@@ -190,6 +198,76 @@ class _ResearchState extends State<ResearchPage> {
     );
   }
 
+  ///
+  Widget leadingIcon(BuildContext context) {
+    // print(" ${_user.details.daily}");
+    if (!GlobalConstants.menuHasNotification(_user.details)) {
+      return IconButton(
+        color: Colors.white,
+        icon: Icon(
+          Icons.menu,
+          color: Colors.white,
+        ),
+        onPressed: () {
+          if (_scaffoldKey.currentState != null) {
+            _scaffoldKey.currentState?.openDrawer();
+          } else {
+            Navigator.of(context).pop();
+          }
+        },
+      );
+    }
+
+    return InkWell(
+      splashColor: Colors.lightBlue,
+      onTap: () {
+        if (_scaffoldKey.currentState != null) {
+          _scaffoldKey.currentState?.openDrawer();
+        } else {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Center(
+        child: Container(
+          margin: EdgeInsets.only(left: 10),
+          width: 40,
+          height: 25,
+          child: Stack(
+            children: [
+              Icon(
+                Icons.menu,
+                color: Colors.white,
+              ),
+              Positioned(
+                left: 25,
+                top: 0,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.red,
+                      ),
+                      width: 10,
+                      height: 10,
+                    ),
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  ///
   Widget build(BuildContext context) {
     //ignore: omit_local_variable_types
     int currentTabIndex = 1;
@@ -197,16 +275,7 @@ class _ResearchState extends State<ResearchPage> {
     /// Application top Bar
     final topBar = AppBar(
       brightness: Brightness.dark,
-      leading: IconButton(
-        color: GlobalConstants.appFg,
-        icon: Icon(
-          Icons.menu,
-          // size: 32,
-        ),
-        onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState?.openDrawer()
-            : Navigator.of(context).pop(),
-      ),
+      leading: leadingIcon(context),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
       title: Text(
@@ -282,6 +351,31 @@ class _ResearchState extends State<ResearchPage> {
     var blps = [];
     if (response.containsKey("success")) {
       if (response["success"] == true) {
+        // update local data
+        _user.details.coins =
+            double.tryParse(response["coins"].toString()) ?? 0.0;
+        _user.details.guildId = response["guild"]["id"];
+        _user.details.mining = response["mining"];
+        _user.details.xp = response["xp"];
+        _user.details.unread = response["unread"];
+        _user.details.attack = response["attack"];
+        _user.details.defense = response["defense"];
+        _user.details.daily = response["daily"];
+        _user.details.costs = response["costs"];
+
+        _userdata.updateUserData(
+          _user.details.coins,
+          _user.details.mining,
+          _user.details.guildId,
+          _user.details.xp,
+          _user.details.unread,
+          _user.details.attack,
+          _user.details.defense,
+          _user.details.daily,
+          _user.details.music,
+          _user.details.costs,
+        );
+
         if (response.containsKey("techs")) {
           for (dynamic elem in response["techs"]) {
             final r = Research.fromJson(elem);

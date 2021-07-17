@@ -8,7 +8,7 @@ class StreamUserData {
   final _userdata = BehaviorSubject<UserData>.seeded(
     UserData(
       coins: 0.0,
-      miningSpeed: 0,
+      mining: 3600,
       guildId: "0",
       xp: 0,
       unread: [],
@@ -16,6 +16,7 @@ class StreamUserData {
       defense: [],
       daily: 0,
       music: 100,
+      costs: [],
     ),
   );
 
@@ -28,7 +29,7 @@ class StreamUserData {
   ///
   void updateUserData(
     double coins,
-    int miningSpeed,
+    int mining,
     String guildId,
     int xp,
     List<dynamic> unread,
@@ -36,11 +37,12 @@ class StreamUserData {
     List<dynamic> defense,
     int daily,
     int music,
+    List<dynamic> costs,
   ) {
     _userdata.add(
       UserData(
         coins: coins,
-        miningSpeed: miningSpeed,
+        mining: mining,
         guildId: guildId,
         xp: xp,
         unread: unread,
@@ -48,6 +50,7 @@ class StreamUserData {
         defense: defense,
         daily: daily,
         music: music,
+        costs: costs,
       ),
     );
   }

@@ -11,7 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:geohunter/fonts/rpg_awesome_icons.dart';
 import 'package:get_it/get_it.dart';
-import 'package:latlong/latlong.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:image_picker/image_picker.dart';
@@ -21,20 +21,20 @@ import 'package:url_launcher/url_launcher.dart';
 //import 'package:logger/logger.dart';
 
 ///
-import '../app_localizations.dart';
-import '../models/location.dart';
-import '../models/mine.dart';
-import '../models/user.dart';
-import '../models/visitevent.dart';
-import '../providers/api_provider.dart';
-import '../providers/stream_location.dart';
-import '../providers/stream_mines.dart';
-import '../providers/stream_visit.dart';
-import '../screens/battle/rock_paper_scissors.dart';
-import '../shared/constants.dart';
-import '../widgets/custom_app_bar.dart';
-import '../widgets/custom_dialog.dart';
-import '../widgets/drawer.dart';
+import '../../app_localizations.dart';
+import '../../models/location.dart';
+import '../../models/mine.dart';
+import '../../models/user.dart';
+import '../../models/visitevent.dart';
+import '../../providers/api_provider.dart';
+import '../../providers/stream_location.dart';
+import '../../providers/stream_mines.dart';
+import '../../providers/stream_visit.dart';
+import '../battle/rock_paper_scissors.dart';
+import '../../shared/constants.dart';
+import '../../widgets/custom_app_bar.dart';
+import '../../widgets/custom_dialog.dart';
+import '../../widgets/drawer.dart';
 
 ///
 GetIt getIt = GetIt.instance;
@@ -436,10 +436,7 @@ class _PoiMapState extends State<PoiMap>
       return false;
     } else {
       setState(() => ifPop = true);
-      if (_scaffoldKey != null) {
-        //_scaffoldKey.currentState.openDrawer();
-        Navigator.of(context).pop();
-      }
+      Navigator.of(context).pop();
     }
     return true;
   }
@@ -791,7 +788,7 @@ class _PoiMapState extends State<PoiMap>
       }
     }
 
-    if (meters <= digDistance && timeFromLastMine > _user.details.miningSpeed) {
+    if (meters <= digDistance && timeFromLastMine > _user.details.mining) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
@@ -1364,16 +1361,6 @@ class _PoiMapState extends State<PoiMap>
       mapController: mapController,
     );
 
-    //user_location
-    // userLocationOptions = UserLocationOptions(
-    //   context: context,
-    //   mapController: mapController,
-    //   markers: markers,
-    //   updateMapLocationOnPositionChange: false,
-    //   showMoveToCurrentLocationFloatingActionButton: false,
-    //   zoomToCurrentLocationOnLoad: true,
-    // );
-
     return Scaffold(
       resizeToAvoidBottomInset: false,
       // appBar: appBar,
@@ -1384,8 +1371,13 @@ class _PoiMapState extends State<PoiMap>
             // height: 0,
             constraints: BoxConstraints(maxHeight: 80),
             child: CustomAppBar(
-                _customAppBarTextColor, _customAppBarIconColor, _scaffoldKey,
-                systemHeaderBrightness: _systemHeaderBrightness),
+              _customAppBarTextColor,
+              _customAppBarIconColor,
+              _scaffoldKey,
+              systemHeaderBrightness: _systemHeaderBrightness,
+              hasNotification:
+                  GlobalConstants.menuHasNotification(_user.details),
+            ),
           ),
           if (_infoWindowVisible == true) _myCustomPopup(context),
           Padding(
