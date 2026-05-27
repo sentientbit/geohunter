@@ -48,7 +48,7 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
   final ApiProvider _apiProvider = ApiProvider();
   ImageProvider _avatar = AssetImage("assets/images/avatars/default01.jpg");
 
-  bool _loadingAvatar = true;
+  bool _loadingAvatar = false;
 
   @override
   void initState() {
@@ -444,7 +444,8 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
           await _apiProvider.updateProfilePicture(File(pickedFile.path));
       // _unwrap() already threw on any failure — we're here only on success.
       setState(() {
-        _avatar = NetworkImage(response["thumbnail"]);
+        _avatar = NetworkImage(
+            'https://${GlobalConstants.apiHostUrl}${response["thumbnail"]}');
         _loadingAvatar = false;
       });
       // Refresh user data so picture URL is in sync with server state.
