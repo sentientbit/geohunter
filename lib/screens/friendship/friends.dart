@@ -14,7 +14,8 @@ import '../../models/friends.dart';
 import '../../models/player_stats.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
-import '../../providers/stream_userdata.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/user_provider.dart';
 import '../../screens/friendship/showqr.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
@@ -33,20 +34,17 @@ enum PopupMenuChoice {
 }
 
 ///
-class FriendsPage extends StatefulWidget {
+class FriendsPage extends ConsumerStatefulWidget {
   ///
   final String name = 'friends';
   @override
   _FriendsPageState createState() => _FriendsPageState();
 }
 
-class _FriendsPageState extends State<FriendsPage> {
+class _FriendsPageState extends ConsumerState<FriendsPage> {
   //final Logger log = Logger(
   //    printer: PrettyPrinter(
   //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
-
-  ///
-  final _userdata = getIt.get<StreamUserData>();
 
   /// Curent loggedin user
   User _user = User.blank();
@@ -128,20 +126,7 @@ class _FriendsPageState extends State<FriendsPage> {
       // log.d(_user.details.unread);
       ravens = _user.details.unread.asMap();
 
-      // update global data
-      _userdata.updateUserData(
-        'friends',
-        _user.details.coins,
-        _user.details.mining,
-        _user.details.guildId,
-        _user.details.xp,
-        _user.details.unread,
-        _user.details.attack,
-        _user.details.defense,
-        _user.details.daily,
-        _user.details.settings,
-        _user.details.costs,
-      );
+      ref.invalidate(userProvider);
       setState(() {
         _friends.addAll(friends.toList());
         _isLoading = false;

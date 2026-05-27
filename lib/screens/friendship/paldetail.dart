@@ -13,7 +13,8 @@ import '../../models/friends.dart';
 import '../../models/player_stats.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
-import '../../providers/stream_userdata.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/user_provider.dart';
 import '../../screens/map/map_explore.dart' show PoiMap;
 import '../../shared/constants.dart';
 import '../../text_style.dart';
@@ -22,7 +23,7 @@ import '../../widgets/drawer.dart';
 //import '../app_localizations.dart';
 
 ///
-class PalDetailPage extends StatefulWidget {
+class PalDetailPage extends ConsumerStatefulWidget {
   ///
   final Friend friend;
 
@@ -37,7 +38,7 @@ class PalDetailPage extends StatefulWidget {
 }
 
 ///
-class _PalDetailState extends State<PalDetailPage> {
+class _PalDetailState extends ConsumerState<PalDetailPage> {
   final _controller = TextEditingController();
 
   // Define the focus node. To manage the lifecycle, create the FocusNode in
@@ -50,8 +51,6 @@ class _PalDetailState extends State<PalDetailPage> {
 
   ///
   final ApiProvider _apiProvider = ApiProvider();
-
-  final _userdata = getIt.get<StreamUserData>();
 
   /// Curent loggedin user
   User _user = User.blank();
@@ -592,20 +591,7 @@ class _PalDetailState extends State<PalDetailPage> {
           }
           _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
 
-          // update global data
-          _userdata.updateUserData(
-            'paldetail',
-            _user.details.coins,
-            _user.details.mining,
-            _user.details.guildId,
-            _user.details.xp,
-            _user.details.unread,
-            _user.details.attack,
-            _user.details.defense,
-            _user.details.daily,
-            _user.details.settings,
-            _user.details.costs,
-          );
+          ref.invalidate(userProvider);
           ravenSound =
               (response["received_ack"] == 0 && response["received"].length > 0)
                   ? true

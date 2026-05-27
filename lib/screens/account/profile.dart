@@ -16,7 +16,8 @@ import '../../models/player_stats.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/custom_interceptors.dart';
-import '../../providers/stream_userdata.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/user_provider.dart';
 import '../../screens/account/equipment.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
@@ -29,7 +30,7 @@ import '../../widgets/profile_info_card.dart';
 List<Item> _equipments = List<Item>.filled(12, Item.blank());
 
 ///
-class ProfilePage extends StatefulWidget {
+class ProfilePage extends ConsumerStatefulWidget {
   ///
   final String name = 'profile';
 
@@ -37,9 +38,7 @@ class ProfilePage extends StatefulWidget {
   _ProfilePageState createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
-  final _userdata = getIt.get<StreamUserData>();
-
+class _ProfilePageState extends ConsumerState<ProfilePage> {
   ///
   final ApiProvider _apiProvider = ApiProvider();
 
@@ -1115,20 +1114,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     //log.d(response);
 
-    // update global data
-    _userdata.updateUserData(
-      'profile',
-      _user.details.coins,
-      _user.details.mining,
-      _user.details.guildId,
-      _user.details.xp,
-      _user.details.unread,
-      _user.details.attack,
-      _user.details.defense,
-      _user.details.daily,
-      _user.details.settings,
-      _user.details.costs,
-    );
+    ref.invalidate(userProvider);
 
     setState(() {
       /// update controller data

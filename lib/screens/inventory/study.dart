@@ -13,14 +13,15 @@ import '../../models/player_stats.dart';
 import '../../models/research.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
-import '../../providers/stream_userdata.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/user_provider.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
 
 ///
-class StudyDetailPage extends StatefulWidget {
+class StudyDetailPage extends ConsumerStatefulWidget {
   /// Widget name
   final String name = "Study";
 
@@ -42,9 +43,7 @@ class StudyDetailPage extends StatefulWidget {
 }
 
 ///
-class _StudyDetailState extends State<StudyDetailPage> {
-  final _userdata = getIt.get<StreamUserData>();
-
+class _StudyDetailState extends ConsumerState<StudyDetailPage> {
   double _nrInvBlueprints = 0;
   String _btnDisText = "0";
   String _blueprintImg = "";
@@ -462,19 +461,7 @@ class _StudyDetailState extends State<StudyDetailPage> {
         }
         _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
 
-        _userdata.updateUserData(
-          'study',
-          _user.details.coins,
-          _user.details.mining,
-          _user.details.guildId,
-          _user.details.xp,
-          _user.details.unread,
-          _user.details.attack,
-          _user.details.defense,
-          _user.details.daily,
-          _user.details.settings,
-          _user.details.costs,
-        );
+        ref.invalidate(userProvider);
 
         if (!mounted) return;
         showDialog(

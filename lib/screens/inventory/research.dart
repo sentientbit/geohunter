@@ -12,14 +12,15 @@ import '../../models/player_stats.dart';
 import '../../models/research.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
-import '../../providers/stream_userdata.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/user_provider.dart';
 import '../../screens/inventory/study.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
 
 ///
-class ResearchPage extends StatefulWidget {
+class ResearchPage extends ConsumerStatefulWidget {
   /// Widget name
   final String name = "research";
 
@@ -28,9 +29,7 @@ class ResearchPage extends StatefulWidget {
 }
 
 ///
-class _ResearchState extends State<ResearchPage> {
-  final _userdata = getIt.get<StreamUserData>();
-
+class _ResearchState extends ConsumerState<ResearchPage> {
   /// Curent loggedin user
   User _user = User.blank();
 
@@ -351,19 +350,7 @@ class _ResearchState extends State<ResearchPage> {
     }
     _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
 
-    _userdata.updateUserData(
-      'research',
-      _user.details.coins,
-      _user.details.mining,
-      _user.details.guildId,
-      _user.details.xp,
-      _user.details.unread,
-      _user.details.attack,
-      _user.details.defense,
-      _user.details.daily,
-      _user.details.settings,
-      _user.details.costs,
-    );
+    ref.invalidate(userProvider);
 
     if (response.containsKey("techs")) {
       for (dynamic elem in response["techs"]) {

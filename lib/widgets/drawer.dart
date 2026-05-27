@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_it/get_it.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:percent_indicator/percent_indicator.dart';
@@ -20,29 +21,27 @@ import '../libraries/pk_skeleton.dart';
 import '../models/user.dart';
 import '../providers/api_provider.dart';
 import '../providers/custom_interceptors.dart';
+import '../providers/user_provider.dart';
 import '../shared/constants.dart';
 import '../text_style.dart';
 import '../widgets/custom_app_bar.dart';
-import '../widgets/custom_dialog.dart';
+// import '../widgets/custom_dialog.dart';
 
 ///
 GetIt getIt = GetIt.instance;
 
 ///
-class DrawerPage extends StatefulWidget {
+class DrawerPage extends ConsumerStatefulWidget {
   @override
-  _DrawerPageState createState() => _DrawerPageState();
+  ConsumerState<DrawerPage> createState() => _DrawerPageState();
 }
 
-class _DrawerPageState extends State<DrawerPage> {
+class _DrawerPageState extends ConsumerState<DrawerPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   // final Logger log = Logger(
   //     printer: PrettyPrinter(
   //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
-
-  /// Curent loggedin user
-  User _user = User.blank();
 
   final _storage = FlutterSecureStorage();
 
@@ -51,27 +50,13 @@ class _DrawerPageState extends State<DrawerPage> {
 
   bool _loadingAvatar = true;
 
-  void loadUser() async {
-    final tmp = await _apiProvider.getStoredUser();
-    // log.d(tmp.details.unread);
-
-    _user = tmp;
-    setState(() {
-      _user.details.coins = tmp.details.coins;
-      _user.details.xp = tmp.details.xp;
-      _user.details.unread = tmp.details.unread;
-      _loadingAvatar = false;
-    });
-  }
-
   @override
   void initState() {
     super.initState();
-    loadUser();
   }
 
-  Widget dailyQuests() {
-    if (_user.details.daily > GlobalConstants.dailyGiftFreq) {
+  Widget dailyQuests(UserData details) {
+    if (details.daily > GlobalConstants.dailyGiftFreq) {
       return Chip(
         backgroundColor: Colors.red,
         label: Text(
@@ -84,13 +69,12 @@ class _DrawerPageState extends State<DrawerPage> {
   }
 
   ///
-  Widget numberOfUnreadMessages() {
-    // log.d(_user.details.unread);
-    if (_user.details.unread.length > 0) {
+  Widget numberOfUnreadMessages(List<int> unread) {
+    if (unread.isNotEmpty) {
       return Chip(
         backgroundColor: Colors.red,
         label: Text(
-          _user.details.unread.length.toString(),
+          unread.length.toString(),
           style: TextStyle(color: Colors.white),
         ),
       );
@@ -100,6 +84,8 @@ class _DrawerPageState extends State<DrawerPage> {
 
   ///
   Widget build(BuildContext context) {
+    final user = ref.watch(userProvider).valueOrNull ?? User.blank();
+
     ///
     var percentage = 0.0;
 
@@ -112,14 +98,15 @@ class _DrawerPageState extends State<DrawerPage> {
     ///
     var currentExperience = 0;
 
-    currentExperience = _user.details.xp;
+    currentExperience = user.details.xp;
     currentLevel = expToLevel(currentExperience);
     nextExperienceLevel = levelToExp(currentLevel + 1);
     percentage = currentExperience / nextExperienceLevel;
-    //status = _user.details.status;
 
-    _avatar = NetworkImage(
-        'https://${GlobalConstants.apiHostUrl}${_user.details.picture}');
+    if (!_loadingAvatar && user.details.picture.isNotEmpty) {
+      _avatar = NetworkImage(
+          'https://${GlobalConstants.apiHostUrl}${user.details.picture}');
+    }
 
     return Stack(
       children: <Widget>[
@@ -188,7 +175,7 @@ class _DrawerPageState extends State<DrawerPage> {
                                 Row(
                                   children: <Widget>[
                                     Text(
-                                      _user.details.username,
+                                      user.details.username,
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 16.0,
@@ -229,7 +216,7 @@ class _DrawerPageState extends State<DrawerPage> {
                                       size: 20,
                                     ),
                                     Text(
-                                      " ${_user.details.coins}",
+                                      " ${user.details.coins}",
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 14.0,
@@ -308,7 +295,7 @@ class _DrawerPageState extends State<DrawerPage> {
                       SizedBox(
                         width: 20,
                       ),
-                      dailyQuests(),
+                      dailyQuests(user.details),
                     ],
                   ),
                   onTap: () {
@@ -338,7 +325,7 @@ class _DrawerPageState extends State<DrawerPage> {
                       SizedBox(
                         width: 20,
                       ),
-                      numberOfUnreadMessages(),
+                      numberOfUnreadMessages(user.details.unread),
                     ],
                   ),
                   onTap: () {
@@ -357,13 +344,8 @@ class _DrawerPageState extends State<DrawerPage> {
                       AppLocalizations.of(context)!
                           .translate('guild_drawer_label'),
                       style: Style.menuTextStyle),
-                  onTap: () async {
+                  onTap: () {
                     playClick();
-                    if (_user.details.unnaprovedMembers > 0) {
-                      _user.details.unnaprovedMembers = 0;
-                      await CustomInterceptors.setStoredCookies(
-                          GlobalConstants.apiHostUrl, _user.toMap());
-                    }
                     context.go('/group');
                   },
                 ),
@@ -441,44 +423,43 @@ class _DrawerPageState extends State<DrawerPage> {
       setState(() {
         _loadingAvatar = false;
       });
+      return;
     } catch (err) {
       debugPrint('getImage unexpected error: $err');
-    }
-
-    if (pickedFile == null) {
-      _loadingAvatar = false;
-      return;
-    }
-
-    dynamic response =
-        await _apiProvider.updateProfilePicture(File(pickedFile.path));
-
-    if (response["success"] != true) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Error',
-          description: '${response['message']}',
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
       setState(() {
-        _avatar = AssetImage("assets/images/avatars/default01.jpg");
         _loadingAvatar = false;
       });
       return;
     }
 
-    _user.details.picture = response["thumbnail"];
-    await CustomInterceptors.setStoredCookies(
-        GlobalConstants.apiHostUrl, _user.toMap());
-    setState(() {
-      _avatar = NetworkImage(response["thumbnail"]);
-      _loadingAvatar = false;
-    });
-    return;
+    if (pickedFile == null) {
+      setState(() {
+        _loadingAvatar = false;
+      });
+      return;
+    }
+
+    try {
+      final response =
+          await _apiProvider.updateProfilePicture(File(pickedFile.path));
+      // _unwrap() already threw on any failure — we're here only on success.
+      setState(() {
+        _avatar = NetworkImage(response["thumbnail"]);
+        _loadingAvatar = false;
+      });
+      // Refresh user data so picture URL is in sync with server state.
+      ref.invalidate(userProvider);
+    } on AppError catch (err) {
+      err.show(context);
+      setState(() {
+        _loadingAvatar = false;
+      });
+    } catch (err) {
+      debugPrint('getImage upload unexpected error: $err');
+      setState(() {
+        _loadingAvatar = false;
+      });
+    }
   }
 
   ///

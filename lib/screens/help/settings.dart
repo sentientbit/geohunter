@@ -12,13 +12,14 @@ import '../../models/player_stats.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/custom_interceptors.dart';
-import '../../providers/stream_userdata.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/user_provider.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
 
 ///
-class SettingsPage extends StatefulWidget {
+class SettingsPage extends ConsumerStatefulWidget {
   ///
   final String name = "settings";
 
@@ -32,10 +33,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 ///
-class _SettingsState extends State<SettingsPage> {
-  ///
-  final _userdata = getIt.get<StreamUserData>();
-
+class _SettingsState extends ConsumerState<SettingsPage> {
   ///
   math.Random rndBattleNumber = math.Random.secure();
 
@@ -358,20 +356,7 @@ class _SettingsState extends State<SettingsPage> {
       debugPrint('_updateSettings unexpected error: $err');
     }
 
-    // update global data
-    _userdata.updateUserData(
-      'settings',
-      _user.details.coins,
-      _user.details.mining,
-      _user.details.guildId,
-      _user.details.xp,
-      _user.details.unread,
-      _user.details.attack,
-      _user.details.defense,
-      _user.details.daily,
-      _user.details.settings,
-      _user.details.costs,
-    );
+    ref.invalidate(userProvider);
 
     if (mounted) context.pop();
   }
@@ -413,20 +398,7 @@ class _SettingsState extends State<SettingsPage> {
     }
     _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
 
-    // update global data
-    _userdata.updateUserData(
-      'settings2',
-      _user.details.coins,
-      _user.details.mining,
-      _user.details.guildId,
-      _user.details.xp,
-      _user.details.unread,
-      _user.details.attack,
-      _user.details.defense,
-      _user.details.daily,
-      _user.details.settings,
-      _user.details.costs,
-    );
+    ref.invalidate(userProvider);
 
     setState(() {
       musicLevel = _user.details.settings.music;

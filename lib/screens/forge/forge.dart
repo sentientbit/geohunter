@@ -17,7 +17,8 @@ import '../../models/app_error.dart';
 import '../../models/player_stats.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
-import '../../providers/stream_userdata.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/user_provider.dart';
 import '../../screens/forge/blueprints.dart';
 import '../../screens/forge/materials.dart';
 import '../../shared/constants.dart';
@@ -29,7 +30,7 @@ import '../../widgets/drawer.dart';
 enum PopupMenuChoice { refreshForge, showCoinSheet }
 
 ///
-class ForgePage extends StatefulWidget {
+class ForgePage extends ConsumerStatefulWidget {
   ///
   final String name = 'forge';
 
@@ -38,9 +39,7 @@ class ForgePage extends StatefulWidget {
 }
 
 ///
-class _ForgeState extends State<ForgePage> {
-  final _userdata = getIt.get<StreamUserData>();
-
+class _ForgeState extends ConsumerState<ForgePage> {
   /// Secure Storage for User Data
   final _storage = FlutterSecureStorage();
 
@@ -920,20 +919,7 @@ class _ForgeState extends State<ForgePage> {
         _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
 
         if (response.containsKey("coins")) {
-          //update global data
-          _userdata.updateUserData(
-            'forge',
-            _user.details.coins,
-            _user.details.mining,
-            _user.details.guildId,
-            _user.details.xp,
-            _user.details.unread,
-            _user.details.attack,
-            _user.details.defense,
-            _user.details.daily,
-            _user.details.settings,
-            _user.details.costs,
-          );
+          ref.invalidate(userProvider);
         }
       }
     }
@@ -974,20 +960,7 @@ class _ForgeState extends State<ForgePage> {
       _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
     });
 
-    // update global data
-    _userdata.updateUserData(
-      'forge2',
-      _user.details.coins,
-      _user.details.mining,
-      _user.details.guildId,
-      _user.details.xp,
-      _user.details.unread,
-      _user.details.attack,
-      _user.details.defense,
-      _user.details.daily,
-      _user.details.settings,
-      _user.details.costs,
-    );
+    ref.invalidate(userProvider);
 
     return;
   }

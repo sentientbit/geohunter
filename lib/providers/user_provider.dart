@@ -1,15 +1,28 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../models/user.dart';
+import 'user_repository.dart';
 
-/// Holds the current live UserData that all screens can watch.
+/// Holds the live authenticated user.
 ///
-/// Populated by [StreamUserData.updateUserData] (existing call sites) until
-/// each screen is migrated to call [UserNotifier.update] directly via ref.
-class UserNotifier extends Notifier<UserData> {
+/// Access from any ConsumerWidget:
+///   `ref.watch(userProvider)` → AsyncValue<User>
+///   `ref.watch(userProvider).valueOrNull` → User? (null while loading)
+///
+/// After any mutation that changes user state, call:
+///   `ref.invalidate(userProvider)` — triggers a fresh GET /api/profile
+///   and rebuilds every widget watching this provider.
+class UserNotifier extends AsyncNotifier<User> {
   @override
-  UserData build() => UserData.blank();
+  Future<User> build() => ref.read(userRepositoryProvider).getUser();
 
-  void update(UserData ud) => state = ud;
+  /// Triggers a fresh GET /api/profile and waits for it to complete.
+  /// Use [ref.invalidate(userProvider)] for fire-and-forget.
+  Future<void> refresh() async {
+    ref.invalidateSelf();
+    await future;
+  }
 }
 
-final userProvider = NotifierProvider<UserNotifier, UserData>(UserNotifier.new);
+final userProvider =
+    AsyncNotifierProvider<UserNotifier, User>(UserNotifier.new);

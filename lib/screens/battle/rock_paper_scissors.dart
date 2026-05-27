@@ -14,14 +14,15 @@ import '../../models/app_error.dart';
 import '../../models/player_stats.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
-import '../../providers/stream_userdata.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/user_provider.dart';
 import '../../providers/stream_visit.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
 
 ///
-class RockPaperScissorsPage extends StatefulWidget {
+class RockPaperScissorsPage extends ConsumerStatefulWidget {
   ///
   final String name = "battle";
 
@@ -43,10 +44,7 @@ class RockPaperScissorsPage extends StatefulWidget {
 }
 
 ///
-class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
-  ///
-  final _userdata = getIt.get<StreamUserData>();
-
+class _RockPaperScissorsState extends ConsumerState<RockPaperScissorsPage> {
   ///
   math.Random rndBattleNumber = math.Random.secure();
 
@@ -757,20 +755,7 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
             _user.details.defense.min;
       }
 
-      // update global data
-      _userdata.updateUserData(
-        'rock_paper',
-        _user.details.coins,
-        _user.details.mining,
-        _user.details.guildId,
-        _user.details.xp,
-        _user.details.unread,
-        _user.details.attack,
-        _user.details.defense,
-        _user.details.daily,
-        _user.details.settings,
-        _user.details.costs,
-      );
+      ref.invalidate(userProvider);
     }
 
     setState(() {

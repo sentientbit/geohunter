@@ -20,7 +20,8 @@ import '../../models/dailyreward.dart';
 import '../../models/player_stats.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
-import '../../providers/stream_userdata.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/user_provider.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
@@ -28,7 +29,7 @@ import '../../widgets/drawer.dart';
 import '../../widgets/network_status_message.dart';
 
 ///
-class QuestLinePage extends StatefulWidget {
+class QuestLinePage extends ConsumerStatefulWidget {
   ///
   final String name = 'questline';
 
@@ -41,11 +42,9 @@ class QuestLinePage extends StatefulWidget {
   _QuestLinePageState createState() => _QuestLinePageState();
 }
 
-class _QuestLinePageState extends State<QuestLinePage> {
+class _QuestLinePageState extends ConsumerState<QuestLinePage> {
   /// Curent loggedin user
   User _user = User.blank();
-
-  final _userdata = getIt.get<StreamUserData>();
 
   // final Logger log = Logger(
   //     printer: PrettyPrinter(
@@ -801,20 +800,7 @@ class _QuestLinePageState extends State<QuestLinePage> {
     }
     _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
 
-    // update global data
-    _userdata.updateUserData(
-      'quest',
-      _user.details.coins,
-      _user.details.mining,
-      _user.details.guildId,
-      _user.details.xp,
-      _user.details.unread,
-      _user.details.attack,
-      _user.details.defense,
-      _user.details.daily,
-      _user.details.settings,
-      _user.details.costs,
-    );
+    ref.invalidate(userProvider);
 
     setState(() {
       _isLoading = false;

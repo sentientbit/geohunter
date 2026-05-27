@@ -17,13 +17,10 @@ import 'package:double_back_to_close_app/double_back_to_close_app.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../fonts/rpg_awesome_icons.dart';
-import '../models/player_stats.dart';
 import '../models/user.dart';
 import '../models/visitevent.dart';
-import '../providers/api_provider.dart';
 import '../providers/custom_interceptors.dart';
 import '../providers/stream_location.dart';
-import '../providers/stream_userdata.dart';
 import '../providers/stream_visit.dart';
 import '../providers/user_provider.dart';
 import '../shared/auth_utils.dart';
@@ -54,9 +51,6 @@ class SplashScreenState extends ConsumerState<SplashScreen> {
   /// Send periodical GPS updates to all dart files
   final _location = getIt.get<StreamLocation>();
 
-  /// keep user data updated
-  final _userdata = getIt.get<StreamUserData>();
-
   ///
   final _visiteventdata = getIt.get<StreamVisit>();
 
@@ -69,15 +63,8 @@ class SplashScreenState extends ConsumerState<SplashScreen> {
   /// Secure Storage for User Data
   final _storage = const FlutterSecureStorage();
 
-  /// Current logged-in user
-  User _user = User.blank();
-
-  /// API Connection provider
-  final _apiProvider = ApiProvider();
-
   @override
   void dispose() {
-    _userdata.setRiverpodSink(null); // ref becomes invalid after dispose
     super.dispose();
   }
 
@@ -127,13 +114,6 @@ class SplashScreenState extends ConsumerState<SplashScreen> {
 
     _visiteventdata.stream$.listen(_visitEventData);
 
-    // Wire existing screens (still using StreamUserData) into the Riverpod notifier.
-    // Once a screen is migrated to ref, it calls userProvider.notifier.update() directly
-    // and this bridge can be removed for that screen.
-    _userdata.setRiverpodSink(
-      (ud) => ref.read(userProvider.notifier).update(ud),
-    );
-
     Timer(Duration(milliseconds: 800), buttonContinue);
   }
 
@@ -147,45 +127,17 @@ class SplashScreenState extends ConsumerState<SplashScreen> {
       return false;
     }
 
-    final response = await _apiProvider.get('/profile');
-
-    if (response.containsKey("user")) {
-      if (response["user"] != null) {
-        // update local data
-        _user.details.coins =
-            double.tryParse(response["user"]["coins"].toString()) ?? 0.0;
-        _user.details.guildId = response["user"]["guild"]["id"].toString();
-        _user.details.xp = response["user"]["xp"];
-        _user.details.unread = ((response["user"]["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
-        _user.details.attack = StatRange.fromList((response["user"]["attack"] ?? []) as List);
-        _user.details.defense = StatRange.fromList((response["user"]["defense"] ?? []) as List);
-        _user.details.daily = response["user"]["daily"];
-        _user.details.costs = ActionCosts.fromList((response["user"]["costs"] ?? [0.1, 0.1, 0.1]) as List);
-
-        appGroupStatus = ((int.tryParse(_user.details.guildId) ?? 0) > 0)
-            ? GroupStatus.inGroup
-            : GroupStatus.notInGroup;
-
-        // update global data
-        _userdata.updateUserData(
-          'main',
-          _user.details.coins,
-          _user.details.mining,
-          _user.details.guildId,
-          _user.details.xp,
-          _user.details.unread,
-          _user.details.attack,
-          _user.details.defense,
-          _user.details.daily,
-          _user.details.settings,
-          _user.details.costs,
-        );
-
-        cookies["jwt"] = response["jwt"];
-        cookies["user"] = response["user"];
-        await CustomInterceptors.setStoredCookies(
-            GlobalConstants.apiHostUrl, cookies);
-      }
+    try {
+      // UserRepository fetches /api/profile, persists JWT + user to cookies,
+      // and populates userProvider so the Drawer is ready immediately.
+      ref.invalidate(userProvider);
+      final user = await ref.read(userProvider.future);
+      appGroupStatus = ((int.tryParse(user.details.guildId) ?? 0) > 0)
+          ? GroupStatus.inGroup
+          : GroupStatus.notInGroup;
+    } catch (_) {
+      // Profile fetch failed — navigate anyway; screens will handle auth errors.
+      appGroupStatus = GroupStatus.unknown;
     }
 
     // Go to the Map
@@ -207,8 +159,10 @@ class SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // React to user data changes: music, cookie persistence, _user sync.
-    ref.listen<UserData>(userProvider, (_, next) => _updateUserData(next));
+    // React to user data changes: music.
+    ref.listen<AsyncValue<User>>(userProvider, (_, next) {
+      next.whenData(_updateUserData);
+    });
 
     var szHeight = MediaQuery.of(context).size.height;
     var szWidth = MediaQuery.of(context).size.width;
@@ -529,34 +483,15 @@ class SplashScreenState extends ConsumerState<SplashScreen> {
     );
   }
 
-  /// A function to be called when the User has new data
-  void _updateUserData(UserData ud) async {
-    User user = await _apiProvider.getStoredUser();
-    print('--- _updateUserData ${ud.traces} ---');
-    print(ud);
-    print(user.details);
-
-    // user opted for a music change
-    if (ud.settings.isMusicOn) {
-      if (musicBackground.isPlaying == false) {
+  /// Called when userProvider emits a new User — handles music only.
+  /// Cookie persistence is handled by UserRepository.getUser().
+  void _updateUserData(User user) {
+    if (user.details.settings.isMusicOn) {
+      if (!musicBackground.isPlaying) {
         musicBackground.play('audio/music/aWayThrough.mp3');
       }
     } else {
       musicBackground.stop();
-    }
-
-    if (user.details != UserData.blank()) {
-      user.details.coins = ud.coins;
-      user.details.mining = ud.mining;
-      user.details.xp = ud.xp;
-      user.details.unread = ud.unread;
-      user.details.attack = ud.attack;
-      user.details.defense = ud.defense;
-      user.details.daily = ud.daily;
-      user.details.settings = ud.settings;
-
-      CustomInterceptors.setStoredCookies(
-          GlobalConstants.apiHostUrl, user.toMap());
     }
   }
 
