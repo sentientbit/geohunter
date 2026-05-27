@@ -7,7 +7,7 @@ import '../shared/constants.dart';
 ///
 class ItemsGrid extends StatelessWidget {
   ///
-  List<Image> images = [];
+  final List<Image> images;
 
   ///
   ItemsGrid({
@@ -40,19 +40,19 @@ class ItemsGrid extends StatelessWidget {
 ///
 class CustomDialog extends StatelessWidget {
   ///
-  String title = "";
+  final String title;
 
   ///
-  String description = "";
+  final String description;
 
   ///
-  String buttonText = "";
+  final String buttonText;
 
   ///
-  List<Image> images = [];
+  final List<Image> images;
 
   ///
-  VoidCallback callback = () {};
+  final VoidCallback callback;
 
   ///
   CustomDialog({
@@ -115,12 +115,11 @@ class CustomDialog extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 24.0),
-                  if (images != null)
-                    SizedBox(
-                      width: 200.0,
-                      height: 200.0,
-                      child: ItemsGrid(images: images),
-                    ),
+                  SizedBox(
+                    width: 200.0,
+                    height: 200.0,
+                    child: ItemsGrid(images: images),
+                  ),
                   //if (images != null) ...images.map((image) => image).toList(),
                   SizedBox(height: 24.0),
                   Row(
@@ -139,9 +138,7 @@ class CustomDialog extends StatelessWidget {
                         ),
                         onPressed: () {
                           Navigator.of(context).pop();
-                          if (callback != null) {
-                            callback();
-                          }
+                          callback();
                         },
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,

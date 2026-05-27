@@ -85,8 +85,10 @@ app.*.map.json
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 
 android/app/geocraft.jks
+android/app/google-services.json
 ios/Runner/GeneratedPluginRegistrant.h
 ios/Runner/GeneratedPluginRegistrant.m
+ios/Runner/GoogleService-Info.plist
 android/local.properties
 ios/Flutter/Generated.xcconfig
 ios/Flutter/flutter_export_environment.sh
@@ -96,3 +98,4 @@ assets/secrets.json
 .flutter-plugins-dependencies
 pubspec.lock
 ios/Podfile.lock
+ui.xml

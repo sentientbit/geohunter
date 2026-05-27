@@ -1,22 +1,20 @@
 ///
 import 'dart:math' as math;
-import 'package:dio/dio.dart';
-import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:flutter/material.dart';
-import 'package:percent_indicator/linear_percent_indicator.dart';
+import 'package:go_router/go_router.dart';
 
 //import 'package:logger/logger.dart';
 
 ///
 import '../../app_localizations.dart';
-import '../../fonts/rpg_awesome_icons.dart';
+import '../../models/app_error.dart';
+import '../../models/player_stats.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/custom_interceptors.dart';
 import '../../providers/stream_userdata.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
-import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
 
 ///
@@ -48,57 +46,41 @@ class _SettingsState extends State<SettingsPage> {
   ///
   final ApiProvider _apiProvider = ApiProvider();
 
-  /// Make sure back button is pressed twice
-  bool ifPop = false;
-
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   /// Curent loggedin user
   User _user = User.blank();
 
-  bool _lights = false;
+  bool _soundsEnabled = false;
 
-  int musicLevel = 100;
+  bool _vibrateEnabled = false;
+
+  int notificationLevel = 0;
+
+  int musicLevel = 0;
 
   @override
   void initState() {
     super.initState();
     _getUserDetails();
-    BackButtonInterceptor.add(myInterceptor,
-        name: widget.name, context: context);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
   }
 
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    if (stopDefaultButtonEvent) return false;
-    if (ifPop) {
-      return false;
-    } else {
-      setState(() => ifPop = true);
-      Navigator.of(context).pop();
-    }
-    return true;
-  }
-
   Widget build(BuildContext context) {
-    var szHeight = MediaQuery.of(context).size.height;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
 
     /// Application top Bar
     final topBar = AppBar(
-      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(Icons.arrow_back),
         onPressed: () {
-          Navigator.pop(context);
+          context.pop();
         },
       ),
       elevation: 0.1,
@@ -174,9 +156,8 @@ class _SettingsState extends State<SettingsPage> {
                               Expanded(
                                 flex: 10,
                                 child: SwitchListTile(
-                                  activeTrackColor: Colors.black,
-                                  activeColor: Colors.black,
-                                  inactiveThumbColor: Colors.black,
+                                  activeTrackColor: Colors.white,
+                                  activeThumbColor: Color(0xffe6a04e),
                                   title: const Text(
                                     'Notifications',
                                     style: TextStyle(
@@ -192,15 +173,18 @@ class _SettingsState extends State<SettingsPage> {
                                       ],
                                     ),
                                   ),
-                                  value: _lights,
-                                  onChanged: (value) {
+                                  value: (notificationLevel > 0),
+                                  onChanged: (toggle) {
                                     setState(() {
-                                      _lights = value;
+                                      notificationLevel = (!toggle) ? 0 : 100;
                                     });
                                   },
-                                  secondary: const Icon(
-                                      Icons.notifications_none,
-                                      color: Colors.white),
+                                  secondary: Icon(
+                                    (notificationLevel > 0)
+                                        ? Icons.notifications_none
+                                        : Icons.notifications_off_outlined,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                               Expanded(
@@ -215,9 +199,8 @@ class _SettingsState extends State<SettingsPage> {
                               Expanded(
                                 flex: 10,
                                 child: SwitchListTile(
-                                  activeTrackColor: Colors.black,
-                                  activeColor: Colors.black,
-                                  inactiveThumbColor: Colors.black,
+                                  activeTrackColor: Colors.white,
+                                  activeThumbColor: Color(0xffe6a04e),
                                   title: const Text(
                                     'Sounds',
                                     style: TextStyle(
@@ -233,10 +216,10 @@ class _SettingsState extends State<SettingsPage> {
                                       ],
                                     ),
                                   ),
-                                  value: _lights,
+                                  value: _soundsEnabled,
                                   onChanged: (value) {
                                     setState(() {
-                                      _lights = value;
+                                      _soundsEnabled = value;
                                     });
                                   },
                                   secondary: const Icon(Icons.volume_down,
@@ -256,7 +239,7 @@ class _SettingsState extends State<SettingsPage> {
                                 flex: 10,
                                 child: SwitchListTile(
                                   activeTrackColor: Colors.white,
-                                  activeColor: Color(0xffe6a04e),
+                                  activeThumbColor: Color(0xffe6a04e),
                                   title: const Text(
                                     'Music',
                                     style: TextStyle(
@@ -298,9 +281,8 @@ class _SettingsState extends State<SettingsPage> {
                               Expanded(
                                 flex: 10,
                                 child: SwitchListTile(
-                                  activeTrackColor: Colors.black,
-                                  activeColor: Colors.black,
-                                  inactiveThumbColor: Colors.black,
+                                  activeTrackColor: Colors.white,
+                                  activeThumbColor: Color(0xffe6a04e),
                                   title: const Text(
                                     'Vibrate',
                                     style: TextStyle(
@@ -316,10 +298,10 @@ class _SettingsState extends State<SettingsPage> {
                                       ],
                                     ),
                                   ),
-                                  value: _lights,
-                                  onChanged: (value) {
+                                  value: _vibrateEnabled,
+                                  onChanged: (toggle) {
                                     setState(() {
-                                      _lights = value;
+                                      _vibrateEnabled = toggle;
                                     });
                                   },
                                   secondary: const Icon(Icons.vibration,
@@ -353,13 +335,32 @@ class _SettingsState extends State<SettingsPage> {
   }
 
   void _updateSettings() async {
-    _user.details.music = musicLevel;
+    _user.details.settings = PlayerSettings(
+      music: musicLevel,
+      notifications: notificationLevel,
+      sounds: _soundsEnabled ? 100 : 0,
+      vibrate: _vibrateEnabled ? 1 : 0,
+    );
 
     CustomInterceptors.setStoredCookies(
         GlobalConstants.apiHostUrl, _user.toMap());
 
+    try {
+      await ApiProvider().put('/settings', {
+        "music": _user.details.settings.music,
+        "notification": _user.details.settings.notifications,
+        "sounds": _user.details.settings.sounds,
+        "vibrate": _user.details.settings.vibrate,
+      });
+    } on AppError catch (err) {
+      err.show(context);
+    } catch (err) {
+      debugPrint('_updateSettings unexpected error: $err');
+    }
+
     // update global data
     _userdata.updateUserData(
+      'settings',
       _user.details.coins,
       _user.details.mining,
       _user.details.guildId,
@@ -368,11 +369,11 @@ class _SettingsState extends State<SettingsPage> {
       _user.details.attack,
       _user.details.defense,
       _user.details.daily,
-      _user.details.music,
+      _user.details.settings,
       _user.details.costs,
     );
 
-    Navigator.of(context).pop();
+    if (mounted) context.pop();
   }
 
   ///
@@ -383,33 +384,38 @@ class _SettingsState extends State<SettingsPage> {
     dynamic response;
     try {
       response = await _apiProvider.get("/equipment");
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Error',
-          description: err.response?.data["message"],
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
+    } on AppError catch (err) {
+      err.show(context);
+      return;
+    } catch (err) {
+      debugPrint('_getUserDetails unexpected error: $err');
       return;
     }
 
     // update local data
     _user.details.coins = double.tryParse(response["coins"].toString()) ?? 0.0;
-    _user.details.guildId = response["guild"]["id"];
+    _user.details.guildId = (response["guild"]?["id"] ?? '0').toString();
     _user.details.mining = response["mining"];
     _user.details.xp = response["xp"];
-    _user.details.unread = response["unread"];
-    _user.details.attack = response["attack"];
-    _user.details.defense = response["defense"];
+    _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
+    _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
+    _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
     _user.details.daily = response["daily"];
-    _user.details.costs = response["costs"];
+    if (response is Map && response.containsKey("settings")) {
+      _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
+    } else {
+      _user.details.settings = PlayerSettings(
+        music: musicLevel,
+        notifications: notificationLevel,
+        sounds: _soundsEnabled ? 100 : 0,
+        vibrate: _vibrateEnabled ? 1 : 0,
+      );
+    }
+    _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
 
     // update global data
     _userdata.updateUserData(
+      'settings2',
       _user.details.coins,
       _user.details.mining,
       _user.details.guildId,
@@ -418,13 +424,15 @@ class _SettingsState extends State<SettingsPage> {
       _user.details.attack,
       _user.details.defense,
       _user.details.daily,
-      _user.details.music,
+      _user.details.settings,
       _user.details.costs,
     );
 
     setState(() {
-      /// update controller data
-      musicLevel = _user.details.music;
+      musicLevel = _user.details.settings.music;
+      notificationLevel = _user.details.settings.notifications;
+      _soundsEnabled = _user.details.settings.isSoundsOn;
+      _vibrateEnabled = _user.details.settings.isVibrateOn;
     });
 
     return;

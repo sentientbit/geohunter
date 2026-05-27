@@ -12,7 +12,7 @@ class Friend {
   String username = "";
 
   ///
-  String status = "";
+  String? status = "";
 
   ///
   int xp = 0;
@@ -48,15 +48,15 @@ class Friend {
 
   ///
   Friend.fromJson(dynamic json) {
-    id = int.parse(json["id"].toString());
-    sex = json["sex"];
-    username = json["username"];
-    status = json["status"];
-    xp = json["xp"];
-    locationPrivacy = json['privacy'];
-    thumbnail = json["thumbnail"];
-    lat = json["lat"];
-    lng = json["lng"];
+    id = int.tryParse(json["id"].toString()) ?? 0;
+    sex = json["sex"].toString();
+    username = json["username"].toString();
+    status = json["status"]?.toString() ?? "";
+    xp = int.tryParse(json["xp"].toString()) ?? 0;
+    locationPrivacy = int.tryParse(json["privacy"].toString()) ?? 0;
+    thumbnail = json["thumbnail"].toString();
+    lat = double.tryParse(json["lat"].toString()) ?? 51.5;
+    lng = double.tryParse(json["lng"].toString()) ?? 0.0;
   }
 
   ///

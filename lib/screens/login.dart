@@ -1,26 +1,25 @@
 ///
-import 'dart:convert' as convert;
 import 'dart:math' as math;
 import 'dart:ui';
 
-import 'package:dio/dio.dart';
 import 'package:flame_audio/flame_audio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
-
 import 'package:flutter_offline/flutter_offline.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 //import 'package:encrypt/encrypt.dart' as enq;
 import 'package:loading_overlay/loading_overlay.dart';
+import 'package:go_router/go_router.dart';
 
 //import 'package:logger/logger.dart';
 
 ///
 import '../app_localizations.dart';
+import '../models/app_error.dart';
 //import '../models/secret.dart';
 import '../providers/api_provider.dart';
 import '../providers/custom_interceptors.dart';
 import '../shared/constants.dart';
-import '../widgets/custom_dialog.dart';
 import '../widgets/network_status_message.dart';
 
 ///
@@ -45,9 +44,6 @@ class _LoginPageState extends State<LoginPage> {
   bool _showEmailError = false;
   String _passwordControllerMessage = '';
   bool _showPasswordError = false;
-  convert.Codec<String, String> stringToBase64 =
-      convert.utf8.fuse(convert.base64);
-
   final _apiProvider = ApiProvider();
   final _storage = FlutterSecureStorage();
 
@@ -97,13 +93,13 @@ class _LoginPageState extends State<LoginPage> {
   //           GlobalConstants.apiHostUrl, tmp);
 
   //       Navigator.of(context).pushReplacementNamed('/poi-map');
-  //     } on DioError catch (err) {
+  //     } on DioException catch (err) {
   //       showDialog<void>(
   //         context: context,
   //         builder: (context) {
   //           return CustomDialog(
   //             title: "Error",
-  //             description: err.response?.data["message"],
+  //             description: (err.response?.data is Map ? err.response?.data["message"] : err.response?.data?.toString()) ?? 'Server error',
   //             buttonText: 'Okay',
   //           );
   //         },
@@ -143,7 +139,7 @@ class _LoginPageState extends State<LoginPage> {
         await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
     try {
       final response = await _apiProvider.get('/profile');
-      if (response.containsKey("success")) {
+      if (response is Map && response.containsKey("success")) {
         if (response["success"] == true) {
           tmp["jwt"] = response["jwt"];
           tmp["user"] = response["user"];
@@ -159,20 +155,12 @@ class _LoginPageState extends State<LoginPage> {
           }
         }
       }
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: "Error",
-          description: err.response?.data["message"],
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
-      setState(() {
-        _isLoading = false;
-      });
+    } on AppError catch (err) {
+      if (mounted) err.show(context);
+      if (mounted) setState(() => _isLoading = false);
+    } catch (err) {
+      debugPrint('getUserDetails unexpected error: $err');
+      if (mounted) setState(() => _isLoading = false);
     }
 
     return false;
@@ -201,11 +189,14 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    final encoded = stringToBase64
-        .encode("${_emailController.text}:${_passwordController.text}");
     try {
-      final response = await ApiProvider()
-          .get("/login", headers: {"Authorization": "Basic $encoded"});
+      final response = await ApiProvider().post(
+        "/login",
+        {
+          "email": _emailController.text,
+          "password": _passwordController.text,
+        },
+      );
 
       if (response.containsKey("jwt")) {
         Map jwtdata = parseJwt(response["jwt"]);
@@ -217,7 +208,8 @@ class _LoginPageState extends State<LoginPage> {
             if (isOk == true) {
               await _storage.write(key: 'email', value: jwtdata["usr"]);
               await _storage.write(key: 'api_key', value: response["api_key"]);
-              Navigator.of(context).pushReplacementNamed('/poi-map');
+              if (!mounted) return;
+              context.go('/poi-map');
               return;
             }
           }
@@ -229,21 +221,12 @@ class _LoginPageState extends State<LoginPage> {
         _showPasswordError = true;
         _isLoading = false;
       });
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: "Error",
-          description: "Check internet connection, or try again later",
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
+    } on AppError catch (err) {
+      if (mounted) err.show(context);
+    } catch (err) {
+      debugPrint('login unexpected error: $err');
     }
-    setState(() {
-      _isLoading = false;
-    });
+    if (mounted) setState(() => _isLoading = false);
     return;
   }
 
@@ -281,7 +264,8 @@ class _LoginPageState extends State<LoginPage> {
               bool isOk = await getInPartial(response["jwt"]);
               if (isOk) {
                 await _storage.write(key: 'email', value: jwtdata["usr"]);
-                Navigator.of(context).pushReplacementNamed('/poi-map');
+                if (!mounted) return;
+                context.go('/poi-map');
                 return;
               } else {
                 setState(() {
@@ -291,10 +275,12 @@ class _LoginPageState extends State<LoginPage> {
               }
             }
           }
-        } on DioError catch (err) {
-          setState(() {
-            _isLoading = false;
-          });
+        } on AppError catch (_) {
+          if (mounted) setState(() => _isLoading = false);
+          return;
+        } catch (err) {
+          debugPrint('_tryAutoSignIn unexpected error: $err');
+          if (mounted) setState(() => _isLoading = false);
           return;
         }
       }
@@ -345,7 +331,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
       onPressed: () {
-        Navigator.of(context).pushNamed('/forgot');
+        context.push('/forgot');
       },
     );
 
@@ -366,7 +352,7 @@ class _LoginPageState extends State<LoginPage> {
       ),
       onPressed: () {
         //Flame.audio.play('sfx/bookOpen_${(math.Random.secure().nextInt(2) + 1).toString()}.mp3');
-        Navigator.of(context).pushNamed('/register');
+        context.push('/register');
       },
     );
 
@@ -388,9 +374,9 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
       onPressed: () {
-        FlameAudio.audioCache.play(
+        FlameAudio.play(
             'sfx/bookOpen_${(math.Random.secure().nextInt(2) + 1).toString()}.mp3');
-        Navigator.of(context).pushNamed('/terms');
+        context.push('/terms');
       },
     );
 
@@ -436,13 +422,13 @@ class _LoginPageState extends State<LoginPage> {
           connectivity,
           child,
         ) {
-          if (connectivity == ConnectivityResult.none) {
+          if (connectivity.isEmpty || connectivity.contains(ConnectivityResult.none)) {
             return Stack(children: <Widget>[
               child,
               BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                 child: Container(
-                    color: Colors.black.withOpacity(0),
+                    color: Colors.black.withValues(alpha: 0),
                     // child: child,
                     child: NetworkStatusMessage()),
               )

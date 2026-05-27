@@ -1,6 +1,4 @@
 ///
-import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 //import 'package:flutter_html/style.dart';//tobeused in 1.0.0
@@ -8,10 +6,10 @@ import 'package:flutter/material.dart';
 
 ///
 import '../app_localizations.dart';
+import '../models/app_error.dart';
 import '../providers/api_provider.dart';
 import '../shared/constants.dart';
 import '../widgets/custom_app_bar.dart';
-import '../widgets/custom_dialog.dart';
 
 ///
 class TermsAndPrivacyPage extends StatefulWidget {
@@ -32,12 +30,10 @@ class _TermsAndPrivacyPageState extends State<TermsAndPrivacyPage> {
   String _terms = '';
   String _privacy = '';
   bool _showTerms = true;
-  bool _showPrivacy = false;
 
   @override
   void initState() {
     super.initState();
-    BackButtonInterceptor.add(myInterceptor);
   }
 
   void didChangeDependencies() {
@@ -47,14 +43,7 @@ class _TermsAndPrivacyPageState extends State<TermsAndPrivacyPage> {
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    Navigator.of(context).pop();
-    return true;
   }
 
   Widget build(BuildContext context) {
@@ -99,7 +88,6 @@ class _TermsAndPrivacyPageState extends State<TermsAndPrivacyPage> {
                     ),
                     onPressed: () {
                       setState(() {
-                        _showPrivacy = false;
                         _showTerms = true;
                       });
                     },
@@ -131,7 +119,6 @@ class _TermsAndPrivacyPageState extends State<TermsAndPrivacyPage> {
                     ),
                     onPressed: () {
                       setState(() {
-                        _showPrivacy = true;
                         _showTerms = false;
                       });
                     },
@@ -198,17 +185,10 @@ class _TermsAndPrivacyPageState extends State<TermsAndPrivacyPage> {
         _privacy = requesPrivacyt["message"];
       });
       // print();
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Main Error',
-          description: err.error.toString(),
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
+    } on AppError catch (err) {
+      err.show(context, title: 'Main Error');
+    } catch (err) {
+      debugPrint('_loadTerms unexpected error: $err');
     }
   }
 }

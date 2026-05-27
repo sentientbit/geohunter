@@ -1,15 +1,14 @@
 ///
-import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
-
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:go_router/go_router.dart';
 ///
+import '../../models/app_error.dart';
 import '../../models/blueprint.dart';
-import '../../models/materialmodel.dart';
+import '../../providers/api_provider.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
-import '../../providers/api_provider.dart';
 
 //import '../app_localizations.dart';
 
@@ -41,11 +40,11 @@ class BlueprintListPage extends StatefulWidget {
 
 ///
 class _BlueprintListState extends State<BlueprintListPage> {
-  /// Secure Storage for User Data
-  final _storage = FlutterSecureStorage();
-
   ///
   final ApiProvider _apiProvider = ApiProvider();
+
+  ///
+  final _storage = FlutterSecureStorage();
 
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -57,19 +56,11 @@ class _BlueprintListState extends State<BlueprintListPage> {
   void initState() {
     super.initState();
     _getBlueprints();
-    BackButtonInterceptor.add(myInterceptor);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    Navigator.of(context).pop();
-    return true;
   }
 
   Widget _makeCard(BuildContext context, int index) {
@@ -142,11 +133,87 @@ class _BlueprintListState extends State<BlueprintListPage> {
       ),
       trailing:
           Icon(Icons.keyboard_arrow_right, color: Colors.white, size: 30.0),
-      onTap: () {},
+      onTap: () => _openBlueprint(context, _blueprints[index]),
     );
   }
 
   void choiceAction(PopupMenuChoice choice) {}
+
+  void _openBlueprint(BuildContext context, Blueprint blp) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: GlobalConstants.appBg,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image(
+              image: AssetImage('assets/images/blueprints/${blp.img}'),
+              height: 120,
+              width: 120,
+            ),
+            SizedBox(height: 12),
+            Text(
+              blp.name,
+              style: TextStyle(
+                color: GlobalConstants.appFg,
+                fontSize: 22,
+                fontFamily: 'Cormorant SC',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 4),
+            Text(
+              'You have ${blp.nr}',
+              style: TextStyle(color: Colors.white70, fontSize: 16),
+            ),
+            SizedBox(height: 24),
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                backgroundColor: GlobalConstants.appBg,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                side: BorderSide(width: 1, color: Colors.white),
+              ),
+              onPressed: () => _goForge(context, blp),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.construction, color: Color(0xffe6a04e)),
+                  SizedBox(width: 8),
+                  Text(
+                    'Go to Forge',
+                    style: TextStyle(
+                      color: Color(0xffe6a04e),
+                      fontSize: 18,
+                      fontFamily: 'Cormorant SC',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _goForge(BuildContext context, Blueprint blp) async {
+    await _storage.write(key: 'forgeBlueprintId', value: blp.id.toString());
+    await _storage.write(key: 'forgeBlueprintImg', value: blp.img);
+    await _storage.write(key: 'forgeBlueprintName', value: blp.name);
+    if (!mounted) return;
+    Navigator.of(context).pop(); // close bottom sheet
+    context.go('/forge');
+  }
 
   Widget build(BuildContext context) {
     //ignore: omit_local_variable_types
@@ -158,26 +225,23 @@ class _BlueprintListState extends State<BlueprintListPage> {
         currentTabIndex = index;
       });
       if (index == 0) {
-        Navigator.of(context).pushReplacementNamed('/inventory');
+        context.go('/inventory');
       }
       /* else index == 1 We are here: Blueprints */
       else if (index == 2) {
-        Navigator.of(context).pushReplacementNamed('/materials');
+        context.go('/materials');
       }
     }
 
     /// Application top Bar
     final topBar = AppBar(
-      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
           Icons.menu,
           // size: 32,
         ),
-        onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState?.openDrawer()
-            : Navigator.of(context).pop(),
+        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
@@ -267,14 +331,19 @@ class _BlueprintListState extends State<BlueprintListPage> {
         ),
       ],
     );
-    return Scaffold(
-      backgroundColor: GlobalConstants.appBg,
-      appBar: topBar,
-      extendBodyBehindAppBar: true,
-      body: Stack(
-        children: <Widget>[
-          Container(
-            decoration: BoxDecoration(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) context.go('/poi-map');
+      },
+      child: Scaffold(
+        backgroundColor: GlobalConstants.appBg,
+        appBar: topBar,
+        extendBodyBehindAppBar: true,
+        body: Stack(
+          children: <Widget>[
+            Container(
+              decoration: BoxDecoration(
               image: DecorationImage(
                 image: AssetImage('assets/images/research_study.jpg'),
                 fit: BoxFit.fill,
@@ -291,30 +360,31 @@ class _BlueprintListState extends State<BlueprintListPage> {
           ),
         ],
       ),
-      key: _scaffoldKey,
-      drawer: DrawerPage(),
-      bottomNavigationBar: BottomNavigationBar(
-        onTap: onTapped,
-        currentIndex: currentTabIndex,
-        backgroundColor: GlobalConstants.appBg,
-        selectedItemColor: Color(0xfffeb53b),
-        selectedLabelStyle: TextStyle(fontSize: 14),
-        unselectedItemColor: Colors.white,
-        unselectedLabelStyle: TextStyle(fontSize: 14),
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.format_list_bulleted, color: Colors.white),
-            label: 'Items',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.library_books_outlined, color: Colors.white),
-            label: 'Blueprints',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.widgets, color: Colors.white),
-            label: 'Materials',
-          )
-        ],
+        key: _scaffoldKey,
+        drawer: DrawerPage(),
+        bottomNavigationBar: BottomNavigationBar(
+          onTap: onTapped,
+          currentIndex: currentTabIndex,
+          backgroundColor: GlobalConstants.appBg,
+          selectedItemColor: Color(0xfffeb53b),
+          selectedLabelStyle: TextStyle(fontSize: 14),
+          unselectedItemColor: Colors.white,
+          unselectedLabelStyle: TextStyle(fontSize: 14),
+          items: [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.format_list_bulleted, color: Colors.white),
+              label: 'Items',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.library_books_outlined, color: Colors.white),
+              label: 'Blueprints',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.widgets, color: Colors.white),
+              label: 'Materials',
+            )
+          ],
+        ),
       ),
     );
   }
@@ -322,22 +392,28 @@ class _BlueprintListState extends State<BlueprintListPage> {
   void _getBlueprints() async {
     // 17 is intermediate items
     // (save a bit of bandwidth as we only need the blueprints)
-    final response = await _apiProvider.get('/inventory/17');
+    try {
+      final response = await _apiProvider.post('/inventory', {"types": [17]});
 
-    var tmp = [];
-    if (response.containsKey("success")) {
-      if (response["success"] == true) {
-        if (response.containsKey("blueprints")) {
-          for (dynamic elem in response["blueprints"]) {
-            final itm = Blueprint.fromJson(elem);
-            tmp.add(itm);
+      var tmp = [];
+      if (response is Map && response.containsKey("success")) {
+        if (response["success"] == true) {
+          if (response.containsKey("blueprints")) {
+            for (dynamic elem in response["blueprints"]) {
+              final itm = Blueprint.fromJson(elem);
+              tmp.add(itm);
+            }
           }
         }
       }
+      setState(() {
+        _blueprints.clear();
+        _blueprints.addAll(tmp.toList());
+      });
+    } on AppError catch (err) {
+      debugPrint(err.toString());
+    } catch (err) {
+      debugPrint('_getBlueprints unexpected error: $err');
     }
-    setState(() {
-      _blueprints.clear();
-      _blueprints.addAll(tmp.toList());
-    });
   }
 }

@@ -26,7 +26,7 @@ class CustomAppBar extends StatelessWidget {
   final Icon icon;
 
   ///
-  bool hasNotification = false;
+  final bool hasNotification;
 
   ///
   CustomAppBar(
@@ -114,7 +114,6 @@ class CustomAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      brightness: systemHeaderBrightness,
       title: Text(
         GlobalConstants.appName,
         style: TextStyle(

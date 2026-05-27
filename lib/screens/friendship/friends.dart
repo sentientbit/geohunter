@@ -1,18 +1,17 @@
 ///
 import 'dart:ui';
-import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flame_audio/flame_audio.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_offline/flutter_offline.dart';
-import 'package:qrcode_flutter/qrcode_flutter.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 //import 'package:logger/logger.dart';
 
 ///
 import '../../app_localizations.dart';
+import '../../models/app_error.dart';
 import '../../models/friends.dart';
+import '../../models/player_stats.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/stream_userdata.dart';
@@ -52,9 +51,6 @@ class _FriendsPageState extends State<FriendsPage> {
   /// Curent loggedin user
   User _user = User.blank();
 
-  /// Make sure back button is pressed twice
-  bool ifPop = false;
-
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -62,75 +58,25 @@ class _FriendsPageState extends State<FriendsPage> {
   bool _isLoading = true;
   final _apiProvider = ApiProvider();
 
-  String _scanBarcode = '';
+  String? _scanBarcode = null;
   bool qrFound = false;
 
+  MobileScannerController? controllerQr = null;
+
   Map<int, dynamic> ravens = {};
-
-  final QRCaptureController controllerQr = QRCaptureController();
-
-  // Future<void> scanQR() async {
-  //   String barcodeScanRes;
-  //   // Platform messages may fail, so we use a try/catch PlatformException.
-  //   try {
-  //     barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
-  //         '#ff6666', 'Cancel', true, ScanMode.QR);
-  //   } on Exception catch (err) {
-  //     barcodeScanRes = '';
-  //   }
-
-  //   // If the widget was removed from the tree while the asynchronous platform
-  //   // message was in flight, we want to discard the reply rather than calling
-  //   // setState to update our non-existent appearance.
-  //   if (!mounted) return;
-
-  //   setState(() {
-  //     _scanBarcode = barcodeScanRes;
-  //   });
-  // }
 
   @override
   void initState() {
     super.initState();
     _loadFriends();
-    controllerQr.onCapture(iFoundSomething);
-    BackButtonInterceptor.add(myInterceptor,
-        name: widget.name, context: context);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
   }
 
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    if (stopDefaultButtonEvent) return false;
-    if (ifPop) {
-      return false;
-    } else {
-      setState(() => ifPop = true);
-      Navigator.of(context).pop();
-      Navigator.of(context).pushNamed(GlobalConstants.backButtonPage);
-    }
-    return true;
-  }
-
-  /// When a QR Code is found
-  void iFoundSomething(String data) {
-    if (qrFound == false) {
-      //print('--- found ---');
-      controllerQr.pause();
-      FlameAudio.audioCache.play('sfx/stick_1.mp3');
-      //print('--- pause ---');
-      setState(() {
-        _scanBarcode = data;
-        qrFound = true;
-      });
-    }
-  }
-
+  ///
   Future _loadFriends() async {
     /// populate initial data from cookies
     _user = await ApiProvider().getStoredUser();
@@ -142,24 +88,24 @@ class _FriendsPageState extends State<FriendsPage> {
       var privacy = 0;
       var lat = 51.5;
       var lng = 0.0;
-      if (response.containsKey("success")) {
+      if (response is Map && response.containsKey("success")) {
         if (response["success"] == true) {
           for (dynamic elem in response["friends"]) {
             privacy = 0;
             if (elem.containsKey("privacy")) {
               privacy = int.tryParse(elem["privacy"].toString()) ?? 0;
-              lat = double.parse(elem["lat"].toString());
-              lng = double.parse(elem["lng"].toString());
+              lat = double.tryParse(elem["lat"].toString()) ?? 51.5;
+              lng = double.tryParse(elem["lng"].toString()) ?? 0.0;
             }
             friends.add(
               Friend(
                 id: (int.tryParse(elem["id"].toString()) ?? 0),
-                sex: elem["sex"],
-                username: elem["username"],
-                status: elem["status"],
+                sex: elem["sex"].toString(),
+                username: elem["username"].toString(),
+                status: elem["status"]?.toString() ?? "",
                 locationPrivacy: privacy,
                 xp: (int.tryParse(elem["xp"].toString()) ?? 0),
-                thumbnail: elem["thumbnail"],
+                thumbnail: elem["thumbnail"].toString(),
                 isReq: elem["is_req"].toString(),
                 lat: lat,
                 lng: lng,
@@ -170,19 +116,23 @@ class _FriendsPageState extends State<FriendsPage> {
           // update local data
           _user.details.coins =
               double.tryParse(response["coins"].toString()) ?? 0.0;
-          _user.details.guildId = response["guild"]["id"];
+          _user.details.guildId = response["guild"]["id"].toString();
           _user.details.mining = response["mining"];
           _user.details.xp = response["xp"];
-          _user.details.unread = response["unread"];
-          _user.details.attack = response["attack"];
-          _user.details.defense = response["defense"];
+          _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
+          _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
+          _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
           _user.details.daily = response["daily"];
-          _user.details.costs = response["costs"];
+          if (response.containsKey("settings")) {
+            _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
+          }
+          _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
           // log.d(_user.details.unread);
           ravens = _user.details.unread.asMap();
 
           // update global data
           _userdata.updateUserData(
+            'friends',
             _user.details.coins,
             _user.details.mining,
             _user.details.guildId,
@@ -191,7 +141,7 @@ class _FriendsPageState extends State<FriendsPage> {
             _user.details.attack,
             _user.details.defense,
             _user.details.daily,
-            _user.details.music,
+            _user.details.settings,
             _user.details.costs,
           );
         }
@@ -200,16 +150,12 @@ class _FriendsPageState extends State<FriendsPage> {
         _friends.addAll(friends.toList());
         _isLoading = false;
       });
-    } on DioError catch (err) {
-      if (err.response != null) {
-        print(err.response?.data["message"]);
-      } else {
-        print(err.response?.statusCode);
-        print(err.message);
-      }
-      setState(() {
-        _isLoading = false;
-      });
+    } on AppError catch (err) {
+      debugPrint(err.toString());
+      if (mounted) setState(() => _isLoading = false);
+    } catch (err) {
+      debugPrint('_loadFriends unexpected error: $err');
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -247,10 +193,15 @@ class _FriendsPageState extends State<FriendsPage> {
 
   /// When pressing Start Scan
   void showScan(BuildContext context) async {
-    controllerQr.resume();
+    MobileScannerController controllerQr = MobileScannerController(
+        //torchEnabled: true,
+        // formats: [BarcodeFormat.qrCode]
+        // facing: CameraFacing.front,
+        );
+    // controllerQr auto-starts when passed to MobileScanner widget (mobile_scanner 3.x+)
     //print('--- resume ---');
     setState(() {
-      _scanBarcode = "";
+      _scanBarcode = null;
       qrFound = false;
     });
     showDialog(
@@ -296,8 +247,21 @@ class _FriendsPageState extends State<FriendsPage> {
                       Container(
                         width: 300,
                         height: 300,
-                        child: QRCaptureView(
+                        child: MobileScanner(
                           controller: controllerQr,
+                          fit: BoxFit.contain,
+                          onDetect: (capture) {
+                            final rawValue = capture.barcodes.isNotEmpty
+                                ? capture.barcodes.first.rawValue
+                                : null;
+                            if (rawValue == null) {
+                              _scanBarcode = null;
+                              qrFound = false;
+                            } else {
+                              _scanBarcode = rawValue;
+                              qrFound = true;
+                            }
+                          },
                         ),
                       ),
                       SizedBox(height: 24.0),
@@ -400,7 +364,6 @@ class _FriendsPageState extends State<FriendsPage> {
 
     /// Application top Bar
     final topBar = AppBar(
-      brightness: Brightness.dark,
       leading: leadingIcon(context),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
@@ -465,25 +428,30 @@ class _FriendsPageState extends State<FriendsPage> {
       ],
     );
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      resizeToAvoidBottomInset: false,
-      appBar: topBar,
-      extendBodyBehindAppBar: true,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) context.go('/poi-map');
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        resizeToAvoidBottomInset: false,
+        appBar: topBar,
+        extendBodyBehindAppBar: true,
       body: OfflineBuilder(
         connectivityBuilder: (
           context,
           connectivity,
           child,
         ) {
-          if (connectivity == ConnectivityResult.none) {
+          if (connectivity.isEmpty || connectivity.contains(ConnectivityResult.none)) {
             return Stack(
               children: <Widget>[
                 child,
                 BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                   child: Container(
-                    color: Colors.black.withOpacity(0),
+                    color: Colors.black.withValues(alpha: 0),
                     // child: child,
                     child: NetworkStatusMessage(),
                   ),
@@ -556,55 +524,38 @@ class _FriendsPageState extends State<FriendsPage> {
           ],
         ),
       ),
-      key: _scaffoldKey,
-      drawer: DrawerPage(),
+        key: _scaffoldKey,
+        drawer: DrawerPage(),
+      ),
     );
   }
 
   Future afterScan() async {
     //print('--- afterScan ---');
-    if (_scanBarcode.length <= 0) {
+    if (_scanBarcode == null) {
       //print('f');
       return;
     }
     dynamic response;
     try {
-      if (_scanBarcode.length > 0) {
-        response = await _apiProvider
-            .put('/friends?token=${_scanBarcode.split('/')[5]}', {});
-        _loadFriends();
-      }
-    } on DioError catch (err) {
+      response = await _apiProvider
+          .put('/friends/${_scanBarcode?.split('/')[5]}', {});
       _loadFriends();
-      if (err.runtimeType == RangeError) {
-        showDialog(
-          context: context,
-          builder: (context) => CustomDialog(
-            title: "Error",
-            description: "This is not a valid QR Code",
-            buttonText: "Okay",
-            images: [],
-            callback: () {},
-          ),
-        );
-      } else {
-        showDialog(
-          context: context,
-          builder: (context) => CustomDialog(
-            title: "Error",
-            description: err.response?.data["message"],
-            buttonText: "Okay",
-            images: [],
-            callback: () {},
-          ),
-        );
-      }
-      _scanBarcode = "";
+    } on AppError catch (err) {
+      if (!mounted) return;
+      _loadFriends();
+      err.show(context);
+      _scanBarcode = null;
+      return;
+    } catch (err) {
+      debugPrint('afterScan unexpected error: $err');
+      _scanBarcode = null;
       return;
     }
-    _scanBarcode = "";
-    if (response.containsKey("success")) {
+    _scanBarcode = null;
+    if (response is Map && response.containsKey("success")) {
       if (response["success"] == true) {
+        if (!mounted) return;
         showDialog(
           context: context,
           builder: (context) => CustomDialog(

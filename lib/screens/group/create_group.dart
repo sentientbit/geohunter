@@ -1,12 +1,11 @@
 ///
-import 'dart:ui';
-import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 // import 'package:logger/logger.dart';
 
 ///
 import '../../app_localizations.dart';
+import '../../models/app_error.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/custom_interceptors.dart';
@@ -55,21 +54,13 @@ class _CreateGroupState extends State<CreateGroup> {
   void initState() {
     super.initState();
     _getUserDetails();
-    BackButtonInterceptor.add(myInterceptor, zIndex: 2, name: "SomeName");
   }
 
   @override
   void dispose() {
     _groupNameController.dispose();
     _passwordController.dispose();
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    Navigator.of(context).pop();
-    return true;
   }
 
   Widget build(BuildContext context) {
@@ -257,7 +248,7 @@ class _CreateGroupState extends State<CreateGroup> {
                                       value: _isHidden,
                                       onChanged: _isHiddenChanged,
                                       activeTrackColor: Colors.white,
-                                      activeColor: Color(0xffe6a04e),
+                                      activeThumbColor: Color(0xffe6a04e),
                                     ),
                                     Text(
                                       _isHidden ? 'Hidden' : 'Public',
@@ -298,7 +289,7 @@ class _CreateGroupState extends State<CreateGroup> {
                                       value: _isLocked,
                                       onChanged: _isLockedChanged,
                                       activeTrackColor: Colors.white,
-                                      activeColor: Color(0xffe6a04e),
+                                      activeThumbColor: Color(0xffe6a04e),
                                     ),
                                     Text(
                                       _isLocked ? 'Locked' : 'Open',
@@ -445,6 +436,7 @@ class _CreateGroupState extends State<CreateGroup> {
       }
 
       _groupNameController.text = "";
+      if (!mounted) return;
       showDialog(
         context: context,
         builder: (context) => CustomDialog(
@@ -454,23 +446,16 @@ class _CreateGroupState extends State<CreateGroup> {
           images: [],
           callback: () {
             Navigator.of(context).pop();
-            Navigator.of(context).pushReplacementNamed('/in-group');
+            context.go('/in-group');
           },
         ),
       );
       // _images.clear();
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Error',
-          description: err.response?.data["message"],
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
-      //log.e(err.response);
+    } on AppError catch (err) {
+      if (!mounted) return;
+      err.show(context);
+    } catch (err) {
+      debugPrint('createGuild unexpected error: $err');
     }
   }
 }

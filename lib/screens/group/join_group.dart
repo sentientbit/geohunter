@@ -1,13 +1,12 @@
 ///
-import 'dart:ui';
-import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:geohunter/screens/group/no_group.dart';
+import 'package:go_router/go_router.dart';
 // import 'package:logger/logger.dart';
 
 ///
 import '../../app_localizations.dart';
+import '../../models/app_error.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/custom_interceptors.dart';
@@ -21,13 +20,13 @@ class JoinGroup extends StatefulWidget {
   static String tag = 'join-group';
 
   ///
-  String guid = "";
+  final String guid;
 
   ///
-  int isLocked = 0;
+  final int isLocked;
 
   ///
-  String title = "";
+  final String title;
 
   ///
   JoinGroup({
@@ -78,19 +77,11 @@ class _JoinGroupState extends State<JoinGroup> {
       pageTitle = widget.title;
     }
     _getUserDetails();
-    BackButtonInterceptor.add(myInterceptor);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    Navigator.of(context).pop();
-    return true;
   }
 
   Widget build(BuildContext context) {
@@ -300,7 +291,7 @@ class _JoinGroupState extends State<JoinGroup> {
                                       value: _isLocked,
                                       onChanged: _isLockedChanged,
                                       activeTrackColor: Colors.white,
-                                      activeColor: Color(0xffe6a04e),
+                                      activeThumbColor: Color(0xffe6a04e),
                                     ),
                                     Text(
                                       _isLocked ? 'Locked' : 'Open',
@@ -441,17 +432,19 @@ class _JoinGroupState extends State<JoinGroup> {
       return;
     }
     try {
-      var data = {"guid": _guildUidController.text};
+      final guid = _guildUidController.text;
+      var data = <String, dynamic>{};
       if (_isLocked && _passwordController.text.isNotEmpty) {
         data["password"] = _passwordController.text;
       }
-      dynamic response = await _apiProvider.post('/membership', data);
+      dynamic response = await _apiProvider.post('/membership/$guid', data);
 
-      if (int.parse(response["guild_id"] ?? 0) > 0) {
+      if (response is Map && int.parse(response["guild_id"]?.toString() ?? "0") > 0) {
         _user.details.guildId = response["guild_id"].toString();
         await CustomInterceptors.setStoredCookies(
             GlobalConstants.apiHostUrl, _user.toMap());
 
+        if (!mounted) return;
         showDialog(
           context: context,
           builder: (context) => CustomDialog(
@@ -461,22 +454,16 @@ class _JoinGroupState extends State<JoinGroup> {
             images: [],
             callback: () {
               Navigator.of(context).pop();
-              Navigator.of(context).pushReplacementNamed('/in-group');
+              context.go('/in-group');
             },
           ),
         );
       }
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Error',
-          description: err.response?.data["message"],
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
+    } on AppError catch (err) {
+      if (!mounted) return;
+      err.show(context);
+    } catch (err) {
+      debugPrint('joinGuild unexpected error: $err');
     }
   }
 }

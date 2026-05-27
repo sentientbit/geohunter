@@ -1,13 +1,11 @@
 ///
 import 'dart:ui';
-import 'package:dio/dio.dart';
-import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_offline/flutter_offline.dart';
-import 'package:geohunter/shared/constants.dart';
-
+import 'package:go_router/go_router.dart';
 ///
 import '../app_localizations.dart';
+import '../models/app_error.dart';
 import '../providers/api_provider.dart';
 import '../shared/constants.dart';
 import '../widgets/custom_dialog.dart';
@@ -43,19 +41,11 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   void initState() {
     super.initState();
-    BackButtonInterceptor.add(myInterceptor);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    Navigator.of(context).pop();
-    return true;
   }
 
   Widget build(BuildContext context) {
@@ -109,36 +99,22 @@ class _RegisterPageState extends State<RegisterPage> {
       },
     );
 
-    final topBar = AppBar(
-      brightness: Brightness.dark,
-      backgroundColor: Colors.transparent,
-      actions: <Widget>[
-        IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-      ],
-    );
-
     return Scaffold(
       backgroundColor: Colors.white,
       resizeToAvoidBottomInset: false,
-      //appBar: topBar,
       body: OfflineBuilder(
         connectivityBuilder: (
           context,
           connectivity,
           child,
         ) {
-          if (connectivity == ConnectivityResult.none) {
+          if (connectivity.isEmpty || connectivity.contains(ConnectivityResult.none)) {
             return Stack(children: <Widget>[
               child,
               BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                 child: Container(
-                    color: Colors.black.withOpacity(0),
+                    color: Colors.black.withValues(alpha: 0),
                     // child: child,
                     child: NetworkStatusMessage()),
               )
@@ -403,10 +379,10 @@ class _RegisterPageState extends State<RegisterPage> {
                       value: _acceptedTerms,
                       onChanged: _acceptedTermsChanged,
                       activeTrackColor: Colors.white,
-                      activeColor: Color(0xffe6a04e),
+                      activeThumbColor: Color(0xffe6a04e),
                     ),
                     GestureDetector(
-                      onTap: () => {Navigator.of(context).pushNamed('/terms')},
+                      onTap: () => {context.push('/terms')},
                       child: Text(
                         AppLocalizations.of(context)!
                             .translate('register_terms_label'),
@@ -521,6 +497,7 @@ class _RegisterPageState extends State<RegisterPage> {
         "password": _passwordController.text,
         "pass_confirm": _retypePasswordController.text
       });
+      if (!mounted) return;
       showDialog(
           context: context,
           builder: (context) => CustomDialog(
@@ -536,19 +513,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
       // Navigator.of(context).pushNamed('/poi-map');
       // log.d(body);
-    } on DioError catch (err) {
-      showDialog<void>(
-        context: context,
-        builder: (context) {
-          return CustomDialog(
-            title: "Register Error",
-            description: err.response?.data["message"],
-            buttonText: 'Okay',
-            images: [],
-            callback: () {},
-          );
-        },
-      );
+    } on AppError catch (err) {
+      if (!mounted) return;
+      err.show(context, title: 'Register Error');
+    } catch (err) {
+      debugPrint('register unexpected error: $err');
     }
   }
 }

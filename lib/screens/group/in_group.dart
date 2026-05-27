@@ -1,15 +1,14 @@
 import 'dart:ui';
-import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_offline/flutter_offline.dart';
+import 'package:go_router/go_router.dart';
 import 'package:geohunter/models/friends.dart';
 
 //import 'package:logger/logger.dart';
 
 ///
 import '../../app_localizations.dart';
+import '../../models/app_error.dart';
 import '../../models/guild.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
@@ -30,9 +29,6 @@ class InGroup extends StatefulWidget {
 }
 
 class _InGroupState extends State<InGroup> {
-  /// Make sure back button is pressed twice
-  bool ifPop = false;
-
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -95,29 +91,11 @@ class _InGroupState extends State<InGroup> {
   void initState() {
     super.initState();
     _getGuildDetails();
-    BackButtonInterceptor.add(myInterceptor,
-        name: widget.name, context: context);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    if (stopDefaultButtonEvent) return false;
-    if (ifPop) {
-      return false;
-    } else {
-      setState(() => ifPop = true);
-      if (_scaffoldKey != null) {
-        Navigator.of(context).pop();
-        Navigator.of(context).pushNamed(GlobalConstants.backButtonPage);
-      }
-    }
-    return true;
   }
 
   Widget _makeCard(BuildContext context, int index) {
@@ -425,7 +403,6 @@ class _InGroupState extends State<InGroup> {
 
     /// Application top Bar
     final topBar = AppBar(
-      brightness: Brightness.dark,
       leading: leadingIcon(context),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
@@ -437,23 +414,28 @@ class _InGroupState extends State<InGroup> {
           )),
     );
 
-    return Scaffold(
-      backgroundColor: GlobalConstants.appBg,
-      resizeToAvoidBottomInset: false,
-      appBar: topBar,
-      body: OfflineBuilder(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) context.go('/poi-map');
+      },
+      child: Scaffold(
+        backgroundColor: GlobalConstants.appBg,
+        resizeToAvoidBottomInset: false,
+        appBar: topBar,
+        body: OfflineBuilder(
         connectivityBuilder: (
           context,
           connectivity,
           child,
         ) {
-          if (connectivity == ConnectivityResult.none) {
+          if (connectivity.isEmpty || connectivity.contains(ConnectivityResult.none)) {
             return Stack(children: <Widget>[
               child,
               BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                 child: Container(
-                    color: Colors.black.withOpacity(0),
+                    color: Colors.black.withValues(alpha: 0),
                     // child: child,
                     child: NetworkStatusMessage()),
               )
@@ -565,7 +547,7 @@ class _InGroupState extends State<InGroup> {
                                       value: (_isHidden > 0),
                                       onChanged: _isHiddenChanged,
                                       activeTrackColor: Colors.white,
-                                      activeColor: Color(0xffe6a04e),
+                                      activeThumbColor: Color(0xffe6a04e),
                                     )
                                   : Row(
                                       children: <Widget>[
@@ -618,7 +600,7 @@ class _InGroupState extends State<InGroup> {
                                       value: (_isLocked > 0),
                                       onChanged: _isLockedChanged,
                                       activeTrackColor: Colors.white,
-                                      activeColor: Color(0xffe6a04e),
+                                      activeThumbColor: Color(0xffe6a04e),
                                     )
                                   : Row(
                                       children: <Widget>[
@@ -754,8 +736,9 @@ class _InGroupState extends State<InGroup> {
           ],
         ),
       ),
-      key: _scaffoldKey,
-      drawer: DrawerPage(),
+        key: _scaffoldKey,
+        drawer: DrawerPage(),
+      ),
     );
   }
 
@@ -773,7 +756,7 @@ class _InGroupState extends State<InGroup> {
       dynamic response =
           await _apiProvider.get("/guild/${user.details.guildId}");
 
-      if (response["guilds"].isEmpty) {
+      if (response is! Map || !response.containsKey("guilds") || response["guilds"].isEmpty) {
         _user = user;
         _user.details.guildId = '0';
         await CustomInterceptors.setStoredCookies(
@@ -796,17 +779,10 @@ class _InGroupState extends State<InGroup> {
           _guildNameController.text = currentGuild.name;
         });
       }
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Error',
-          description: err.response?.data?["message"],
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
+    } on AppError catch (err) {
+      err.show(context);
+    } catch (err) {
+      debugPrint('_loadGuildData unexpected error: $err');
     }
 
     //log.d('--- currentGuild ---');
@@ -846,11 +822,12 @@ class _InGroupState extends State<InGroup> {
       //   try {
       //     await _apiProvider.uploadPicture('/emblem', 'emblemfile', 'guild_id',
       //         _image, int.parse(addGuild["guild_id"].toString()));
-      //   } on DioError catch (err) {
+      //   } on DioException catch (err) {
       //     log.e(err.response);
       //   }
       // }
 
+      if (!mounted) return;
       showDialog(
         context: context,
         builder: (context) => CustomDialog(
@@ -862,18 +839,10 @@ class _InGroupState extends State<InGroup> {
         ),
       );
       // _images.clear();
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Error',
-          description: err.response?.data["message"],
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
-      //log.e(err.response);
+    } on AppError catch (err) {
+      err.show(context);
+    } catch (err) {
+      debugPrint('_saveGuildDetails unexpected error: $err');
     }
   }
 
@@ -1058,6 +1027,7 @@ class _InGroupState extends State<InGroup> {
             GlobalConstants.apiHostUrl, _user.toMap());
       }
 
+      if (!mounted) return;
       showDialog(
         context: context,
         builder: (context) => CustomDialog(
@@ -1067,22 +1037,14 @@ class _InGroupState extends State<InGroup> {
           images: [],
           callback: () {
             Navigator.of(context).pop();
-            Navigator.of(context).pushNamed('/no-group');
+            context.go('/no-group');
           },
         ),
       );
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Error',
-          description: err.response?.data["message"],
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
-      //log.e(err.response);
+    } on AppError catch (err) {
+      err.show(context);
+    } catch (err) {
+      debugPrint('_deleteGuild unexpected error: $err');
     }
   }
 
@@ -1091,37 +1053,30 @@ class _InGroupState extends State<InGroup> {
       final response = await _apiProvider
           .delete("/membership/${currentGuild.id}/${_user.details.id}", {});
 
-      if (response["success"] == true) {
+      if (response is Map && response["success"] == true) {
         _user.details.guildId = '0';
         await CustomInterceptors.setStoredCookies(
             GlobalConstants.apiHostUrl, _user.toMap());
       }
 
+      if (!mounted) return;
       showDialog(
         context: context,
         builder: (context) => CustomDialog(
           title: AppLocalizations.of(context)!.translate('congrats'),
-          description: response["message"],
+          description: response is Map ? response["message"] : "Done",
           buttonText: "Okay",
           images: [],
           callback: () {
             Navigator.of(context).pop();
-            Navigator.of(context).pushNamed('/no-group');
+            context.go('/no-group');
           },
         ),
       );
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Error',
-          description: err.response?.data["message"],
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
-      //log.e(err.response);
+    } on AppError catch (err) {
+      err.show(context);
+    } catch (err) {
+      debugPrint('_unjoinGuild unexpected error: $err');
     }
   }
 }

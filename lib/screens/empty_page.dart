@@ -1,5 +1,4 @@
 ///
-import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:flutter/material.dart';
 // import 'package:logger/logger.dart';
 
@@ -24,19 +23,11 @@ class _EmptyPageState extends State<EmptyPage> {
   @override
   void initState() {
     super.initState();
-    BackButtonInterceptor.add(myInterceptor);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    Navigator.of(context).pop();
-    return true;
   }
 
   Widget build(BuildContext context) {

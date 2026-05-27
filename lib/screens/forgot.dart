@@ -1,13 +1,14 @@
 ///
 import 'dart:ui';
-import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-// import 'package:logger/logger.dart';
 import 'package:flutter_offline/flutter_offline.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:go_router/go_router.dart';
+
+// import 'package:logger/logger.dart';
 
 import '../app_localizations.dart';
+import '../models/app_error.dart';
 import '../providers/api_provider.dart';
 import '../shared/constants.dart';
 import '../widgets/custom_dialog.dart';
@@ -49,6 +50,7 @@ class _ForgotPageState extends State<ForgotPage> {
           await ApiProvider().get('/forgot?email=${_emailController.text}');
       String message = response['message'] ?? "Please check your email.";
 
+      if (!mounted) return;
       showDialog(
         context: context,
         builder: (context) => CustomDialog(
@@ -58,20 +60,14 @@ class _ForgotPageState extends State<ForgotPage> {
             images: [],
             callback: () {
               Navigator.of(context).pop();
-              Navigator.of(context).pushNamed('/login');
+              context.go('/login');
             }),
       );
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Forgot password',
-          description: err.response?.data["message"],
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
+    } on AppError catch (err) {
+      if (!mounted) return;
+      err.show(context, title: 'Forgot password');
+    } catch (err) {
+      debugPrint('sendResetEmail unexpected error: $err');
     }
   }
 
@@ -79,12 +75,10 @@ class _ForgotPageState extends State<ForgotPage> {
   void initState() {
     super.initState();
     populateEmail();
-    BackButtonInterceptor.add(myInterceptor);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
   }
 
@@ -93,12 +87,6 @@ class _ForgotPageState extends State<ForgotPage> {
     if (secureStorage.containsKey("email")) {
       _emailController.text = secureStorage["email"] ?? "";
     }
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    Navigator.of(context).pop();
-    return true;
   }
 
   Widget build(BuildContext context) {
@@ -163,13 +151,13 @@ class _ForgotPageState extends State<ForgotPage> {
           connectivity,
           child,
         ) {
-          if (connectivity == ConnectivityResult.none) {
+          if (connectivity.isEmpty || connectivity.contains(ConnectivityResult.none)) {
             return Stack(children: <Widget>[
               child,
               BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                 child: Container(
-                    color: Colors.black.withOpacity(0),
+                    color: Colors.black.withValues(alpha: 0),
                     // child: child,
                     child: NetworkStatusMessage()),
               )

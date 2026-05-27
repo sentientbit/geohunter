@@ -2,10 +2,8 @@ import 'dart:math';
 
 ///
 import 'dart:ui';
-import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_countdown_timer/current_remaining_time.dart';
 import 'package:flutter_countdown_timer/flutter_countdown_timer.dart';
 import 'package:flutter_offline/flutter_offline.dart';
@@ -17,7 +15,9 @@ import 'package:loading_overlay/loading_overlay.dart';
 
 ///
 import '../../app_localizations.dart';
+import '../../models/app_error.dart';
 import '../../models/dailyreward.dart';
+import '../../models/player_stats.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/stream_userdata.dart';
@@ -53,9 +53,6 @@ class _QuestLinePageState extends State<QuestLinePage> {
 
   final _apiProvider = ApiProvider();
 
-  /// Make sure back button is pressed twice
-  bool ifPop = false;
-
   bool _isLoading = true;
 
   ///
@@ -77,29 +74,11 @@ class _QuestLinePageState extends State<QuestLinePage> {
   void initState() {
     super.initState();
     _getPastRewards();
-    BackButtonInterceptor.add(myInterceptor,
-        name: widget.name, context: context);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    if (stopDefaultButtonEvent) return false;
-    if (ifPop) {
-      return false;
-    } else {
-      setState(() => ifPop = true);
-      if (_scaffoldKey != null) {
-        Navigator.of(context).pop();
-        Navigator.of(context).pushNamed(GlobalConstants.backButtonPage);
-      }
-    }
-    return true;
   }
 
   Widget countDownTimer(CurrentRemainingTime time) {
@@ -124,10 +103,6 @@ class _QuestLinePageState extends State<QuestLinePage> {
   }
 
   Widget _makeNextReward(BuildContext context) {
-    if (_nextReward == null) {
-      return SizedBox(width: 1);
-    }
-
     var blueprintImg = Image(
       image:
           AssetImage('assets/images/blueprints/${_nextReward.blueprint.img}'),
@@ -656,12 +631,16 @@ class _QuestLinePageState extends State<QuestLinePage> {
   Widget build(BuildContext context) {
     // final deviceSize = MediaQuery.of(context).size;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      //resizeToAvoidBottomPadding: false,
-      appBar: AppBar(
-        brightness: Brightness.dark,
-        leading: leadingIcon(context),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) context.go('/poi-map');
+      },
+      child: Scaffold(
+        backgroundColor: GlobalConstants.appBg,
+        //resizeToAvoidBottomPadding: false,
+        appBar: AppBar(
+          leading: leadingIcon(context),
         elevation: 0.1,
         backgroundColor: Colors.transparent,
         title: Text(
@@ -676,13 +655,13 @@ class _QuestLinePageState extends State<QuestLinePage> {
           connectivity,
           child,
         ) {
-          if (connectivity == ConnectivityResult.none) {
+          if (connectivity.isEmpty || connectivity.contains(ConnectivityResult.none)) {
             return Stack(children: <Widget>[
               child,
               BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                 child: Container(
-                    color: Colors.black.withOpacity(0),
+                    color: Colors.black.withValues(alpha: 0),
                     // child: child,
                     child: NetworkStatusMessage()),
               )
@@ -779,8 +758,9 @@ class _QuestLinePageState extends State<QuestLinePage> {
           ),
         ),
       ),
-      key: _scaffoldKey,
-      drawer: DrawerPage(),
+        key: _scaffoldKey,
+        drawer: DrawerPage(),
+      ),
     );
   }
 
@@ -788,11 +768,12 @@ class _QuestLinePageState extends State<QuestLinePage> {
     /// populate initial data from cookies
     _user = await ApiProvider().getStoredUser();
 
+    try {
     final response = await _apiProvider.get('/dailyrewards');
 
     var past = [];
     var secs = 0;
-    if (response.containsKey("success")) {
+    if (response is Map && response.containsKey("success")) {
       if (response["success"] == true) {
         if (response.containsKey("past_rewards")) {
           for (dynamic elem in response["past_rewards"]) {
@@ -810,17 +791,21 @@ class _QuestLinePageState extends State<QuestLinePage> {
         // update local data
         _user.details.coins =
             double.tryParse(response["coins"].toString()) ?? 0.0;
-        _user.details.guildId = response["guild"]["id"];
+        _user.details.guildId = (response["guild"]?["id"] ?? '0').toString();
         _user.details.mining = response["mining"];
         _user.details.xp = response["xp"];
-        _user.details.unread = response["unread"];
-        _user.details.attack = response["attack"];
-        _user.details.defense = response["defense"];
+        _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
+        _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
+        _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
         _user.details.daily = response["daily"];
-        _user.details.costs = response["costs"];
+        if (response.containsKey("settings")) {
+          _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
+        }
+        _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
 
         // update global data
         _userdata.updateUserData(
+          'quest',
           _user.details.coins,
           _user.details.mining,
           _user.details.guildId,
@@ -829,7 +814,7 @@ class _QuestLinePageState extends State<QuestLinePage> {
           _user.details.attack,
           _user.details.defense,
           _user.details.daily,
-          _user.details.music,
+          _user.details.settings,
           _user.details.costs,
         );
       }
@@ -841,6 +826,13 @@ class _QuestLinePageState extends State<QuestLinePage> {
       _pastRewards.clear();
       _pastRewards.addAll(past.toList());
     });
+    } on AppError catch (err) {
+      debugPrint(err.toString());
+      if (mounted) setState(() => _isLoading = false);
+    } catch (err) {
+      debugPrint('_getPastRewards unexpected error: $err');
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   ///
@@ -853,32 +845,22 @@ class _QuestLinePageState extends State<QuestLinePage> {
     dynamic response;
     try {
       response = await _apiProvider.post(
-        '/dailyrewards',
-        {
-          "day": day.toString(),
-          "blueprint_id": blueprintId,
-          "material_id": materialId,
-          "item_id": itemId
-        },
+        '/dailyrewards/$day/$blueprintId/$materialId/$itemId',
+        {},
       );
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Error',
-          description: 'Daily reward failed ${err.response?.data['message']}',
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
+    } on AppError catch (err) {
+      if (!mounted) return;
+      err.show(context, title: 'Daily Reward');
+      return;
+    } catch (err) {
+      debugPrint('_dailyReward unexpected error: $err');
       return;
     }
 
     // ignore: omit_local_variable_types
     List<Image> imagesArr = [];
 
-    if (response.containsKey("success")) {
+    if (response is Map && response.containsKey("success")) {
       if (response["success"] == true) {
         if (response["blueprints"].isNotEmpty) {
           for (dynamic value in response["blueprints"]) {
@@ -915,6 +897,7 @@ class _QuestLinePageState extends State<QuestLinePage> {
           key: "dailyrewardsIds",
         );
 
+        if (!mounted) return;
         showDialog(
           context: context,
           builder: (context) => CustomDialog(

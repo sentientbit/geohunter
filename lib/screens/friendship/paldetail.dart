@@ -1,7 +1,5 @@
 /// based on https://medium.com/@afegbua/this-is-the-second-part-of-the-beautiful-list-ui-and-detail-page-article-ecb43e203915
 import 'dart:async';
-import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:dio/dio.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
@@ -10,14 +8,15 @@ import 'package:percent_indicator/linear_percent_indicator.dart';
 
 ///
 import '../../fonts/rpg_awesome_icons.dart';
+import '../../models/app_error.dart';
 import '../../models/friends.dart';
+import '../../models/player_stats.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/stream_userdata.dart';
 import '../../screens/map/map_explore.dart' show PoiMap;
 import '../../shared/constants.dart';
 import '../../text_style.dart';
-import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
 
 //import '../app_localizations.dart';
@@ -39,7 +38,7 @@ class PalDetailPage extends StatefulWidget {
 
 ///
 class _PalDetailState extends State<PalDetailPage> {
-  TextEditingController _controller = new TextEditingController();
+  final _controller = TextEditingController();
 
   // Define the focus node. To manage the lifecycle, create the FocusNode in
   // the initState method, and clean it up in the dispose method.
@@ -97,7 +96,6 @@ class _PalDetailState extends State<PalDetailPage> {
     currentFriend = widget.friend;
     currentLevel = expToLevel(currentFriend.xp);
     nextExperienceLevel = levelToExp(currentLevel + 1);
-    BackButtonInterceptor.add(myInterceptor);
     getMessages(currentFriend.id);
     myFocusNode = FocusNode();
   }
@@ -106,15 +104,8 @@ class _PalDetailState extends State<PalDetailPage> {
   void dispose() {
     // Clean up the focus node when the Form is disposed.
     myFocusNode.dispose();
-    BackButtonInterceptor.remove(myInterceptor);
     poorManTimer?.cancel();
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    Navigator.of(context).pop();
-    return true;
   }
 
   Widget privacyWidget() {
@@ -186,7 +177,7 @@ class _PalDetailState extends State<PalDetailPage> {
           "$currentExperience / $nextExperienceLevel",
           style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.bold),
         ),
-        linearStrokeCap: LinearStrokeCap.roundAll,
+        
         backgroundColor: Colors.white,
         progressColor: color,
       ),
@@ -228,7 +219,7 @@ class _PalDetailState extends State<PalDetailPage> {
     var szWidth = MediaQuery.of(context).size.width;
 
     if (isNewMessage && firstTimeCraaw == true) {
-      FlameAudio.audioCache.play('sfx/raven_1.mp3');
+      FlameAudio.play('sfx/raven_1.mp3');
       firstTimeCraaw = false;
     }
 
@@ -238,16 +229,13 @@ class _PalDetailState extends State<PalDetailPage> {
 
     /// Application top Bar
     final topBar = AppBar(
-      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
           Icons.menu,
           // size: 32,
         ),
-        onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState?.openDrawer()
-            : Navigator.of(context).pop(),
+        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
@@ -592,17 +580,21 @@ class _PalDetailState extends State<PalDetailPage> {
           // update local data
           _user.details.coins =
               double.tryParse(response["coins"].toString()) ?? 0.0;
-          _user.details.guildId = response["guild"]["id"];
+          _user.details.guildId = response["guild"]["id"].toString();
           _user.details.mining = response["mining"];
           _user.details.xp = response["xp"];
-          _user.details.unread = response["unread"];
-          _user.details.attack = response["attack"];
-          _user.details.defense = response["defense"];
+          _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
+          _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
+          _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
           _user.details.daily = response["daily"];
-          _user.details.costs = response["costs"];
+          if (response.containsKey("settings")) {
+            _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
+          }
+          _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
 
           // update global data
           _userdata.updateUserData(
+            'paldetail',
             _user.details.coins,
             _user.details.mining,
             _user.details.guildId,
@@ -611,7 +603,7 @@ class _PalDetailState extends State<PalDetailPage> {
             _user.details.attack,
             _user.details.defense,
             _user.details.daily,
-            _user.details.music,
+            _user.details.settings,
             _user.details.costs,
           );
           ravenSound =
@@ -633,17 +625,10 @@ class _PalDetailState extends State<PalDetailPage> {
           });
         }
       }
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: "Error",
-          description: err.response?.data["message"],
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
+    } on AppError catch (err) {
+      err.show(context);
+    } catch (err) {
+      debugPrint('getMessages unexpected error: $err');
     }
   }
 
@@ -663,7 +648,7 @@ class _PalDetailState extends State<PalDetailPage> {
         },
       );
 
-      if (response.containsKey("success")) {
+      if (response is Map && response.containsKey("success")) {
         if (response["success"] == true) {
           setState(() {
             _controller.text = "";
@@ -678,17 +663,10 @@ class _PalDetailState extends State<PalDetailPage> {
           });
         }
       }
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: "Error",
-          description: err.response?.data["message"],
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
+    } on AppError catch (err) {
+      err.show(context);
+    } catch (err) {
+      debugPrint('sendMessage unexpected error: $err');
     }
   }
 }

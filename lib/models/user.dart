@@ -1,4 +1,4 @@
-// import 'package:logger/logger.dart';
+import 'player_stats.dart';
 
 ///
 class User {
@@ -71,10 +71,10 @@ class User {
         "coins": details.coins,
         "xp": details.xp,
         "unread": details.unread,
-        "attack": details.attack,
-        "defense": details.defense,
+        "attack": details.attack.toList(),
+        "defense": details.defense.toList(),
         "daily": details.daily,
-        "music": details.music,
+        "settings": details.settings.toList(),
       },
       "jwt": jwt
     };
@@ -130,6 +130,9 @@ class UserData {
   String id = "";
 
   ///
+  String traces = "";
+
+  ///
   String username = "";
 
   ///
@@ -177,26 +180,27 @@ class UserData {
   ///
   int xp = 0;
 
-  ///
-  List<dynamic> unread = [];
+  /// User IDs of senders with unread messages
+  List<int> unread = [];
 
   ///
-  List<dynamic> attack = [];
+  StatRange attack = const StatRange.zero();
 
   ///
-  List<dynamic> defense = [];
+  StatRange defense = const StatRange.zero();
 
   /// Elapsed number of seconds for the next Daily Reward
   int daily = 0;
 
-  /// Music default volume
-  int music = 100;
+  ///
+  PlayerSettings settings = const PlayerSettings(music: 0, notifications: 0);
 
   ///
-  List<dynamic> costs = [0.1, 0.1, 0.1];
+  ActionCosts costs = const ActionCosts.defaults();
 
   /// constructor
   UserData({
+    this.traces = "",
     this.username = "",
     this.sex = "0",
     this.locationPrivacy = "0",
@@ -205,17 +209,18 @@ class UserData {
     this.guildId = "",
     this.unnaprovedMembers = 0,
     this.xp = 0,
-    required this.unread,
-    required this.attack,
-    required this.defense,
-    required this.daily,
-    this.music = 100,
-    required this.costs,
+    this.unread = const [],
+    this.attack = const StatRange.zero(),
+    this.defense = const StatRange.zero(),
+    this.daily = 0,
+    this.settings = const PlayerSettings(music: 0, notifications: 0),
+    this.costs = const ActionCosts.defaults(),
   });
 
   ///
   factory UserData.blank() {
     return UserData(
+      traces: "",
       username: "Guest",
       sex: "0",
       locationPrivacy: "0",
@@ -224,25 +229,17 @@ class UserData {
       guildId: "",
       unnaprovedMembers: 0,
       xp: 0,
-      unread: [],
-      attack: [],
-      defense: [],
-      daily: 0,
-      music: 100,
-      costs: [0.1, 0.1, 0.1],
     );
   }
 
   ///
   UserData.fromJson(dynamic json) {
-    if (json == null) {
-      return;
-    }
+    if (json == null) return;
     id = json["user_id"].toString();
     username = json["username"];
-    guildId = json["guild"]["id"];
-    lat = double.parse(json["lat"].toString());
-    lng = double.parse(json["lng"].toString());
+    guildId = json["guild"]["id"].toString();
+    lat = double.tryParse(json["lat"].toString()) ?? 51.5;
+    lng = double.tryParse(json["lng"].toString()) ?? 0.0;
     picture = json["picture"]["thumbnail"];
     sex = json["sex"].toString();
     language = json["language"];
@@ -256,12 +253,12 @@ class UserData {
         ? int.parse(json["unapproved_members"].toString())
         : 0;
     xp = json["xp"] ?? 0;
-    unread = json["unread"] ?? [];
-    attack = json["attack"] ?? [];
-    defense = json["defense"] ?? [];
+    unread = ((json["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
+    attack = StatRange.fromList((json["attack"] ?? []) as List);
+    defense = StatRange.fromList((json["defense"] ?? []) as List);
     daily = json["daily"] ?? 0;
-    music = json["music"] ?? 100;
-    costs = json["costs"] ?? [0.1, 0.1, 0.1];
+    settings = PlayerSettings.fromList((json["settings"] ?? [0, 0, 0]) as List);
+    costs = ActionCosts.fromList((json["costs"] ?? [0.1, 0.1, 0.1]) as List);
   }
 
   ///
@@ -273,16 +270,16 @@ class UserData {
         'unnaprovedMembers': unnaprovedMembers,
         'xp': xp,
         'unread': unread,
-        'attack': attack,
-        'defense': defense,
+        'attack': attack.toList(),
+        'defense': defense.toList(),
         'daily': daily,
-        'music': music,
-        'costs': costs,
+        'settings': settings.toList(),
+        'costs': costs.toList(),
       };
 
   /// Override toString to have a beautiful log of student object
   @override
   String toString() {
-    return 'UserData({level: $level, coins: $coins, mining: $mining, daily: $daily, music: $music, costs: $costs})';
+    return 'UserData({level: $level, coins: $coins, mining: $mining, daily: $daily, settings: $settings, costs: $costs, unread: ${unread.length}})';
   }
 }

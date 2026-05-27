@@ -1,6 +1,6 @@
 ///
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:go_router/go_router.dart';
 
 ///
 import '../../app_localizations.dart';
@@ -12,7 +12,12 @@ import '../../widgets/drawer.dart';
 ///
 class LegendPage extends StatelessWidget {
   ///
-  User _user = User.blank();
+  final User _user;
+
+  ///
+  LegendPage({Key? key, User? user})
+      : _user = user ?? User.blank(),
+        super(key: key);
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -151,7 +156,6 @@ class LegendPage extends StatelessWidget {
 
     /// Application top Bar
     final topBar = AppBar(
-      brightness: Brightness.dark,
       leading: leadingIcon(context),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
@@ -259,7 +263,7 @@ class LegendPage extends StatelessWidget {
                       ),
                     ),
                     onPressed: () {
-                      Navigator.of(context).pushNamed('/terms');
+                      context.push('/terms');
                     },
                   )
                 ],

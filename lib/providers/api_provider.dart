@@ -1,11 +1,11 @@
 ///
 import 'dart:io';
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
 
 // import 'package:logger/logger.dart';
 
 ///
+import '../models/app_error.dart';
 import '../models/user.dart';
 import '../providers/custom_interceptors.dart';
 import '../shared/constants.dart';
@@ -19,8 +19,8 @@ class ApiProvider {
   /// or new Dio with a BaseOptions instance.
   static Dio api = Dio(BaseOptions(
     baseUrl: "https://${GlobalConstants.apiHostUrl}/api",
-    connectTimeout: 10000,
-    receiveTimeout: 9000,
+    connectTimeout: const Duration(seconds: 10),
+    receiveTimeout: const Duration(seconds: 9),
   ));
 
   ///
@@ -39,62 +39,76 @@ class ApiProvider {
   }
 
   /// Read
-  Future get(String endpoint, {dynamic headers}) async {
-    if (headers != null) {
-      api.options.headers = headers;
-    }
-    api.options.validateStatus = hookStatus;
-    final response = await api.get(endpoint);
-    //log.d(response);
+  Future<dynamic> get(String endpoint, {dynamic headers}) async {
     try {
+      final response = await api.get(
+        endpoint,
+        options: Options(headers: headers, validateStatus: hookStatus),
+      );
       return response.data;
+    } on DioException catch (e) {
+      throw AppError.fromDio(e);
     } on Exception catch (error, stacktrace) {
       print("Exception occured: $error stackTrace: $stacktrace");
-      return error;
+      return null;
     }
   }
 
   /// Create
-  Future post(String endpoint, dynamic body, {dynamic headers}) async {
-    if (headers != null) {
-      api.options.headers = headers;
-    }
-    var response = await api.post(endpoint, data: body);
+  Future<dynamic> post(String endpoint, dynamic body,
+      {dynamic headers}) async {
     try {
+      final response = await api.post(
+        endpoint,
+        data: body,
+        options: Options(headers: headers, validateStatus: hookStatus),
+      );
       return response.data;
+    } on DioException catch (e) {
+      throw AppError.fromDio(e);
     } on Exception catch (error, stacktrace) {
       print("Exception occured: $error stackTrace: $stacktrace");
-      return error;
+      return null;
     }
   }
 
   /// Update
-  Future put(String endpoint, dynamic body) async {
-    final response = await api.put(endpoint, data: body);
+  Future<dynamic> put(String endpoint, dynamic body) async {
     try {
+      final response = await api.put(
+        endpoint,
+        data: body,
+        options: Options(validateStatus: hookStatus),
+      );
       return response.data;
+    } on DioException catch (e) {
+      throw AppError.fromDio(e);
     } on Exception catch (error, stacktrace) {
       print("Exception occured: $error stackTrace: $stacktrace");
-      return error;
+      return null;
     }
   }
 
   ///
-  Future save(int isId, String endpoint, dynamic body) async {
-    if (isId == 0) {
-      return post(endpoint, body);
-    }
+  Future<dynamic> save(int isId, String endpoint, dynamic body) async {
+    if (isId == 0) return post(endpoint, body);
     return put(endpoint, body);
   }
 
   /// Delete
-  Future delete(String endpoint, dynamic body) async {
-    final response = await api.delete(endpoint, data: body);
+  Future<dynamic> delete(String endpoint, dynamic body) async {
     try {
+      final response = await api.delete(
+        endpoint,
+        data: body,
+        options: Options(validateStatus: hookStatus),
+      );
       return response.data;
+    } on DioException catch (e) {
+      throw AppError.fromDio(e);
     } on Exception catch (error, stacktrace) {
       print("Exception occured: $error stackTrace: $stacktrace");
-      return error;
+      return null;
     }
   }
 
@@ -124,27 +138,21 @@ class ApiProvider {
 
   ///
   Future updateProfilePicture(File image) async {
-    if (image == null) {
-      return;
-    }
-    Response response;
     try {
       final fileName = image.path.split('/').last;
       final formData = FormData.fromMap({
         "avatarfile":
             await MultipartFile.fromFile(image.path, filename: fileName),
       });
-      //api.options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
-
-      response = await api.post(
+      final response = await api.post(
         "https://${GlobalConstants.apiHostUrl}/api/avatar",
         data: formData,
+        options: Options(validateStatus: hookStatus),
       );
-      //print(response);
       return response.data;
     } on Exception catch (error, stacktrace) {
       print("Exception occured: $error stackTrace: $stacktrace");
-      return;
+      return null;
     }
   }
 
@@ -156,18 +164,15 @@ class ApiProvider {
         "landmarkfile":
             await MultipartFile.fromFile(image.path, filename: fileName),
       });
-      //api.options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
-
-      // ignore: omit_local_variable_types
-      Response response = await api.post(
+      final response = await api.post(
         "https://${GlobalConstants.apiHostUrl}/api$endpoint",
         data: formData,
+        options: Options(validateStatus: hookStatus),
       );
-
       return response.data;
     } on Exception catch (error, stacktrace) {
       print("Exception occured: $error stackTrace: $stacktrace");
-      return error;
+      return null;
     }
   }
 }

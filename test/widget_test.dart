@@ -1,4 +1,3 @@
-import 'dart:async' show Future;
 import 'dart:convert';
 // To perform an interaction with a widget in your test, use the WidgetTester
 // utility that Flutter provides. For example, you can send tap and scroll
@@ -30,10 +29,10 @@ import 'dart:convert';
 // }
 
 // flutter test
-import 'package:flutter_test/flutter_test.dart';
-import 'package:geohunter/shared/constants.dart';
 import 'package:encrypt/encrypt.dart' as enq;
+import 'package:flutter_test/flutter_test.dart';
 import 'package:geohunter/models/materialmodel.dart';
+import 'package:geohunter/shared/constants.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -76,13 +75,13 @@ void main() {
     final _debouncer = Debouncer(milliseconds: 10);
     var k = 0;
 
-    _debouncer.run(() => {k++});
-    _debouncer.run(() => {k++});
+    _debouncer.run(() => k++);
+    _debouncer.run(() => k++);
     await Future.delayed(Duration(milliseconds: 50));
-    _debouncer.run(() => {k++});
-    _debouncer.run(() => {k++});
-    _debouncer.run(() => {k++});
-    _debouncer.run(() => {k++});
+    _debouncer.run(() => k++);
+    _debouncer.run(() => k++);
+    _debouncer.run(() => k++);
+    _debouncer.run(() => k++);
     await Future.delayed(Duration(milliseconds: 50));
 
     expect(k, 2);

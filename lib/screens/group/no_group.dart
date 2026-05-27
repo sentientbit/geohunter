@@ -1,11 +1,11 @@
 ///
-import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:geohunter/models/guild.dart';
+import 'package:go_router/go_router.dart';
 //import 'package:logger/logger.dart';
 
 ///
+import '../../models/app_error.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/custom_interceptors.dart';
@@ -47,19 +47,11 @@ class _NoGroupState extends State<NoGroup> {
   void initState() {
     super.initState();
     _getUserDetails(context);
-    BackButtonInterceptor.add(myInterceptor);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    Navigator.of(context).pop();
-    return true;
   }
 
   Widget _makeCard(BuildContext context, int index) {
@@ -267,7 +259,7 @@ class _NoGroupState extends State<NoGroup> {
         side: BorderSide(width: 1, color: Colors.white),
       ),
       onPressed: () {
-        Navigator.of(context).pushReplacementNamed('/in-group');
+        context.go('/in-group');
       },
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -341,24 +333,28 @@ class _NoGroupState extends State<NoGroup> {
 
     /// Application top Bar
     final topBar = AppBar(
-      brightness: Brightness.dark,
       leading: leadingIcon(context),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
       title: Text("Guilds", style: Style.topBar),
     );
 
-    return Scaffold(
-      backgroundColor: GlobalConstants.appBg,
-      resizeToAvoidBottomInset: false,
-      appBar: topBar,
-      extendBodyBehindAppBar: true,
-      body: Stack(
-        children: <Widget>[
-          Container(
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/inn.jpg'),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) context.go('/poi-map');
+      },
+      child: Scaffold(
+        backgroundColor: GlobalConstants.appBg,
+        resizeToAvoidBottomInset: false,
+        appBar: topBar,
+        extendBodyBehindAppBar: true,
+        body: Stack(
+          children: <Widget>[
+            Container(
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/inn.jpg'),
                 fit: BoxFit.fill,
               ),
             ),
@@ -469,8 +465,9 @@ class _NoGroupState extends State<NoGroup> {
           ),
         ],
       ),
-      key: _scaffoldKey,
-      drawer: DrawerPage(),
+        key: _scaffoldKey,
+        drawer: DrawerPage(),
+      ),
     );
   }
 
@@ -480,7 +477,7 @@ class _NoGroupState extends State<NoGroup> {
       final response = await _apiProvider.get('/guilds');
 
       final guilds = [];
-      if (response.containsKey("success")) {
+      if (response is Map && response.containsKey("success")) {
         if (response["success"] == true) {
           for (dynamic elem in response["guilds"]) {
             guilds.add(
@@ -504,22 +501,20 @@ class _NoGroupState extends State<NoGroup> {
       setState(() {
         _guilds.addAll(guilds.toList());
       });
-    } on DioError catch (e) {
-      if (e.response != null) {
-        print(e.response?.data["message"]);
-      } else {
-        print(e.response?.statusCode);
-        print(e.message);
-      }
+    } on AppError catch (err) {
+      debugPrint(err.toString());
+    } catch (err) {
+      debugPrint('_getAllGuilds unexpected error: $err');
     }
   }
 
   void _getUserDetails(BuildContext context) async {
+    try {
     final response = await _apiProvider.get('/profile');
     final tmp =
         await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
 
-    if (response.containsKey("success")) {
+    if (response is Map && response.containsKey("success")) {
       if (response["success"] == true) {
         tmp["jwt"] = response["jwt"];
         tmp["user"] = response["user"];
@@ -543,5 +538,10 @@ class _NoGroupState extends State<NoGroup> {
     // }
 
     _getAllGuilds();
+    } on AppError catch (err) {
+      debugPrint(err.toString());
+    } catch (err) {
+      debugPrint('_getUserDetails unexpected error: $err');
+    }
   }
 }

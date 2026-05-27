@@ -9,7 +9,7 @@ import '../shared/constants.dart';
 ///
 class CustomInterceptors extends Interceptor {
   ///
-  final _cache = <Uri, Response>{};
+  //final _cache = <Uri, Response>{};
 
   /// to be used as prefix for all cookies
   static String prefix = 'c0K1e';
@@ -27,7 +27,9 @@ class CustomInterceptors extends Interceptor {
     // }
     final userDatastored = await getStoredCookies(GlobalConstants.apiHostUrl);
     if (options.path != "/login") {
-      options.headers["authorization"] = "Bearer ${userDatastored["jwt"]}";
+      final jwt = userDatastored["jwt"];
+      options.headers["authorization"] = "Bearer $jwt";
+      if (jwt == null) print("[WARN] JWT is null for ${options.path}");
     }
     print("[${options.method}] ${options.path}");
     super.onRequest(options, handler);
@@ -41,7 +43,7 @@ class CustomInterceptors extends Interceptor {
   }
 
   @override
-  void onError(DioError err, ErrorInterceptorHandler handler) {
+  void onError(DioException err, ErrorInterceptorHandler handler) {
     print("[${err.response?.statusCode}] ${err.requestOptions.path}");
     super.onError(err, handler);
   }

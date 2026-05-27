@@ -1,19 +1,19 @@
 /// based on https://medium.com/@afegbua/this-is-the-second-part-of-the-beautiful-list-ui-and-detail-page-article-ecb43e203915
-import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:dio/dio.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:geohunter/fonts/rpg_awesome_icons.dart';
 //import 'package:logger/logger.dart';
 
 ///
 import '../../app_localizations.dart';
+import '../../models/app_error.dart';
 import '../../models/item.dart';
+import '../../providers/api_provider.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
-import '../../providers/api_provider.dart';
 
 ///
 class ItemDetailPage extends StatefulWidget {
@@ -34,10 +34,11 @@ class ItemDetailPage extends StatefulWidget {
 class _ItemDetailState extends State<ItemDetailPage> {
   double _nrDisItems = 0;
   String _btnDisText = "0";
+  bool _isDeleting = false;
   String _description = "";
   String _blueprintImg = "";
   String _blueprintName = "";
-  final _misc = [];
+  final _misc = <String>[];
 
   // final Logger log = Logger(
   //     printer: PrettyPrinter(
@@ -53,19 +54,11 @@ class _ItemDetailState extends State<ItemDetailPage> {
   void initState() {
     super.initState();
     _getItemDetails(widget.item.id);
-    BackButtonInterceptor.add(myInterceptor);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    Navigator.of(context).pop();
-    return true;
   }
 
   Widget build(BuildContext context) {
@@ -77,16 +70,13 @@ class _ItemDetailState extends State<ItemDetailPage> {
 
     /// Application top Bar
     final topBar = AppBar(
-      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
           Icons.menu,
           // size: 32,
         ),
-        onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState?.openDrawer()
-            : Navigator.of(context).pop(),
+        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
@@ -195,7 +185,7 @@ class _ItemDetailState extends State<ItemDetailPage> {
           children: <Widget>[
             Icon(RPGAwesome.recycle, color: Color(0xffe6a04e)),
             Text(
-              " ${_btnDisText}",
+              " $_btnDisText",
               style: TextStyle(
                   color: Color(0xffe6a04e),
                   fontSize: 24,
@@ -225,7 +215,7 @@ class _ItemDetailState extends State<ItemDetailPage> {
                 ),
                 for (var misc in _misc)
                   Text(
-                    misc ?? "",
+                    misc,
                     style:
                         TextStyle(color: GlobalConstants.appFg, fontSize: 18.0),
                   ),
@@ -350,28 +340,31 @@ class _ItemDetailState extends State<ItemDetailPage> {
   }
 
   void _deleteItem(context, itemId) async {
+    if (_isDeleting) return;
     var nrItems = _nrDisItems.toInt();
 
     if (nrItems <= 0) {
       return;
     }
 
+    setState(() => _isDeleting = true);
+
     dynamic response;
     try {
       response = await _apiProvider.delete("/inventory/$itemId/$nrItems", {});
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Error',
-          description: err.response?.data['message'],
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
+    } on AppError catch (err) {
+      if (!mounted) return;
+      setState(() => _isDeleting = false);
+      err.show(context);
+      return;
+    } catch (err) {
+      debugPrint('_deleteItem unexpected error: $err');
+      if (mounted) setState(() => _isDeleting = false);
       return;
     }
+
+    if (!mounted) return;
+    setState(() => _isDeleting = false);
 
     //ignore: omit_local_variable_types
     List<Image> imagesArr = [];
@@ -394,7 +387,7 @@ class _ItemDetailState extends State<ItemDetailPage> {
     }
 
     if (response["success"] == true) {
-      FlameAudio.audioCache.play('sfx/break_1.mp3');
+      FlameAudio.play('sfx/break_1.mp3');
       showDialog(
         context: context,
         builder: (context) => CustomDialog(
@@ -404,7 +397,7 @@ class _ItemDetailState extends State<ItemDetailPage> {
           images: imagesArr,
           callback: () {
             Navigator.of(context).pop();
-            Navigator.of(context).pushReplacementNamed('/inventory');
+            context.go('/inventory');
           },
         ),
       );
@@ -415,25 +408,25 @@ class _ItemDetailState extends State<ItemDetailPage> {
     if (itemId <= 0) {
       return;
     }
+    try {
     final response = await _apiProvider.get('/itemdetails/$itemId');
 
-    //var props = [];
-    if (response.containsKey("success")) {
+    if (response is Map && response.containsKey("success")) {
       if (response["success"] == true) {
-        // for (var elem in response["misc"]) {
-        //   //TODO
-        //   iterable misc_html
-        //   props.add(elem);
-        // }
-        // log.d(props);
+        final miscMap = response["misc"] as Map<String, dynamic>;
         setState(() {
           _misc.clear();
-          //_misc.addAll(props);
+          _misc.addAll(miscMap.values.map((v) => v.toString()));
           _description = response["description"]["en"];
           _blueprintName = response["blueprint"]["name"];
           _blueprintImg = response["blueprint"]["img"];
         });
       }
+    }
+    } on AppError catch (err) {
+      debugPrint(err.toString());
+    } catch (err) {
+      debugPrint('_getItemDetails unexpected error: $err');
     }
   }
 }

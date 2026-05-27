@@ -2,17 +2,19 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
-import 'package:dio/dio.dart';
-import 'package:get_it/get_it.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:percent_indicator/percent_indicator.dart';
+import 'package:get_it/get_it.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:percent_indicator/percent_indicator.dart';
+import 'package:go_router/go_router.dart';
+
 // import 'package:logger/logger.dart';
 
 ///
 import '../app_localizations.dart';
+import '../models/app_error.dart';
 import '../fonts/rpg_awesome_icons.dart';
 import '../libraries/pk_skeleton.dart';
 import '../models/user.dart';
@@ -69,10 +71,6 @@ class _DrawerPageState extends State<DrawerPage> {
   }
 
   Widget dailyQuests() {
-    // for some reason we still get null from time to time
-    if (_user.details.daily == null) {
-      return SizedBox();
-    }
     if (_user.details.daily > GlobalConstants.dailyGiftFreq) {
       return Chip(
         backgroundColor: Colors.red,
@@ -181,9 +179,7 @@ class _DrawerPageState extends State<DrawerPage> {
                           GestureDetector(
                             onTap: () {
                               playClick();
-                              Navigator.of(context).pop();
-                              Navigator.of(context)
-                                  .pushReplacementNamed('/profile');
+                              context.go('/profile');
                             },
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,7 +216,7 @@ class _DrawerPageState extends State<DrawerPage> {
                                           fontSize: 12.0,
                                           fontWeight: FontWeight.bold),
                                     ),
-                                    linearStrokeCap: LinearStrokeCap.roundAll,
+                                    
                                     backgroundColor: Colors.white,
                                     progressColor: Colors.orange,
                                   ),
@@ -259,8 +255,7 @@ class _DrawerPageState extends State<DrawerPage> {
                       style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pushReplacementNamed('/profile');
+                    context.go('/profile');
                   },
                 ),
                 ListTile(
@@ -277,7 +272,7 @@ class _DrawerPageState extends State<DrawerPage> {
                     //     ? log.d("Already on map")
                     //     : Navigator.of(context).pop();
                     playClick();
-                    Navigator.of(context).pushReplacementNamed('/poi-map');
+                    context.go('/poi-map');
                   },
                 ),
                 Divider(
@@ -290,8 +285,7 @@ class _DrawerPageState extends State<DrawerPage> {
                   title: Text('Inventory', style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pushReplacementNamed('/inventory');
+                    context.go('/inventory');
                   },
                 ),
                 ListTile(
@@ -300,8 +294,7 @@ class _DrawerPageState extends State<DrawerPage> {
                   title: Text('Forge', style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pushReplacementNamed('/forge');
+                    context.go('/forge');
                   },
                 ),
                 ListTile(
@@ -320,8 +313,7 @@ class _DrawerPageState extends State<DrawerPage> {
                   ),
                   onTap: () {
                     playClick();
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pushReplacementNamed('/questline');
+                    context.go('/questline');
                   },
                 ),
                 ListTile(
@@ -332,8 +324,7 @@ class _DrawerPageState extends State<DrawerPage> {
                       style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pushReplacementNamed('/places');
+                    context.go('/places');
                   },
                 ),
                 ListTile(
@@ -352,13 +343,12 @@ class _DrawerPageState extends State<DrawerPage> {
                   ),
                   onTap: () {
                     playClick();
-                    Navigator.of(context).pop();
                     // ModalRoute.of(context).settings.name == "/poi-map"
                     //     // ? Navigator.of(context).pushNamed('/friends')
                     //     ? Navigator.of(context).pushNamed('/friends')
                     //     : Navigator.of(context)
                     //         .pushReplacementNamed('/friends');
-                    Navigator.of(context).pushReplacementNamed('/friends');
+                    context.go('/friends');
                   },
                 ),
                 ListTile(
@@ -374,8 +364,7 @@ class _DrawerPageState extends State<DrawerPage> {
                       await CustomInterceptors.setStoredCookies(
                           GlobalConstants.apiHostUrl, _user.toMap());
                     }
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pushReplacementNamed('/group');
+                    context.go('/group');
                   },
                 ),
                 Divider(
@@ -389,8 +378,7 @@ class _DrawerPageState extends State<DrawerPage> {
                   title: Text('Battle Training', style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pushReplacementNamed('/battle');
+                    context.go('/battle');
                   },
                 ),
                 ListTile(
@@ -400,8 +388,7 @@ class _DrawerPageState extends State<DrawerPage> {
                       style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pushReplacementNamed('/help');
+                    context.go('/help');
                   },
                 ),
                 ListTile(
@@ -410,8 +397,7 @@ class _DrawerPageState extends State<DrawerPage> {
                   title: Text("Settings", style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pushNamed('/settings');
+                    context.push('/settings');
                   },
                 ),
                 ListTile(
@@ -437,25 +423,26 @@ class _DrawerPageState extends State<DrawerPage> {
   }
 
   void playClick() {
-    FlameAudio.audioCache.play(
+    FlameAudio.play(
         'sfx/click_${(math.Random.secure().nextInt(3) + 1).toString()}.mp3');
   }
 
   ///
   Future getImage() async {
     final picker = ImagePicker();
-    PickedFile? pickedFile;
+    XFile? pickedFile;
     try {
       pickedFile =
-          await picker.getImage(source: ImageSource.gallery, imageQuality: 100);
+          await picker.pickImage(source: ImageSource.gallery, imageQuality: 100);
       setState(() {
         _loadingAvatar = true;
       });
-    } on DioError catch (e) {
-      //print(e.message);
+    } on AppError catch (_) {
       setState(() {
         _loadingAvatar = false;
       });
+    } catch (err) {
+      debugPrint('getImage unexpected error: $err');
     }
 
     if (pickedFile == null) {
@@ -498,7 +485,7 @@ class _DrawerPageState extends State<DrawerPage> {
   Future logout() async {
     await CustomInterceptors.deleteStoredCookies(GlobalConstants.apiHostUrl);
     await _storage.delete(key: 'api_key');
-    Navigator.of(context).pop();
-    Navigator.of(context).pushReplacementNamed('/login');
+    if (!mounted) return;
+    context.go('/login');
   }
 }

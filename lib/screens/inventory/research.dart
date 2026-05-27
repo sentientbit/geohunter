@@ -1,12 +1,14 @@
 /// based on https://medium.com/@afegbua/this-is-the-second-part-of-the-beautiful-list-ui-and-detail-page-article-ecb43e203915
-import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 //import 'package:logger/logger.dart';
 
 ///
 import '../../fonts/rpg_awesome_icons.dart';
+import '../../models/app_error.dart';
 import '../../models/blueprint.dart';
+import '../../models/player_stats.dart';
 import '../../models/research.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
@@ -39,9 +41,6 @@ class _ResearchState extends State<ResearchPage> {
   ///
   final ApiProvider _apiProvider = ApiProvider();
 
-  /// Make sure back button is pressed twice
-  bool ifPop = false;
-
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -55,29 +54,11 @@ class _ResearchState extends State<ResearchPage> {
   void initState() {
     super.initState();
     _getTechResearches();
-    BackButtonInterceptor.add(myInterceptor,
-        name: widget.name, context: context);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    if (stopDefaultButtonEvent) return false;
-    if (ifPop) {
-      return false;
-    } else {
-      setState(() => ifPop = true);
-      if (_scaffoldKey != null) {
-        Navigator.of(context).pop();
-        Navigator.of(context).pushNamed(GlobalConstants.backButtonPage);
-      }
-    }
-    return true;
   }
 
   Widget _makeListTile(BuildContext context, int index) {
@@ -274,7 +255,6 @@ class _ResearchState extends State<ResearchPage> {
 
     /// Application top Bar
     final topBar = AppBar(
-      brightness: Brightness.dark,
       leading: leadingIcon(context),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
@@ -291,16 +271,21 @@ class _ResearchState extends State<ResearchPage> {
       });
       if (index == 0) {
         //Navigator.of(context).pop();
-        Navigator.of(context).pushReplacementNamed('/forge');
+        context.go('/forge');
       }
       /* if index == 1 We are here: Research */
     }
 
-    return Scaffold(
-      backgroundColor: GlobalConstants.appBg,
-      appBar: topBar,
-      extendBodyBehindAppBar: true,
-      body: Stack(children: <Widget>[
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) context.go('/poi-map');
+      },
+      child: Scaffold(
+        backgroundColor: GlobalConstants.appBg,
+        appBar: topBar,
+        extendBodyBehindAppBar: true,
+        body: Stack(children: <Widget>[
         Container(
           decoration: BoxDecoration(
             image: DecorationImage(
@@ -320,50 +305,56 @@ class _ResearchState extends State<ResearchPage> {
           ),
         )
       ]),
-      key: _scaffoldKey,
-      drawer: DrawerPage(),
-      bottomNavigationBar: BottomNavigationBar(
-        onTap: onTapped,
-        currentIndex: currentTabIndex,
-        backgroundColor: GlobalConstants.appBg,
-        selectedItemColor: Color(0xfffeb53b),
-        selectedLabelStyle: TextStyle(fontSize: 14),
-        unselectedItemColor: Colors.white,
-        unselectedLabelStyle: TextStyle(fontSize: 14),
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(RPGAwesome.forging, color: Colors.white),
-            label: 'Forge',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.import_contacts, color: Colors.white),
-            label: 'Research',
-          ),
-        ],
+        key: _scaffoldKey,
+        drawer: DrawerPage(),
+        bottomNavigationBar: BottomNavigationBar(
+          onTap: onTapped,
+          currentIndex: currentTabIndex,
+          backgroundColor: GlobalConstants.appBg,
+          selectedItemColor: Color(0xfffeb53b),
+          selectedLabelStyle: TextStyle(fontSize: 14),
+          unselectedItemColor: Colors.white,
+          unselectedLabelStyle: TextStyle(fontSize: 14),
+          items: [
+            BottomNavigationBarItem(
+              icon: Icon(RPGAwesome.forging, color: Colors.white),
+              label: 'Forge',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.import_contacts, color: Colors.white),
+              label: 'Research',
+            ),
+          ],
+        ),
       ),
     );
   }
 
   void _getTechResearches() async {
+    try {
     final response = await _apiProvider.get('/research');
 
     var rscs = [];
     var blps = [];
-    if (response.containsKey("success")) {
+    if (response is Map && response.containsKey("success")) {
       if (response["success"] == true) {
         // update local data
         _user.details.coins =
             double.tryParse(response["coins"].toString()) ?? 0.0;
-        _user.details.guildId = response["guild"]["id"];
+        _user.details.guildId = response["guild"]["id"].toString();
         _user.details.mining = response["mining"];
         _user.details.xp = response["xp"];
-        _user.details.unread = response["unread"];
-        _user.details.attack = response["attack"];
-        _user.details.defense = response["defense"];
+        _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
+        _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
+        _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
         _user.details.daily = response["daily"];
-        _user.details.costs = response["costs"];
+        if (response.containsKey("settings")) {
+          _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
+        }
+        _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
 
         _userdata.updateUserData(
+          'research',
           _user.details.coins,
           _user.details.mining,
           _user.details.guildId,
@@ -372,7 +363,7 @@ class _ResearchState extends State<ResearchPage> {
           _user.details.attack,
           _user.details.defense,
           _user.details.daily,
-          _user.details.music,
+          _user.details.settings,
           _user.details.costs,
         );
 
@@ -397,5 +388,10 @@ class _ResearchState extends State<ResearchPage> {
       _blueprints.clear();
       _blueprints.addAll(blps.toList());
     });
+    } on AppError catch (err) {
+      debugPrint(err.toString());
+    } catch (err) {
+      debugPrint('_getInventoryData unexpected error: $err');
+    }
   }
 }

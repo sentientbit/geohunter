@@ -1,27 +1,26 @@
 ///
-import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
-
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 ///
+import '../../models/app_error.dart';
 import '../../models/materialmodel.dart';
+import '../../providers/api_provider.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
-import '../../providers/api_provider.dart';
 
 //import '../app_localizations.dart';
 
 ///
 class MaterialSelectPage extends StatefulWidget {
   ///
-  int blueprintId = 0;
+  final int blueprintId;
 
   ///
-  int placement = 0;
+  final int placement;
 
   ///
-  int mat0 = 0;
+  final int mat0;
 
   ///
   MaterialSelectPage({
@@ -53,19 +52,11 @@ class _MaterialSelectState extends State<MaterialSelectPage> {
   void initState() {
     super.initState();
     _getMaterials();
-    BackButtonInterceptor.add(myInterceptor);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    Navigator.of(context).pop();
-    return true;
   }
 
   Widget _makeCard(BuildContext context, int index) {
@@ -148,16 +139,13 @@ class _MaterialSelectState extends State<MaterialSelectPage> {
   Widget build(BuildContext context) {
     /// Application top Bar
     final topBar = AppBar(
-      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
           Icons.menu,
           // size: 32,
         ),
-        onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState?.openDrawer()
-            : Navigator.of(context).pop(),
+        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
@@ -165,9 +153,7 @@ class _MaterialSelectState extends State<MaterialSelectPage> {
       actions: <Widget>[
         IconButton(
           icon: Icon(Icons.arrow_back),
-          onPressed: () async {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context, false),
         )
       ],
     );
@@ -201,26 +187,32 @@ class _MaterialSelectState extends State<MaterialSelectPage> {
   }
 
   void _getMaterials() async {
-    final response = await _apiProvider
-        .get('/forge/${widget.blueprintId}/${widget.mat0.toString()}');
+    try {
+      final response = await _apiProvider
+          .get('/forge/${widget.blueprintId}/${widget.mat0.toString()}');
 
-    var tmp = [];
-    if (response.containsKey("success")) {
-      if (response["success"] == true) {
-        if (response.containsKey("materials")) {
-          for (dynamic elem in response["materials"]) {
-            final mat = Materialmodel.fromJson(elem);
-            if (mat.nr > 0) {
-              tmp.add(mat);
+      var tmp = [];
+      if (response is Map && response.containsKey("success")) {
+        if (response["success"] == true) {
+          if (response.containsKey("materials")) {
+            for (dynamic elem in response["materials"]) {
+              final mat = Materialmodel.fromJson(elem);
+              if (mat.nr > 0) {
+                tmp.add(mat);
+              }
             }
           }
         }
       }
+      setState(() {
+        _materials.clear();
+        _materials.addAll(tmp.toList());
+      });
+    } on AppError catch (err) {
+      debugPrint(err.toString());
+    } catch (err) {
+      debugPrint('_getMaterials unexpected error: $err');
     }
-    setState(() {
-      _materials.clear();
-      _materials.addAll(tmp.toList());
-    });
   }
 
   /// Wear the item and get back
@@ -239,12 +231,6 @@ class _MaterialSelectState extends State<MaterialSelectPage> {
       value: matName,
     );
 
-    setState(() {
-      _materials.clear();
-    });
-
-    Navigator.pop(context);
-    Navigator.pop(context);
-    Navigator.of(context).pushNamed('/forge');
+    if (mounted) Navigator.pop(context, true);
   }
 }

@@ -12,9 +12,7 @@ import 'package:geohunter/models/user.dart';
 class LtLn {
   ///
   LtLn(double lat, double lng)
-      : assert(lat != null),
-        assert(lng != null),
-        _latitude = (lat < -90.0 ? -90.0 : (90.0 < lat ? 90.0 : lat)),
+      : _latitude = (lat < -90.0 ? -90.0 : (90.0 < lat ? 90.0 : lat)),
         _longitude = (lng + 180.0) % 360.0 - 180.0;
 
   ///
@@ -45,7 +43,7 @@ class GlobalConstants {
   static const String appNamespace = "com.apsoni.geocraft";
 
   ///
-  static const String appVersion = "1.1.76";
+  static const String appVersion = "1.1.79";
 
   ///
 
@@ -367,9 +365,6 @@ class SunCalc {
 
   ///
   static bool isDaytime(DateTime datenow, DateTime sunrise, DateTime sunset) {
-    if (datenow == null || sunrise == null || sunset == null) {
-      return false;
-    }
     if (sunrise.compareTo(datenow) < 0 && sunset.compareTo(datenow) > 0) {
       return true;
     }
@@ -644,7 +639,7 @@ Color colorRarity(int rarity) {
     return Color(0xff0da3d8);
   } else if (rarity == 3) {
     // Epic
-    return Color(0xffaa66d8);
+    return Color(0xff9e00d8);
   } else if (rarity == 4) {
     // Legendary
     return Color(0xfffeb53b);

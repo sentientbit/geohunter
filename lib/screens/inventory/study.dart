@@ -1,14 +1,15 @@
 ///
-import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 
 //import 'package:logger/logger.dart';
 
 ///
 import '../../app_localizations.dart';
+import '../../models/app_error.dart';
 import '../../fonts/rpg_awesome_icons.dart';
+import '../../models/player_stats.dart';
 import '../../models/research.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
@@ -27,7 +28,7 @@ class StudyDetailPage extends StatefulWidget {
   final Research research;
 
   ///
-  List<dynamic> blueprints;
+  final List<dynamic> blueprints;
 
   ///
   StudyDetailPage({
@@ -64,9 +65,6 @@ class _StudyDetailState extends State<StudyDetailPage> {
   ///
   final ApiProvider _apiProvider = ApiProvider();
 
-  /// Make sure back button is pressed twice
-  bool ifPop = false;
-
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -96,29 +94,11 @@ class _StudyDetailState extends State<StudyDetailPage> {
 
     _blueprintImg = widget.research.blueprint.img;
     _blueprintName = widget.research.blueprint.name;
-    BackButtonInterceptor.add(myInterceptor,
-        name: widget.name, context: context);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    if (stopDefaultButtonEvent) return false;
-    if (ifPop) {
-      return false;
-    } else {
-      setState(() => ifPop = true);
-      if (_scaffoldKey != null) {
-        Navigator.of(context).pop();
-        Navigator.of(context).pushNamed(GlobalConstants.backButtonPage);
-      }
-    }
-    return true;
   }
 
   Widget build(BuildContext context) {
@@ -128,16 +108,13 @@ class _StudyDetailState extends State<StudyDetailPage> {
 
     /// Application top Bar
     final topBar = AppBar(
-      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
           Icons.menu,
           // size: 32,
         ),
-        onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState?.openDrawer()
-            : Navigator.of(context).pop(),
+        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
@@ -199,7 +176,7 @@ class _StudyDetailState extends State<StudyDetailPage> {
                     style:
                         TextStyle(fontSize: 12.0, fontWeight: FontWeight.bold),
                   ),
-                  linearStrokeCap: LinearStrokeCap.roundAll,
+                  
                   backgroundColor: Colors.white,
                   progressColor: Colors.orange,
                 ),
@@ -269,7 +246,7 @@ class _StudyDetailState extends State<StudyDetailPage> {
           children: <Widget>[
             Icon(RPGAwesome.book, color: Color(0xffe6a04e)),
             Text(
-              " ${_btnDisText}",
+              " $_btnDisText",
               style: TextStyle(
                   color: Color(0xffe6a04e),
                   fontSize: 24,
@@ -332,11 +309,14 @@ class _StudyDetailState extends State<StudyDetailPage> {
                       height: 80.0,
                       width: 80.0,
                     ),
-                    Text(
-                      "${(_nrInvBlueprints * _user.details.costs[1]).toString()} Coins needed",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
+                    Flexible(
+                      child: Text(
+                        "${(_nrInvBlueprints * _user.details.costs.research).toStringAsFixed(2)} Coins needed",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -376,7 +356,7 @@ class _StudyDetailState extends State<StudyDetailPage> {
                               ),
                             ),
                           ),
-                          researchButton,
+                          Flexible(child: researchButton),
                         ],
                       )
                     : Column(
@@ -399,11 +379,16 @@ class _StudyDetailState extends State<StudyDetailPage> {
       ],
     );
 
-    return Scaffold(
-      backgroundColor: GlobalConstants.appBg,
-      appBar: topBar,
-      extendBodyBehindAppBar: true,
-      body: Stack(children: <Widget>[
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) context.go('/poi-map');
+      },
+      child: Scaffold(
+        backgroundColor: GlobalConstants.appBg,
+        appBar: topBar,
+        extendBodyBehindAppBar: true,
+        body: Stack(children: <Widget>[
         Container(
           decoration: BoxDecoration(
             image: DecorationImage(
@@ -433,8 +418,9 @@ class _StudyDetailState extends State<StudyDetailPage> {
           ),
         ),
       ]),
-      key: _scaffoldKey,
-      drawer: DrawerPage(),
+        key: _scaffoldKey,
+        drawer: DrawerPage(),
+      ),
     );
   }
 
@@ -451,34 +437,33 @@ class _StudyDetailState extends State<StudyDetailPage> {
     dynamic response;
     try {
       response = await _apiProvider.post("/research/$researchId/$nrBlp", {});
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Error',
-          description: err.response?.data["message"],
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
+    } on AppError catch (err) {
+      if (!mounted) return;
+      err.show(context);
+      return;
+    } catch (err) {
+      debugPrint('_studyResearch unexpected error: $err');
       return;
     }
-    if (response.containsKey("success")) {
+    if (response is Map && response.containsKey("success")) {
       if (response["success"] == true) {
         // update local data
         _user.details.coins =
             double.tryParse(response["coins"].toString()) ?? 0.0;
-        _user.details.guildId = response["guild"]["id"];
+        _user.details.guildId = response["guild"]["id"].toString();
         _user.details.mining = response["mining"];
         _user.details.xp = response["xp"];
-        _user.details.unread = response["unread"];
-        _user.details.attack = response["attack"];
-        _user.details.defense = response["defense"];
+        _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
+        _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
+        _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
         _user.details.daily = response["daily"];
-        _user.details.costs = response["costs"];
+        if (response.containsKey("settings")) {
+          _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
+        }
+        _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
 
         _userdata.updateUserData(
+          'study',
           _user.details.coins,
           _user.details.mining,
           _user.details.guildId,
@@ -487,10 +472,11 @@ class _StudyDetailState extends State<StudyDetailPage> {
           _user.details.attack,
           _user.details.defense,
           _user.details.daily,
-          _user.details.music,
+          _user.details.settings,
           _user.details.costs,
         );
 
+        if (!mounted) return;
         showDialog(
           context: context,
           builder: (context) => CustomDialog(
@@ -500,7 +486,7 @@ class _StudyDetailState extends State<StudyDetailPage> {
             images: [],
             callback: () {
               Navigator.of(context).pop();
-              Navigator.of(context).pushNamed('/research');
+              context.go('/research');
             },
           ),
         );

@@ -1,9 +1,7 @@
 ///
 import 'dart:ui';
-import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_offline/flutter_offline.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 
@@ -11,8 +9,10 @@ import 'package:percent_indicator/linear_percent_indicator.dart';
 
 ///
 import '../../app_localizations.dart';
+import '../../models/app_error.dart';
 import '../../fonts/rpg_awesome_icons.dart';
 import '../../models/item.dart';
+import '../../models/player_stats.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/custom_interceptors.dart';
@@ -44,9 +44,6 @@ class _ProfilePageState extends State<ProfilePage> {
   final ApiProvider _apiProvider = ApiProvider();
 
   ImageProvider _avatar = AssetImage("assets/images/avatars/default01.jpg");
-
-  /// Make sure back button is pressed twice
-  bool ifPop = false;
 
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -83,29 +80,11 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _getUserDetails();
-    BackButtonInterceptor.add(myInterceptor,
-        name: widget.name, context: context);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    if (stopDefaultButtonEvent) return false;
-    if (ifPop) {
-      return false;
-    } else {
-      setState(() => ifPop = true);
-      if (_scaffoldKey != null) {
-        Navigator.of(context).pop();
-        Navigator.of(context).pushNamed(GlobalConstants.backButtonPage);
-      }
-    }
-    return true;
   }
 
   bool isValidGender(String input) {
@@ -226,13 +205,14 @@ class _ProfilePageState extends State<ProfilePage> {
     var rarity = (eqp.id > 0) ? (int.tryParse(eqp.rarity.toString()) ?? 0) : 0;
 
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        final changed = await Navigator.push<bool>(
           context,
           MaterialPageRoute(
             builder: (context) => EquipmentPage(placement: index, item: eqp),
           ),
         );
+        if ((changed == true) && mounted) _getUserDetails();
       },
       child: Container(
         height: (szWidth - 60) / 3,
@@ -296,7 +276,7 @@ class _ProfilePageState extends State<ProfilePage> {
           "${currentExperience.toString()} / ${nextExperienceLevel.toString()}",
           style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.bold),
         ),
-        linearStrokeCap: LinearStrokeCap.roundAll,
+        
         backgroundColor: Colors.white,
         progressColor: color,
       ),
@@ -377,7 +357,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
     /// Application top Bar
     final topBar = AppBar(
-      brightness: Brightness.dark,
       leading: leadingIcon(context),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
@@ -463,24 +442,29 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
 
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      backgroundColor: GlobalConstants.appBg,
-      appBar: topBar,
-      extendBodyBehindAppBar: true,
-      body: OfflineBuilder(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) context.go('/poi-map');
+      },
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        backgroundColor: GlobalConstants.appBg,
+        appBar: topBar,
+        extendBodyBehindAppBar: true,
+        body: OfflineBuilder(
         connectivityBuilder: (
           context,
           connectivity,
           child,
         ) {
-          if (connectivity == ConnectivityResult.none) {
+          if (connectivity.isEmpty || connectivity.contains(ConnectivityResult.none)) {
             return Stack(children: <Widget>[
               child,
               BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                 child: Container(
-                    color: Colors.black.withOpacity(0),
+                    color: Colors.black.withValues(alpha: 0),
                     // child: child,
                     child: NetworkStatusMessage()),
               )
@@ -608,8 +592,8 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ),
                             ProfileInfoCard(
-                              firstText: (_user.details.attack.length > 1)
-                                  ? "${_user.details.attack[0]} - ${_user.details.attack[1]}"
+                              firstText: (_user.details.attack.max > 0)
+                                  ? "${_user.details.attack.min} - ${_user.details.attack.max}"
                                   : "0",
                               secondText: "Attack",
                               hasImage: false,
@@ -621,8 +605,8 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ),
                             ProfileInfoCard(
-                              firstText: (_user.details.defense.length > 1)
-                                  ? "${_user.details.defense[0]} - ${_user.details.defense[1]}"
+                              firstText: (_user.details.defense.max > 0)
+                                  ? "${_user.details.defense.min} - ${_user.details.defense.max}"
                                   : "0",
                               secondText: "Defense",
                               hasImage: false,
@@ -1021,8 +1005,9 @@ class _ProfilePageState extends State<ProfilePage> {
           ],
         ),
       ),
-      key: _scaffoldKey,
-      drawer: DrawerPage(),
+        key: _scaffoldKey,
+        drawer: DrawerPage(),
+      ),
     );
   }
 
@@ -1076,19 +1061,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
       // Navigator.of(context).pushNamed('/poi-list');
       // log.d(body);
-    } on DioError catch (err) {
-      showDialog<void>(
-        context: context,
-        builder: (context) {
-          return CustomDialog(
-            title: 'Error',
-            description: err.response?.data["message"],
-            buttonText: 'Okay',
-            images: [],
-            callback: () {},
-          );
-        },
-      );
+    } on AppError catch (err) {
+      err.show(context);
+    } catch (err) {
+      debugPrint('updateProfile unexpected error: $err');
     }
   }
 
@@ -1100,17 +1076,11 @@ class _ProfilePageState extends State<ProfilePage> {
     dynamic response;
     try {
       response = await _apiProvider.get("/equipment");
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Error',
-          description: err.response?.data["message"],
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
+    } on AppError catch (err) {
+      err.show(context);
+      return;
+    } catch (err) {
+      debugPrint('_getUserDetails unexpected error: $err');
       return;
     }
 
@@ -1131,19 +1101,23 @@ class _ProfilePageState extends State<ProfilePage> {
 
     // update local data
     _user.details.coins = double.tryParse(response["coins"].toString()) ?? 0.0;
-    _user.details.guildId = response["guild"]["id"];
+    _user.details.guildId = response["guild"]["id"].toString();
     _user.details.mining = response["mining"];
     _user.details.xp = response["xp"];
-    _user.details.unread = response["unread"];
-    _user.details.attack = response["attack"];
-    _user.details.defense = response["defense"];
+    _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
+    _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
+    _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
     _user.details.daily = response["daily"];
-    _user.details.costs = response["costs"];
+    if (response is Map && response.containsKey("settings")) {
+      _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
+    }
+    _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
 
     //log.d(response);
 
     // update global data
     _userdata.updateUserData(
+      'profile',
       _user.details.coins,
       _user.details.mining,
       _user.details.guildId,
@@ -1152,7 +1126,7 @@ class _ProfilePageState extends State<ProfilePage> {
       _user.details.attack,
       _user.details.defense,
       _user.details.daily,
-      _user.details.music,
+      _user.details.settings,
       _user.details.costs,
     );
 

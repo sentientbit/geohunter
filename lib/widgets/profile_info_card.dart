@@ -8,12 +8,22 @@ import '../shared/constants.dart';
 ///
 class ProfileInfoCard extends StatelessWidget {
   ///
-  String firstText = "";
-  String secondText = "";
-  bool hasImage = false;
-  String imagePath = "";
-  bool hasIcon = false;
-  Icon iconResource = Icon(Icons.ac_unit);
+  final String firstText;
+
+  ///
+  final String secondText;
+
+  ///
+  final bool hasImage;
+
+  ///
+  final String imagePath;
+
+  ///
+  final bool hasIcon;
+
+  ///
+  final Icon iconResource;
 
   ///
   ProfileInfoCard({

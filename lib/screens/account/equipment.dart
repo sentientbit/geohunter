@@ -1,8 +1,8 @@
 ///
-import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:flutter/material.dart';
 
 ///
+import '../../models/app_error.dart';
 import '../../models/item.dart';
 import '../../providers/api_provider.dart';
 import '../../shared/constants.dart';
@@ -39,38 +39,30 @@ class _EquipmentState extends State<EquipmentPage> {
   ///
   final _items = [];
 
-  List<String> _itemTypes = [
-    "1",
-    "2",
-    "3",
-    "4.13.14.16",
-    "5",
-    "6.15",
-    "7",
-    "8",
-    "9",
-    "10",
-    "11",
-    "12"
+  final _itemTypes = <List<int>>[
+    [1],
+    [2],
+    [3],
+    [4, 13, 14, 16],
+    [5],
+    [6, 15],
+    [7],
+    [8],
+    [9],
+    [10],
+    [11],
+    [12],
   ];
 
   @override
   void initState() {
     super.initState();
     _getInventoryItems(_itemTypes[widget.placement]);
-    BackButtonInterceptor.add(myInterceptor);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    Navigator.of(context).pop();
-    return true;
   }
 
   Widget _makeCard(BuildContext context, int index) {
@@ -154,16 +146,13 @@ class _EquipmentState extends State<EquipmentPage> {
   Widget build(BuildContext context) {
     /// Application top Bar
     final topBar = AppBar(
-      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
           Icons.menu,
           // size: 32,
         ),
-        onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState?.openDrawer()
-            : Navigator.of(context).pop(),
+        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
@@ -172,7 +161,7 @@ class _EquipmentState extends State<EquipmentPage> {
         IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pop(context);
+            Navigator.pop(context, false);
           },
         )
       ],
@@ -271,51 +260,64 @@ class _EquipmentState extends State<EquipmentPage> {
     );
   }
 
-  void _getInventoryItems(String types) async {
-    final response = await _apiProvider.get('/inventory/$types');
+  void _getInventoryItems(List<int> types) async {
+    try {
+      final response = await _apiProvider.post('/inventory', {"types": types});
 
-    var tmp = [];
-    if (response.containsKey("success")) {
-      if (response["success"] == true) {
-        if (response.containsKey("items")) {
-          for (dynamic elem in response["items"]) {
-            final itm = Item.fromJson(elem);
-            tmp.add(itm);
+      var tmp = [];
+      if (response is Map && response.containsKey("success")) {
+        if (response["success"] == true) {
+          if (response.containsKey("items")) {
+            for (dynamic elem in response["items"]) {
+              final itm = Item.fromJson(elem);
+              tmp.add(itm);
+            }
           }
         }
       }
+      if (!mounted) return;
+      setState(() {
+        _items.clear();
+        _items.addAll(tmp.toList());
+      });
+    } on AppError catch (err) {
+      debugPrint(err.toString());
+    } catch (err) {
+      debugPrint('_getInventoryItems unexpected error: $err');
     }
-    setState(() {
-      _items.clear();
-      _items.addAll(tmp.toList());
-    });
   }
 
   /// Wear the item and get back
   void _wearItem(BuildContext context, int itemId) async {
-    final response = await _apiProvider.post('/equipment/$itemId', {});
-    if (response.containsKey("success")) {
-      if (response["success"] == true) {
-        _items.clear();
-        Navigator.pop(context);
-        Navigator.pop(context);
-        Navigator.of(context).pushNamed('/profile');
+    try {
+      final response = await _apiProvider.post('/equipment/$itemId', {});
+      if (response is Map && response.containsKey("success")) {
+        if (response["success"] == true) {
+          if (mounted) Navigator.pop(context, true);
+        }
       }
+    } on AppError catch (err) {
+      debugPrint(err.toString());
+    } catch (err) {
+      debugPrint('_wearItem unexpected error: $err');
     }
   }
 
   void _unequipItem(BuildContext context, int placement) async {
     // Our index start with 0 sa we add 1
     var slot = placement + 1;
-    final response = await _apiProvider.delete('/equipment/$slot', {});
-    //print(response['message']);
-    if (response.containsKey("success")) {
-      if (response["success"] == true) {
-        _items.clear();
-        Navigator.pop(context);
-        Navigator.pop(context);
-        Navigator.of(context).pushNamed('/profile');
+    try {
+      final response = await _apiProvider.delete('/equipment/$slot', {});
+      //print(response['message']);
+      if (response is Map && response.containsKey("success")) {
+        if (response["success"] == true) {
+          if (mounted) Navigator.pop(context, true);
+        }
       }
+    } on AppError catch (err) {
+      debugPrint(err.toString());
+    } catch (err) {
+      debugPrint('_unequipItem unexpected error: $err');
     }
   }
 }

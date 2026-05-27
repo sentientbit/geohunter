@@ -3,25 +3,21 @@ import 'dart:async';
 import 'dart:core';
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:ui';
-import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:geohunter/fonts/rpg_awesome_icons.dart';
 import 'package:get_it/get_it.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:image_picker/image_picker.dart';
 //import 'package:user_location/user_location.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
 
 //import 'package:logger/logger.dart';
 
 ///
 import '../../app_localizations.dart';
+import '../../models/app_error.dart';
 import '../../models/location.dart';
 import '../../models/mine.dart';
 import '../../models/user.dart';
@@ -47,13 +43,13 @@ class PoiMap extends StatefulWidget {
   final String name = "poi-map";
 
   ///
-  bool goToRemoteLocation = false;
+  final bool goToRemoteLocation;
 
   ///
-  double latitude = 51.5;
+  final double latitude;
 
   ///
-  double longitude = 0.0;
+  final double longitude;
 
   ///
   PoiMap({
@@ -72,10 +68,6 @@ class _PoiMapState extends State<PoiMap>
   // final Logger log = Logger(
   //     printer: PrettyPrinter(
   //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
-
-  ///
-  String _mapStyle = '';
-  String _mapStyleAubergine = '';
 
   MapController mapController = MapController();
 
@@ -104,13 +96,15 @@ class _PoiMapState extends State<PoiMap>
   /// map style type is 0 for day 1 for night 2 for automatic gps
   int _mapStyleState = 2;
 
-  /// Make sure back button is pressed twice
-  bool ifPop = false;
-
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   final _textFieldController = TextEditingController();
+
+  // Mutable copies of widget params (widget fields are final/immutable)
+  late bool _goToRemoteLocation;
+  late double _remoteLat;
+  late double _remoteLng;
 
   ///
   bool _isOnline = true;
@@ -130,7 +124,6 @@ class _PoiMapState extends State<PoiMap>
   //int _screenRebuilded = 1;
   final List<File> _images = [];
   final List<String> _thumbnails = [];
-  final _storage = FlutterSecureStorage();
 
   Mine _mine = Mine.blank();
   int _mineIdx = -1;
@@ -150,41 +143,35 @@ class _PoiMapState extends State<PoiMap>
       return;
     }
 
-    var url = '';
-    if (_displayWindowCenter != null) {
-      var d = 39136000 *
-          math.cos(location.longitude * oneRad) /
-          math.pow(2, _mapZoom);
-      if (d > 10000000) {
-        d = 10000000;
-        /* cap to 10km */
-      }
-
-      final neLat = _displayWindowCenter.latitude +
-          ((d / terraRadius) * (180.0 / math.pi)); /* max lat */
-      final swLat = _displayWindowCenter.latitude -
-          ((d / terraRadius) * (180.0 / math.pi)); /* min lat */
-
-      final neLng = _displayWindowCenter.longitude +
-          radianToDeg(math.asin(d / terraRadius) /
-              math.cos(
-                  degToRadian(_displayWindowCenter.latitude))); /* max lng */
-      final swLng = _displayWindowCenter.longitude -
-          radianToDeg(math.asin(d / terraRadius) /
-              math.cos(
-                  degToRadian(_displayWindowCenter.latitude))); /* min lng */
-      // await _storage.write(key: 'swLng', value: swLng.toString());
-      // await _storage.write(key: 'swLat', value: swLat.toString());
-      // await _storage.write(key: 'neLng', value: neLng.toString());
-      // await _storage.write(key: 'neLat', value: neLat.toString());
-      // await _storage.write(key: 'mapZoom', value: _mapZoom.toString());
-
-      url =
-          '/radar?cntr_lng=${location.longitude.toString()}&cntr_lat=${location.latitude.toString()}&zoom=$_mapZoom&sw_lng=${swLng.toString()}&sw_lat=${swLat.toString()}&ne_lng=${neLng.toString()}&ne_lat=${neLat.toString()}';
-    } else {
-      url =
-          '/radar?cntr_lng=${location.longitude.toString()}&cntr_lat=${location.latitude.toString()}&zoom=$_mapZoom';
+    var d = 39136000 *
+        math.cos(location.longitude * oneRad) /
+        math.pow(2, _mapZoom);
+    if (d > 10000000) {
+      d = 10000000;
+      /* cap to 10km */
     }
+
+    final neLat = _displayWindowCenter.latitude +
+        ((d / terraRadius) * (180.0 / math.pi)); /* max lat */
+    final swLat = _displayWindowCenter.latitude -
+        ((d / terraRadius) * (180.0 / math.pi)); /* min lat */
+
+    final neLng = _displayWindowCenter.longitude +
+        radianToDeg(math.asin(d / terraRadius) /
+            math.cos(
+                degToRadian(_displayWindowCenter.latitude))); /* max lng */
+    final swLng = _displayWindowCenter.longitude -
+        radianToDeg(math.asin(d / terraRadius) /
+            math.cos(
+                degToRadian(_displayWindowCenter.latitude))); /* min lng */
+    // await _storage.write(key: 'swLng', value: swLng.toString());
+    // await _storage.write(key: 'swLat', value: swLat.toString());
+    // await _storage.write(key: 'neLng', value: neLng.toString());
+    // await _storage.write(key: 'neLat', value: neLat.toString());
+    // await _storage.write(key: 'mapZoom', value: _mapZoom.toString());
+
+    var url =
+        '/radar?cntr_lng=${location.longitude.toString()}&cntr_lat=${location.latitude.toString()}&zoom=$_mapZoom&sw_lng=${swLng.toString()}&sw_lat=${swLat.toString()}&ne_lng=${neLng.toString()}&ne_lat=${neLat.toString()}';
 
     final features = [];
     final players = [];
@@ -192,16 +179,15 @@ class _PoiMapState extends State<PoiMap>
     if (_isOnline) {
       try {
         response = await _apiProvider.get(url);
-      } on DioError catch (err) {
-        if (err.type == DioErrorType.connectTimeout) {
-          return;
-        } else if (err.response == null) {
-          return;
-        } else if (err.response?.statusCode == 401) {
-          Navigator.of(context).pop();
-          Navigator.of(context).pushNamed('/login');
+      } on AppError catch (err) {
+        if (err.isNetworkError) return;
+        if (err.isUnauthorized) {
+          context.go('/login');
           return;
         }
+        return;
+      } catch (err) {
+        debugPrint('_loadPois unexpected error: $err');
         return;
       }
 
@@ -229,43 +215,42 @@ class _PoiMapState extends State<PoiMap>
       }
 
       var _locationMarker = Marker(
-        height: 60.0,
-        width: 60.0,
-        point: LatLng(_userLocation.latitude, _userLocation.longitude),
-        builder: (context) {
-          return Stack(
-            alignment: AlignmentDirectional.center,
-            children: <Widget>[
-              Stack(
-                children: [
-                  Align(
-                    alignment: Alignment.center,
-                    child: Container(
-                      height: 60,
-                      width: 60,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color(0x8864b5f6),
+          height: 60.0,
+          width: 60.0,
+          point: LatLng(_userLocation.latitude, _userLocation.longitude),
+          child: Builder(builder: (BuildContext context) {
+            return Stack(
+              alignment: AlignmentDirectional.center,
+              children: <Widget>[
+                Stack(
+                  children: [
+                    Align(
+                      alignment: Alignment.center,
+                      child: Container(
+                        height: 60,
+                        width: 60,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(0x8864b5f6),
+                        ),
                       ),
                     ),
-                  ),
-                  Align(
-                    alignment: Alignment.center,
-                    child: Container(
-                      height: 10,
-                      width: 10,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.blueAccent,
+                    Align(
+                      alignment: Alignment.center,
+                      child: Container(
+                        height: 10,
+                        width: 10,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.blueAccent,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
-          );
-        },
-      );
+                  ],
+                ),
+              ],
+            );
+          }));
 
       markers.clear();
       markers.add(_locationMarker);
@@ -392,6 +377,10 @@ class _PoiMapState extends State<PoiMap>
   void initState() {
     super.initState();
 
+    _goToRemoteLocation = widget.goToRemoteLocation;
+    _remoteLat = widget.latitude;
+    _remoteLng = widget.longitude;
+
     _getCurrentUser();
     _minesStreamSubscription = _minesStreamBus.stream$.listen(_loadMines);
     _locationStreamSubscription =
@@ -404,22 +393,12 @@ class _PoiMapState extends State<PoiMap>
       (t) => dayAndNight(_userLocation),
     );
 
-    rootBundle.loadString('assets/map_style.json').then((string) {
-      _mapStyle = string;
-    });
-    rootBundle.loadString('assets/map_style_aubergine.json').then((string) {
-      _mapStyleAubergine = string;
-    });
-
     dayAndNight(_userLocation);
 
-    BackButtonInterceptor.add(myInterceptor,
-        name: widget.name, context: context);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     timer?.cancel();
     _pois.clear();
     _minesStreamSubscription?.cancel();
@@ -427,18 +406,6 @@ class _PoiMapState extends State<PoiMap>
     _visitStreamSubscription?.cancel();
     //if (mapController != null) { mapController.removeListener(_onMapChanged); }
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    if (stopDefaultButtonEvent) return false;
-    if (ifPop) {
-      return false;
-    } else {
-      setState(() => ifPop = true);
-      Navigator.of(context).pop();
-    }
-    return true;
   }
 
   Future _getCurrentUser() async {
@@ -492,45 +459,45 @@ class _PoiMapState extends State<PoiMap>
         SunCalc.isDaytime(datenow, astroResult.sunrise, astroResult.sunset);
 
     if (_mapStyleState == 0 /* day */) {
-      setState(() => {
-            _customAppBarTextColor = Colors.black,
-            _customAppBarIconColor = Colors.black,
-            _systemHeaderBrightness = Brightness.light,
-            mapType = 'outdoors',
-          });
+      setState(() {
+        _customAppBarTextColor = Colors.black;
+        _customAppBarIconColor = Colors.black;
+        _systemHeaderBrightness = Brightness.light;
+        mapType = 'outdoors';
+      });
     } else if (_mapStyleState == 1 /* night */) {
-      setState(() => {
-            _customAppBarTextColor = Colors.white,
-            _customAppBarIconColor = Colors.white,
-            _systemHeaderBrightness = Brightness.dark,
-            mapType = 'dark',
-          });
+      setState(() {
+        _customAppBarTextColor = Colors.white;
+        _customAppBarIconColor = Colors.white;
+        _systemHeaderBrightness = Brightness.dark;
+        mapType = 'dark';
+      });
     } else if (_mapStyleState == 2 /* auto */) {
       if (isDayTime == true) {
         /// Day
-        setState(() => {
-              _customAppBarTextColor = Colors.black,
-              _customAppBarIconColor = Colors.black,
-              _systemHeaderBrightness = Brightness.light,
-              mapType = 'outdoors',
-            });
+        setState(() {
+          _customAppBarTextColor = Colors.black;
+          _customAppBarIconColor = Colors.black;
+          _systemHeaderBrightness = Brightness.light;
+          mapType = 'outdoors';
+        });
       } else {
         /// Night
-        setState(() => {
-              _customAppBarTextColor = Colors.white,
-              _customAppBarIconColor = Colors.white,
-              _systemHeaderBrightness = Brightness.dark,
-              mapType = 'dark',
-            });
+        setState(() {
+          _customAppBarTextColor = Colors.white;
+          _customAppBarIconColor = Colors.white;
+          _systemHeaderBrightness = Brightness.dark;
+          mapType = 'dark';
+        });
       }
     } else if (_mapStyleState == 3 /* terrain */) {
       /// Night
-      setState(() => {
-            _customAppBarTextColor = Colors.white,
-            _customAppBarIconColor = Colors.white,
-            _systemHeaderBrightness = Brightness.dark,
-            mapType = 'terrain',
-          });
+      setState(() {
+        _customAppBarTextColor = Colors.white;
+        _customAppBarIconColor = Colors.white;
+        _systemHeaderBrightness = Brightness.dark;
+        mapType = 'terrain';
+      });
     }
   }
 
@@ -595,6 +562,19 @@ class _PoiMapState extends State<PoiMap>
     });
   }
 
+  /// Returns the correct tile URL for the current map style.
+  /// dark/night → CartoDB Dark Matter; terrain → OpenTopoMap; otherwise OSM.
+  String get _effectiveTileUrl {
+    if (mapType == 'outdoors') {
+      return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+    } else if (mapType == 'dark') {
+      return 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
+    } else if (mapType == 'terrain') {
+      return 'https://a.tile.opentopomap.org/{z}/{x}/{y}.png';
+    }
+    return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  }
+
   _onAddPinButtonPressed() {
     // Set the creator to be the current player
     if (_mineId > 0) {
@@ -610,12 +590,12 @@ class _PoiMapState extends State<PoiMap>
   }
 
   LatLng _centerOfMap() {
-    if (widget.goToRemoteLocation == true) {
+    if (_goToRemoteLocation == true) {
       _showRecenterBtn = true;
-      _loadPois(LtLn(widget.latitude, widget.longitude));
-      widget.goToRemoteLocation = false;
+      _loadPois(LtLn(_remoteLat, _remoteLng));
+      _goToRemoteLocation = false;
       _mapZoom = 16;
-      return LatLng(widget.latitude, widget.longitude);
+      return LatLng(_remoteLat, _remoteLng);
     }
 
     return LatLng(_userLocation.latitude, _userLocation.longitude);
@@ -631,10 +611,10 @@ class _PoiMapState extends State<PoiMap>
     }
     try {
       response = await _apiProvider.get(
-        '/mine?mine_id=$mineId',
+        '/mine/$mineId',
       );
 
-      if (response.containsKey("success")) {
+      if (response is Map && response.containsKey("success")) {
         //ignore: omit_local_variable_types
         List<Image> imagesArr = [];
 
@@ -681,6 +661,7 @@ class _PoiMapState extends State<PoiMap>
         Timer(
           Duration(seconds: 1),
           () {
+            if (!mounted) return;
             //ignore: omit_local_variable_types
             String mining =
                 AppLocalizations.of(context)!.translate('you_found_point');
@@ -697,23 +678,13 @@ class _PoiMapState extends State<PoiMap>
           },
         );
       }
-    } on DioError catch (err) {
-      //log.e(err);
-      Timer(
-        Duration(seconds: 1),
-        () {
-          showDialog(
-            context: context,
-            builder: (context) => CustomDialog(
-              title: 'Error',
-              description: '${err.response?.data}',
-              buttonText: "Okay",
-              images: [],
-              callback: () {},
-            ),
-          );
-        },
-      );
+    } on AppError catch (err) {
+      Timer(Duration(seconds: 1), () {
+        if (!mounted) return;
+        err.show(context);
+      });
+    } catch (err) {
+      debugPrint('foundMine unexpected error: $err');
     }
   }
 
@@ -1207,7 +1178,7 @@ class _PoiMapState extends State<PoiMap>
     var icoVar = int.parse(mine.properties.ico);
     final now =
         DateTime.parse(DateTime.now().toUtc().toIso8601String()).toLocal();
-    if (mine.lastVisited != "" && mine.lastVisited != null) {
+    if (mine.lastVisited != "") {
       icoVar = now.difference(DateTime.parse(mine.lastVisited)).inSeconds < 3600
           ? 0
           : int.parse(mine.properties.ico);
@@ -1215,7 +1186,9 @@ class _PoiMapState extends State<PoiMap>
 
     return Marker(
       point: LatLng(mine.geometry.coordinates[1], mine.geometry.coordinates[0]),
-      builder: (context) => betterPoint(context, idx, mine, icoVar),
+      child: Builder(
+          builder: (BuildContext context) =>
+              betterPoint(context, idx, mine, icoVar)),
     );
   }
 
@@ -1259,7 +1232,7 @@ class _PoiMapState extends State<PoiMap>
     var icoVar = int.parse(mine.properties.ico);
     final now =
         DateTime.parse(DateTime.now().toUtc().toIso8601String()).toLocal();
-    if (mine.lastVisited != "" && mine.lastVisited != null) {
+    if (mine.lastVisited != "") {
       icoVar = now.difference(DateTime.parse(mine.lastVisited)).inSeconds < 3600
           ? 0
           : int.parse(mine.properties.ico);
@@ -1267,7 +1240,9 @@ class _PoiMapState extends State<PoiMap>
 
     return Marker(
       point: LatLng(mine.geometry.coordinates[1], mine.geometry.coordinates[0]),
-      builder: (context) => betterPlayer(context, idx, mine, icoVar),
+      child: Builder(
+          builder: (BuildContext context) =>
+              betterPlayer(context, idx, mine, icoVar)),
     );
   }
 
@@ -1277,85 +1252,61 @@ class _PoiMapState extends State<PoiMap>
     //var szHeight = MediaQuery.of(context).size.height;
     //var szWidth = MediaQuery.of(context).size.width;
 
-    _createMap() {
-      //print(mapType);
-      if (mapType == 'outdoors') {
-        return TileLayerOptions(
-          urlTemplate: "https://api.mapbox.com/styles/v1/"
-              "{id}/tiles/{z}/{x}/{y}?access_token={accessToken}",
-          additionalOptions: {
-            'accessToken': GlobalConstants.mapboxToken,
-            'id': "mapbox/outdoors-v11",
-          },
-        );
-      } else if (mapType == 'dark') {
-        return TileLayerOptions(
-          urlTemplate: "https://api.mapbox.com/styles/v1/"
-              "{id}/tiles/{z}/{x}/{y}?access_token={accessToken}",
-          additionalOptions: {
-            'accessToken': GlobalConstants.mapboxToken,
-            'id': "mapbox/dark-v10",
-          },
-        );
-      }
-      return TileLayerOptions(
-        urlTemplate: "https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
-        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-      );
-    }
-
     final mapWidget = FlutterMap(
       options: MapOptions(
-        center: _centerOfMap(),
-        zoom: _mapZoom,
+        initialCenter: _centerOfMap(),
+        initialZoom: _mapZoom,
         maxZoom: 18.0,
-        plugins: [
-          //user_location
-          //UserLocationPlugin(),
-        ],
-        onPositionChanged: (mapPosition, boolValue) => {
-          _debouncer.run(
-            () => {
-              if (_recenterBtnPressed)
-                {
+        onMapEvent: (MapEvent event) {
+          if (event is MapEventMove || event is MapEventFlingAnimation) {
+            _debouncer.run(
+              () {
+                if (!mounted) return;
+                if (_recenterBtnPressed) {
                   setState(() {
                     _showRecenterBtn = false;
                     _recenterBtnPressed = false;
-                    _displayWindowCenter = mapPosition.center!;
-                    _mapZoom = mapPosition.zoom!;
-                  })
-                }
-              else
-                {
+                    _displayWindowCenter = event.camera.center;
+                    _mapZoom = event.camera.zoom;
+                  });
+                } else {
                   setState(() {
                     _showRecenterBtn = true;
-                    _displayWindowCenter = mapPosition.center!;
-                    _mapZoom = mapPosition.zoom!;
-                  })
-                },
-              _loadPois(_userLocation)
-            },
-          )
+                    _displayWindowCenter = event.camera.center;
+                    _mapZoom = event.camera.zoom;
+                  });
+                }
+                _loadPois(_userLocation);
+              },
+            );
+          }
         },
       ),
-      layers: [
-        _createMap(),
-        //user_location
-        //userLocationOptions,
-        MarkerLayerOptions(markers: markers),
-        MarkerLayerOptions(
+      children: [
+        TileLayer(
+          key: ValueKey(_effectiveTileUrl),
+          urlTemplate: _effectiveTileUrl,
+          userAgentPackageName: 'com.apsoni.geocraft',
+        ),
+        MarkerLayer(
+          markers: markers,
+          rotate: false,
+        ),
+        MarkerLayer(
           markers: List<Marker>.of(
             _players.asMap().entries.map(
                   (entry) => _createPlayer(context, entry.key, entry.value),
                 ),
           ),
+          rotate: false,
         ),
-        MarkerLayerOptions(
+        MarkerLayer(
           markers: List<Marker>.of(
             _pois.asMap().entries.map(
                   (entry) => _createMarker(context, entry.key, entry.value),
                 ),
           ),
+          rotate: false,
         ),
       ],
       mapController: mapController,
@@ -1481,7 +1432,7 @@ class _PoiMapState extends State<PoiMap>
     final ImagePicker picker = ImagePicker();
     try {
       final pickedFile =
-          await picker.getImage(source: ImageSource.camera, imageQuality: 100);
+          await picker.pickImage(source: ImageSource.camera, imageQuality: 100);
       if (pickedFile != null) {
         setState(() {
           _images.add(File(pickedFile.path));
@@ -1497,7 +1448,7 @@ class _PoiMapState extends State<PoiMap>
     final ImagePicker picker = ImagePicker();
     try {
       final pickedFile =
-          await picker.getImage(source: ImageSource.gallery, imageQuality: 100);
+          await picker.pickImage(source: ImageSource.gallery, imageQuality: 100);
       if (pickedFile != null) {
         setState(() {
           _images.add(File(pickedFile.path));
@@ -1526,12 +1477,10 @@ class _PoiMapState extends State<PoiMap>
 
   void _loadMines(List<Mine> mines) async {
     //print(' --- _loadMines from Stream --- ');
-    if (mines != null) {
-      setState(() {
-        _pois.clear();
-        _pois.addAll(mines.toList());
-      });
-    }
+    setState(() {
+      _pois.clear();
+      _pois.addAll(mines.toList());
+    });
   }
 
   void _updateUserLocation(LtLn location) async {
@@ -1588,19 +1537,10 @@ class _PoiMapState extends State<PoiMap>
           try {
             await _apiProvider.uploadLandmarkPicture(
                 "/landmark/$_mineId", image);
-          } on DioError catch (err) {
-            if (err.response != null) {
-              showDialog(
-                context: context,
-                builder: (context) => CustomDialog(
-                  title: 'Error',
-                  description: err.response?.data['message'],
-                  buttonText: "Okay",
-                  images: [],
-                  callback: () {},
-                ),
-              );
-            }
+          } on AppError catch (err) {
+            err.show(context);
+          } catch (err) {
+            debugPrint('uploadLandmarkPicture unexpected error: $err');
           }
         }
         showDialog(
@@ -1636,22 +1576,15 @@ class _PoiMapState extends State<PoiMap>
         "lng": pin.lng,
         "desc": pin.desc
       });
-    } on DioError catch (err) {
-      // if (err?.response != null) {
-      //   showDialog(
-      //     context: context,
-      //     builder: (context) => CustomDialog(
-      //       title: 'Error',
-      //       description: err.response.data['message'],
-      //       buttonText: "Okay",
-      //     ),
-      //   );
-      // }
+    } on AppError catch (_) {
+      return;
+    } catch (err) {
+      debugPrint('_modifyPin unexpected error: $err');
       return;
     }
 
     _textFieldController.text = "";
-    if (response.containsKey("message")) {
+    if (response is Map && response.containsKey("message")) {
       showDialog(
         context: context,
         builder: (context) => CustomDialog(
@@ -1664,7 +1597,7 @@ class _PoiMapState extends State<PoiMap>
       );
     }
 
-    if (response.containsKey("mine_id")) {
+    if (response is Map && response.containsKey("mine_id")) {
       //populate the _mineId also
       _mineId = int.tryParse(response["mine_id"].toString()) ?? 0;
     }
@@ -1676,56 +1609,40 @@ class _PoiMapState extends State<PoiMap>
     setState(() {
       _recenterBtnPressed = true;
     });
-    if (mapController != null) {
-      mapController.move(
-        LatLng(_userLocation.latitude, _userLocation.longitude),
-        _mapZoom,
-      );
-    }
-  }
-
-  void _moveCameraToLocation(double latitude, double longitude) {
-    setState(() {
-      _recenterBtnPressed = false;
-    });
-    if (mapController != null) {
-      mapController.move(
-        LatLng(latitude, longitude),
-        _mapZoom,
-      );
-    }
+    mapController.move(
+      LatLng(_userLocation.latitude, _userLocation.longitude),
+      _mapZoom,
+    );
   }
 
   void launchMapApp(double lat, double lng) async {
-    var url = "waze://?ll=${lat.toString()},${lng.toString()}";
-    // ignore: omit_local_variable_types
+    var url = Uri.parse("waze://?ll=${lat.toString()},${lng.toString()}");
     bool launched = false;
-    if (await canLaunch(url)) {
-      launched = await launch(url, forceSafariVC: false, forceWebView: false);
+    if (await canLaunchUrl(url)) {
+      launched = await launchUrl(url);
       if (launched == true) {
         return;
       }
     }
-    var fallbackUrl =
-        "https://www.google.com/maps/search/?api=1&query=${lat.toString()},${lng.toString()}";
+    var fallbackUrl = Uri.parse(
+        "https://www.google.com/maps/search/?api=1&query=${lat.toString()},${lng.toString()}");
     if (Platform.isAndroid) {
-      url =
-          "geo:${lat.toString()},${lng.toString()}?q=${lat.toString()},${lng.toString()}";
-      fallbackUrl =
-          "https://www.google.com/maps/search/?api=1&query=${lat.toString()},${lng.toString()}";
+      url = Uri.parse(
+          "geo:${lat.toString()},${lng.toString()}?q=${lat.toString()},${lng.toString()}");
+      fallbackUrl = Uri.parse(
+          "https://www.google.com/maps/search/?api=1&query=${lat.toString()},${lng.toString()}");
     } else if (Platform.isIOS) {
-      url = "maps://?ll=${lat.toString()},${lng.toString()}";
-      fallbackUrl =
-          "http://maps.apple.com/?ll=${lat.toString()},${lng.toString()}";
+      url = Uri.parse("maps://?ll=${lat.toString()},${lng.toString()}");
+      fallbackUrl = Uri.parse(
+          "http://maps.apple.com/?ll=${lat.toString()},${lng.toString()}");
     }
-    //TODO:UWP,bingmaps:https://bing.com/maps/default.aspx?cp=47.677797~-122.122013
     try {
-      launched = await launch(url, forceSafariVC: false, forceWebView: false);
+      launched = await launchUrl(url);
       if (!launched) {
-        await launch(fallbackUrl, forceSafariVC: false, forceWebView: false);
+        await launchUrl(fallbackUrl);
       }
-    } on Exception catch (e) {
-      await launch(fallbackUrl, forceSafariVC: false, forceWebView: false);
+    } on Exception catch (_) {
+      await launchUrl(fallbackUrl);
     }
   }
 }

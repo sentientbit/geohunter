@@ -19,7 +19,7 @@ class FriendsSummary extends StatelessWidget {
   final Friend friend;
 
   ///
-  bool hasRaven = false;
+  final bool hasRaven;
 
   ///
   final bool horizontal;
@@ -28,7 +28,7 @@ class FriendsSummary extends StatelessWidget {
   FriendsSummary(this.friend, this.hasRaven, {this.horizontal = true});
 
   ///
-  FriendsSummary.vertical(this.friend) : horizontal = false;
+  FriendsSummary.vertical(this.friend) : hasRaven = false, horizontal = false;
 
   @override
   Widget build(BuildContext context) {

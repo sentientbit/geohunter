@@ -67,13 +67,12 @@ class Guild {
 
   ///
   Guild.fromJson(dynamic json) {
-    id = int.parse(json["id"].toString());
-    factionId = int.parse(json["faction_id"].toString());
-    leaderId = int.parse(json["leader_id"].toString());
+    id = int.tryParse(json["id"].toString()) ?? 0;
+    factionId = int.tryParse(json["faction_id"].toString()) ?? 0;
+    leaderId = int.tryParse(json["leader_id"].toString()) ?? 0;
     name = json["name"].toString();
-    isLocked = int.tryParse(json["is_locked"]) ?? 0;
-    isHidden = int.tryParse(json["is_hidden"]) ?? 0;
-    name = json["name"].toString();
+    isLocked = int.tryParse(json["is_locked"].toString()) ?? 0;
+    isHidden = int.tryParse(json["is_hidden"].toString()) ?? 0;
     picture = Picture.fromJson(json["pictures"][0]);
     guid = json["guid"].toString();
     json["users"].forEach(addUser);
@@ -190,14 +189,14 @@ class GuildUser {
 
   ///
   GuildUser.fromJson(dynamic json) {
-    id = int.parse(json["user_id"].toString());
-    sex = json["sex"];
-    username = json["username"];
-    status = json["status"];
-    xp = json["xp"];
-    privacy = json["privacy"];
-    thumbnail = json["thumbnail"];
-    permissions = int.tryParse(json["permissions"]) ?? 0;
+    id = int.tryParse(json["user_id"].toString()) ?? 0;
+    sex = json["sex"].toString();
+    username = json["username"].toString();
+    status = json["status"]?.toString() ?? "";
+    xp = int.tryParse(json["xp"].toString()) ?? 0;
+    privacy = int.tryParse(json["privacy"].toString()) ?? 0;
+    thumbnail = json["thumbnail"].toString();
+    permissions = int.tryParse(json["permissions"].toString()) ?? 0;
     created = json["created"] != null
         ? DateTime.parse(json["created"])
         : DateTime.parse('2020-01-01 01:01:01');

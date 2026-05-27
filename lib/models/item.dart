@@ -63,9 +63,9 @@ class Item {
     }
     id = int.tryParse(json["id"].toString()) ?? 0;
     dropChance = int.tryParse(json["drop_chance"].toString()) ?? 0;
-    name = json["name"];
+    name = json["name"] ?? "";
     blueprintId = int.tryParse(json["blueprint_id"].toString()) ?? 0;
-    img = json["img"];
+    img = (json["img"]?.toString().isNotEmpty == true) ? json["img"] : "nothing.png";
     level = int.tryParse(json["level"].toString()) ?? 0;
     rarity = int.tryParse(json["rarity"].toString()) ?? 0;
     nr = int.tryParse(json["nr"].toString()) ?? 0;

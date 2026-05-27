@@ -1,8 +1,6 @@
 ///
 import 'dart:async';
 import 'dart:math' as math;
-import 'package:dio/dio.dart';
-import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:geohunter/models/visitevent.dart';
@@ -12,13 +10,14 @@ import 'package:percent_indicator/linear_percent_indicator.dart';
 
 ///
 import '../../fonts/rpg_awesome_icons.dart';
+import '../../models/app_error.dart';
+import '../../models/player_stats.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/stream_userdata.dart';
 import '../../providers/stream_visit.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
-import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
 
 ///
@@ -27,10 +26,10 @@ class RockPaperScissorsPage extends StatefulWidget {
   final String name = "battle";
 
   ///
-  int rndMap = 0;
+  final int rndMap;
 
   ///
-  int mineId = 0;
+  final int mineId;
 
   ///
   RockPaperScissorsPage({
@@ -57,9 +56,6 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
 
   ///
   final ApiProvider _apiProvider = ApiProvider();
-
-  /// Make sure back button is pressed twice
-  bool ifPop = false;
 
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -123,37 +119,21 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
   void initState() {
     super.initState();
     loadUser();
-    WidgetsBinding.instance?.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(_scrollController.position.maxScrollExtent,
             duration: Duration(milliseconds: 100), curve: Curves.easeInOut);
       }
     });
-    BackButtonInterceptor.add(myInterceptor,
-        name: widget.name, context: context);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
   }
 
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    if (stopDefaultButtonEvent) return false;
-    if (ifPop) {
-      return false;
-    } else {
-      setState(() => ifPop = true);
-      Navigator.of(context).pop();
-      //Navigator.of(context).pushNamed(GlobalConstants.backButtonPage);
-    }
-    return true;
-  }
-
   String dp(double val, int places) {
-    double mod = double.tryParse(math.pow(10.0, places).toString()) ?? 0.0;
+    var mod = double.tryParse(math.pow(10.0, places).toString()) ?? 0.0;
     var out = ((val * mod).round().toDouble() / mod);
     return out.toString();
   }
@@ -214,28 +194,28 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
     var result = hitOrMiss(playerAction, enemyAction);
 
     if (result == 1) {
-      FlameAudio.audioCache.play('sfx/sword_1.mp3');
+      FlameAudio.play('sfx/sword_1.mp3');
     } else if (result == -1) {
-      FlameAudio.audioCache.play('sfx/bookOpen_1.mp3');
+      FlameAudio.play('sfx/bookOpen_1.mp3');
     } else {
-      FlameAudio.audioCache.play('sfx/cloth_3.mp3');
+      FlameAudio.play('sfx/cloth_3.mp3');
     }
 
-    if (_user.details.attack.length > 1) {
+    if (_user.details.attack.max > 0) {
       myAtk = rndBattleNumber.nextDouble() *
-              (_user.details.attack[1] - _user.details.attack[0]) +
-          _user.details.attack[0];
+              (_user.details.attack.max - _user.details.attack.min) +
+          _user.details.attack.min;
     }
 
-    if (_user.details.defense.length > 1) {
+    if (_user.details.defense.max > 0) {
       myDef = rndBattleNumber.nextDouble() *
-              (_user.details.defense[1] - _user.details.defense[0]) +
-          _user.details.defense[0];
+              (_user.details.defense.max - _user.details.defense.min) +
+          _user.details.defense.min;
     }
 
-    double theirDef = rndBattleNumber.nextDouble() * (10 - 5) + 5;
+    var theirDef = rndBattleNumber.nextDouble() * (10 - 5) + 5.0;
 
-    double theirAtk = rndBattleNumber.nextDouble() * (10 - 5) + 5;
+    var theirAtk = rndBattleNumber.nextDouble() * (10 - 5) + 5.0;
 
     // _scrollController.addListener(() {
     //   print('bbb');
@@ -281,8 +261,8 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
       setState(() {
         tap = false;
       });
-      FlameAudio.audioCache
-          .play('sfx/rat_${(rndBattleNumber.nextInt(3) + 1).toString()}.mp3');
+      FlameAudio.play(
+          'sfx/rat_${(rndBattleNumber.nextInt(3) + 1).toString()}.mp3');
     });
   }
 
@@ -298,11 +278,11 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
     } else if (percentage > 1) {
       percentage = 1.0;
     }
-    int currentInt = current.round();
+    var currentInt = current.round();
     if (currentInt < 0) {
       currentInt = 0;
     }
-    int nextInt = next.round();
+    var nextInt = next.round();
     return SizedBox(
       height: 40,
       width: 180,
@@ -313,7 +293,7 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
           "$currentInt / $nextInt",
           style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.bold),
         ),
-        linearStrokeCap: LinearStrokeCap.roundAll,
+        
         backgroundColor: Colors.white,
         progressColor: color,
       ),
@@ -519,7 +499,7 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
     );
   }
 
-  Widget battleLog(szHeight) {
+  Widget battleLog(double szHeight) {
     return SizedBox(
       height: szHeight / 4,
       child: SingleChildScrollView(
@@ -552,11 +532,8 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
   }
 
   Widget build(BuildContext context) {
-    var szHeight = MediaQuery.of(context).size.height;
-
     /// Application top Bar
     final topBar = AppBar(
-      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(Icons.arrow_back),
@@ -571,14 +548,6 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
         style: Style.topBar,
       ),
     );
-
-    double width(BuildContext context) {
-      return MediaQuery.of(context).size.width;
-    }
-
-    double height(BuildContext context) {
-      return MediaQuery.of(context).size.height;
-    }
 
     return Scaffold(
       backgroundColor: GlobalConstants.appBg,
@@ -597,7 +566,7 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
           ),
           SingleChildScrollView(
             child: Container(
-              height: szHeight,
+              height: MediaQuery.of(context).size.height,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 mainAxisSize: MainAxisSize.max,
@@ -614,7 +583,8 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
                               flex: 2,
                               child: Container(
                                 alignment: Alignment.center,
-                                child: battleLog(szHeight),
+                                child: battleLog(
+                                    MediaQuery.of(context).size.height),
                               ),
                             ),
                           ],
@@ -674,8 +644,13 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
                               child: (isWinner == false)
                                   ? Image.asset(
                                       'assets/images/enemies/rat.png',
-                                      height: width(context) / 1.5 < 260
-                                          ? width(context) / 1.5
+                                      height: MediaQuery.of(context)
+                                                      .size
+                                                      .width /
+                                                  1.5 <
+                                              260
+                                          ? MediaQuery.of(context).size.width /
+                                              1.5
                                           : 260,
                                       color: tap ? Color(0x80FFFFFF) : null,
                                     )
@@ -746,47 +721,45 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
     dynamic response;
     try {
       response = await _apiProvider.get("/equipment");
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Error',
-          description: err.response?.data["message"],
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
+    } on AppError catch (err) {
+      err.show(context);
+      return;
+    } catch (err) {
+      debugPrint('_getUserDetails unexpected error: $err');
       return;
     }
 
-    if (response.containsKey("coins")) {
+    if (response is Map && response.containsKey("coins")) {
       // update local data
       _user.details.coins =
           double.tryParse(response["coins"].toString()) ?? 0.0;
-      _user.details.guildId = response["guild"]["id"];
+      _user.details.guildId = response["guild"]["id"].toString();
       _user.details.mining = response["mining"];
       _user.details.xp = response["xp"];
-      _user.details.unread = response["unread"];
-      _user.details.attack = response["attack"];
-      _user.details.defense = response["defense"];
+      _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
+      _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
+      _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
       _user.details.daily = response["daily"];
-      _user.details.costs = response["costs"];
+      if (response.containsKey("settings")) {
+        _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
+      }
+      _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
 
-      if (_user.details.attack.length > 1) {
+      if (_user.details.attack.max > 0) {
         myAtk = rndBattleNumber.nextDouble() *
-                (_user.details.attack[1] - _user.details.attack[0]) +
-            _user.details.attack[0];
+                (_user.details.attack.max - _user.details.attack.min) +
+            _user.details.attack.min;
       }
 
-      if (_user.details.defense.length > 1) {
+      if (_user.details.defense.max > 0) {
         myDef = rndBattleNumber.nextDouble() *
-                (_user.details.defense[1] - _user.details.defense[0]) +
-            _user.details.defense[0];
+                (_user.details.defense.max - _user.details.defense.min) +
+            _user.details.defense.min;
       }
 
       // update global data
       _userdata.updateUserData(
+        'rock_paper',
         _user.details.coins,
         _user.details.mining,
         _user.details.guildId,
@@ -795,7 +768,7 @@ class _RockPaperScissorsState extends State<RockPaperScissorsPage> {
         _user.details.attack,
         _user.details.defense,
         _user.details.daily,
-        _user.details.music,
+        _user.details.settings,
         _user.details.costs,
       );
     }

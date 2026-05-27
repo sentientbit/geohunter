@@ -1,14 +1,13 @@
 ///
-import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
-
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 ///
+import '../../models/app_error.dart';
 import '../../models/blueprint.dart';
+import '../../providers/api_provider.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
-import '../../providers/api_provider.dart';
 
 //import '../app_localizations.dart';
 
@@ -39,19 +38,11 @@ class _BlueprintSelectState extends State<BlueprintSelectPage> {
   void initState() {
     super.initState();
     _getBlueprints();
-    BackButtonInterceptor.add(myInterceptor);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    Navigator.of(context).pop();
-    return true;
   }
 
   Widget _makeCard(BuildContext context, int index) {
@@ -134,16 +125,13 @@ class _BlueprintSelectState extends State<BlueprintSelectPage> {
   Widget build(BuildContext context) {
     /// Application top Bar
     final topBar = AppBar(
-      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
           Icons.menu,
           // size: 32,
         ),
-        onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState?.openDrawer()
-            : Navigator.of(context).pop(),
+        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
@@ -151,12 +139,7 @@ class _BlueprintSelectState extends State<BlueprintSelectPage> {
       actions: <Widget>[
         IconButton(
           icon: Icon(Icons.arrow_back),
-          onPressed: () async {
-            // await _storage.write(key: 'forgeBlueprintId', value: "0");
-            // await _storage.write(key: 'forgeBlueprintImg', value: "");
-            // await _storage.write(key: 'forgeBlueprintName', value: "");
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context, false),
         )
       ],
     );
@@ -193,23 +176,29 @@ class _BlueprintSelectState extends State<BlueprintSelectPage> {
   void _getBlueprints() async {
     // 17 is intermediate items
     // (save a bit of bandwidth as we only need the blueprints)
-    final response = await _apiProvider.get('/inventory/17');
+    try {
+      final response = await _apiProvider.post('/inventory', {"types": [17]});
 
-    var tmp = [];
-    if (response.containsKey("success")) {
-      if (response["success"] == true) {
-        if (response.containsKey("blueprints")) {
-          for (dynamic elem in response["blueprints"]) {
-            final itm = Blueprint.fromJson(elem);
-            tmp.add(itm);
+      var tmp = [];
+      if (response is Map && response.containsKey("success")) {
+        if (response["success"] == true) {
+          if (response.containsKey("blueprints")) {
+            for (dynamic elem in response["blueprints"]) {
+              final itm = Blueprint.fromJson(elem);
+              tmp.add(itm);
+            }
           }
         }
       }
+      setState(() {
+        _blueprints.clear();
+        _blueprints.addAll(tmp.toList());
+      });
+    } on AppError catch (err) {
+      debugPrint(err.toString());
+    } catch (err) {
+      debugPrint('_getBlueprints unexpected error: $err');
     }
-    setState(() {
-      _blueprints.clear();
-      _blueprints.addAll(tmp.toList());
-    });
   }
 
   /// Wear the item and get back
@@ -218,12 +207,6 @@ class _BlueprintSelectState extends State<BlueprintSelectPage> {
     await _storage.write(key: 'forgeBlueprintId', value: blpId.toString());
     await _storage.write(key: 'forgeBlueprintImg', value: blpImg);
     await _storage.write(key: 'forgeBlueprintName', value: blpName);
-
-    setState(() {
-      _blueprints.clear();
-    });
-    Navigator.pop(context);
-    Navigator.pop(context);
-    Navigator.of(context).pushNamed('/forge');
+    if (mounted) Navigator.pop(context, true);
   }
 }

@@ -1,16 +1,17 @@
 /// based on https://proandroiddev.com/flutter-thursday-02-beautiful-list-ui-and-detail-page-a9245f5ceaf0
-import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 // import 'package:logger/logger.dart';
 
 ///
+import '../../models/app_error.dart';
 import '../../models/item.dart';
 import '../../models/user.dart';
+import '../../providers/api_provider.dart';
 import '../../screens/inventory/itemdetail.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
-import '../../providers/api_provider.dart';
 
 //import '../app_localizations.dart';
 
@@ -49,9 +50,6 @@ class _InventoryState extends State<InventoryPage> {
   ///
   final ApiProvider _apiProvider = ApiProvider();
 
-  /// Make sure back button is pressed twice
-  bool ifPop = false;
-
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -65,30 +63,12 @@ class _InventoryState extends State<InventoryPage> {
   void initState() {
     super.initState();
     _getUserDetails();
-    _getInventoryItems("0");
-    BackButtonInterceptor.add(myInterceptor,
-        name: widget.name, context: context);
+    _getInventoryItems([0]);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    if (stopDefaultButtonEvent) return false;
-    if (ifPop) {
-      return false;
-    } else {
-      setState(() => ifPop = true);
-      if (_scaffoldKey != null) {
-        Navigator.of(context).pop();
-        Navigator.of(context).pushNamed(GlobalConstants.backButtonPage);
-      }
-    }
-    return true;
   }
 
   Widget _makeListTile(BuildContext context, int index) {
@@ -130,8 +110,11 @@ class _InventoryState extends State<InventoryPage> {
         children: <Widget>[
           for (var i = 0; i < _items[index].rarity; i++)
             Icon(Icons.star_border, color: Colors.white),
-          Text(" Level ${_items[index].level}",
-              style: TextStyle(color: Colors.white))
+          Flexible(
+            child: Text(" Level ${_items[index].level}",
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: Colors.white)),
+          )
         ],
       ),
       trailing:
@@ -174,11 +157,11 @@ class _InventoryState extends State<InventoryPage> {
 
   void choiceAction(PopupMenuChoice choice) {
     if (choice == PopupMenuChoice.allItems) {
-      _getInventoryItems("0");
+      _getInventoryItems([0]);
     } else if (choice == PopupMenuChoice.mainHand) {
-      _getInventoryItems("4.13.14.16");
+      _getInventoryItems([4, 13, 14, 16]);
     } else if (choice == PopupMenuChoice.intermediate) {
-      _getInventoryItems("17");
+      _getInventoryItems([17]);
     }
   }
 
@@ -262,17 +245,21 @@ class _InventoryState extends State<InventoryPage> {
       });
       /* if index == 0 We are here: Items */
       if (index == 1) {
-        Navigator.of(context).pushReplacementNamed('/blueprints');
+        context.go('/blueprints');
       } else if (index == 2) {
-        Navigator.of(context).pushReplacementNamed('/materials');
+        context.go('/materials');
       }
     }
 
-    return Scaffold(
-      backgroundColor: GlobalConstants.appBg,
-      appBar: AppBar(
-        brightness: Brightness.dark,
-        leading: leadingIcon(context),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) context.go('/poi-map');
+      },
+      child: Scaffold(
+        backgroundColor: GlobalConstants.appBg,
+        appBar: AppBar(
+          leading: leadingIcon(context),
         elevation: 0.1,
         backgroundColor: Colors.transparent,
         title: Text(
@@ -364,30 +351,31 @@ class _InventoryState extends State<InventoryPage> {
           ),
         )
       ]),
-      key: _scaffoldKey,
-      drawer: DrawerPage(),
-      bottomNavigationBar: BottomNavigationBar(
-        onTap: onTapped,
-        currentIndex: currentTabIndex,
-        backgroundColor: GlobalConstants.appBg,
-        selectedItemColor: Color(0xfffeb53b),
-        selectedLabelStyle: TextStyle(fontSize: 14),
-        unselectedItemColor: Colors.white,
-        unselectedLabelStyle: TextStyle(fontSize: 14),
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.format_list_bulleted, color: Colors.white),
-            label: 'Items',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.library_books_outlined, color: Colors.white),
-            label: 'Blueprints',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.widgets, color: Colors.white),
-            label: 'Materials',
-          )
-        ],
+        key: _scaffoldKey,
+        drawer: DrawerPage(),
+        bottomNavigationBar: BottomNavigationBar(
+          onTap: onTapped,
+          currentIndex: currentTabIndex,
+          backgroundColor: GlobalConstants.appBg,
+          selectedItemColor: Color(0xfffeb53b),
+          selectedLabelStyle: TextStyle(fontSize: 14),
+          unselectedItemColor: Colors.white,
+          unselectedLabelStyle: TextStyle(fontSize: 14),
+          items: [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.format_list_bulleted, color: Colors.white),
+              label: 'Items',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.library_books_outlined, color: Colors.white),
+              label: 'Blueprints',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.widgets, color: Colors.white),
+              label: 'Materials',
+            )
+          ],
+        ),
       ),
     );
   }
@@ -399,23 +387,28 @@ class _InventoryState extends State<InventoryPage> {
     });
   }
 
-  void _getInventoryItems(String types) async {
-    final response = await _apiProvider.get('/inventory/$types');
+  void _getInventoryItems(List<int> types) async {
+    try {
+      final response = await _apiProvider.post('/inventory', {"types": types});
 
-    var tmp = [];
-    if (response.containsKey("success")) {
-      if (response["success"] == true) {
-        if (response.containsKey("items")) {
-          for (dynamic elem in response["items"]) {
-            final itm = Item.fromJson(elem);
-            tmp.add(itm);
-          }
+      var tmp = [];
+      if (response is Map &&
+          response.containsKey("success") &&
+          response["success"] == true &&
+          response.containsKey("items")) {
+        for (dynamic elem in response["items"]) {
+          final itm = Item.fromJson(elem);
+          tmp.add(itm);
         }
       }
+      setState(() {
+        _items.clear();
+        _items.addAll(tmp.toList());
+      });
+    } on AppError catch (err) {
+      debugPrint(err.toString());
+    } catch (err) {
+      debugPrint('_getInventoryItems unexpected error: $err');
     }
-    setState(() {
-      _items.clear();
-      _items.addAll(tmp.toList());
-    });
   }
 }

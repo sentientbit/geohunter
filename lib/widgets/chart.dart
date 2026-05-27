@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 ///
 class Chart extends StatelessWidget {
   ///
-  String imgUrl = "";
+  final String imgUrl;
 
   ///
   Chart({

@@ -7,10 +7,16 @@ import '../shared/constants.dart';
 ///
 class TwoLineItem extends StatelessWidget {
   ///
-  String firstText = "";
-  String secondText = "";
-  bool hasIcon = false;
-  Icon iconResource = Icon(Icons.ac_unit);
+  final String firstText;
+
+  ///
+  final String secondText;
+
+  ///
+  final bool hasIcon;
+
+  ///
+  final Icon iconResource;
 
   ///
   TwoLineItem({

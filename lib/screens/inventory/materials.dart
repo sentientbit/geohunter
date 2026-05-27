@@ -1,16 +1,15 @@
 ///
-import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
-
+import 'package:go_router/go_router.dart';
 // import 'package:logger/logger.dart';
 
 ///
+import '../../models/app_error.dart';
 import '../../models/materialmodel.dart';
+import '../../providers/api_provider.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
-import '../../providers/api_provider.dart';
 
 //import '../app_localizations.dart';
 
@@ -46,8 +45,6 @@ class _MaterialListState extends State<MaterialListPage> {
   //     printer: PrettyPrinter(
   //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
-  /// Secure Storage for User Data
-  final _storage = FlutterSecureStorage();
 
   ///
   final ApiProvider _apiProvider = ApiProvider();
@@ -62,19 +59,11 @@ class _MaterialListState extends State<MaterialListPage> {
   void initState() {
     super.initState();
     _getMaterials("0");
-    BackButtonInterceptor.add(myInterceptor);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    Navigator.of(context).pop();
-    return true;
   }
 
   Widget _makeCard(BuildContext context, int index) {
@@ -179,25 +168,22 @@ class _MaterialListState extends State<MaterialListPage> {
         currentTabIndex = index;
       });
       if (index == 0) {
-        Navigator.of(context).pushReplacementNamed('/inventory');
+        context.go('/inventory');
       } else if (index == 1) {
-        Navigator.of(context).pushReplacementNamed('/blueprints');
+        context.go('/blueprints');
       }
       /* else index == 2 We are here: Materials */
     }
 
     /// Application top Bar
     final topBar = AppBar(
-      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
           Icons.menu,
           // size: 32,
         ),
-        onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState?.openDrawer()
-            : Navigator.of(context).pop(),
+        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
@@ -287,63 +273,70 @@ class _MaterialListState extends State<MaterialListPage> {
         ),
       ],
     );
-    return Scaffold(
-      backgroundColor: GlobalConstants.appBg,
-      appBar: topBar,
-      extendBodyBehindAppBar: true,
-      body: Stack(
-        children: <Widget>[
-          Container(
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/ruins_shadow.jpg'),
-                fit: BoxFit.fill,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) context.go('/poi-map');
+      },
+      child: Scaffold(
+        backgroundColor: GlobalConstants.appBg,
+        appBar: topBar,
+        extendBodyBehindAppBar: true,
+        body: Stack(
+          children: <Widget>[
+            Container(
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/ruins_shadow.jpg'),
+                  fit: BoxFit.fill,
+                ),
               ),
             ),
-          ),
-          Container(
-            child: ListView.builder(
-              scrollDirection: Axis.vertical,
-              shrinkWrap: true,
-              itemCount: _materials.length,
+            Container(
+              child: ListView.builder(
+                scrollDirection: Axis.vertical,
+                shrinkWrap: true,
+                itemCount: _materials.length,
               itemBuilder: _makeCard,
             ),
           ),
         ],
       ),
-      key: _scaffoldKey,
-      drawer: DrawerPage(),
-      bottomNavigationBar: BottomNavigationBar(
-        onTap: onTapped,
-        currentIndex: currentTabIndex,
-        backgroundColor: GlobalConstants.appBg,
-        selectedItemColor: Color(0xfffeb53b),
-        selectedLabelStyle: TextStyle(fontSize: 14),
-        unselectedItemColor: Colors.white,
-        unselectedLabelStyle: TextStyle(fontSize: 14),
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.format_list_bulleted, color: Colors.white),
-            label: 'Items',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.library_books_outlined, color: Colors.white),
-            label: 'Blueprints',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.widgets, color: Colors.white),
-            label: 'Materials',
-          )
-        ],
+        key: _scaffoldKey,
+        drawer: DrawerPage(),
+        bottomNavigationBar: BottomNavigationBar(
+          onTap: onTapped,
+          currentIndex: currentTabIndex,
+          backgroundColor: GlobalConstants.appBg,
+          selectedItemColor: Color(0xfffeb53b),
+          selectedLabelStyle: TextStyle(fontSize: 14),
+          unselectedItemColor: Colors.white,
+          unselectedLabelStyle: TextStyle(fontSize: 14),
+          items: [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.format_list_bulleted, color: Colors.white),
+              label: 'Items',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.library_books_outlined, color: Colors.white),
+              label: 'Blueprints',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.widgets, color: Colors.white),
+              label: 'Materials',
+            )
+          ],
+        ),
       ),
     );
   }
 
   void _getMaterials(String types) async {
+    try {
     final response = await _apiProvider.get('/materials/$types');
 
     var tmp = [];
-    if (response.containsKey("success")) {
+    if (response is Map && response.containsKey("success")) {
       if (response["success"] == true) {
         if (response.containsKey("materials")) {
           for (dynamic elem in response["materials"]) {
@@ -359,5 +352,10 @@ class _MaterialListState extends State<MaterialListPage> {
       _materials.clear();
       _materials.addAll(tmp.toList());
     });
+    } on AppError catch (err) {
+      debugPrint(err.toString());
+    } catch (err) {
+      debugPrint('_getMaterials unexpected error: $err');
+    }
   }
 }

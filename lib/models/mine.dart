@@ -48,13 +48,14 @@ class Mine {
 
   ///
   Mine.fromJson(dynamic json, this.category, LtLn location) {
-    id = int.parse(json["id"].toString());
+    id = int.tryParse(json["id"].toString()) ?? 0;
     if (json["last_visited"] != null && json["last_visited"] != "") {
       lastVisited = json["last_visited"];
     } else {
       lastVisited = "1980-01-01 01:01:01Z";
     }
     geometry = Geometry.fromJson(json["geometry"]);
+    //print("Exception occured: {$json}");
     properties = MineProperties.fromJson(json["properties"]);
     final x = sphericalToCartesian(
       geometry.coordinates[1],
@@ -134,7 +135,7 @@ class MineProperties {
   String comment = "";
 
   ///
-  String status = "";
+  String? status = "";
 
   ///
   String ico = "0";

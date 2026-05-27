@@ -1,9 +1,9 @@
-import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:flutter/material.dart';
 // import 'package:logger/logger.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 ///
+import '../../models/app_error.dart';
 import '../../providers/api_provider.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
@@ -14,10 +14,10 @@ import '../../widgets/drawer.dart';
 ///
 class ShowQRPage extends StatefulWidget {
   ///
-  double latitude = 51.5;
+  final double latitude;
 
   ///
-  double longitude = 0.0;
+  final double longitude;
 
   ///
   ShowQRPage({
@@ -49,25 +49,18 @@ class _ShowQRState extends State<ShowQRPage> {
   void initState() {
     super.initState();
     generateNewQr();
-    BackButtonInterceptor.add(myInterceptor);
   }
 
   @override
   void dispose() {
-    BackButtonInterceptor.remove(myInterceptor);
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    Navigator.of(context).pop();
-    return true;
   }
 
   Future<void> generateNewQr() async {
     if (!mounted) return;
+    try {
     final response = await _apiProvider.post('/friends', {});
-    if (response.containsKey("success")) {
+    if (response is Map && response.containsKey("success")) {
       if (response["success"] == true) {
         if (response.containsKey("friendship_qr")) {
           setState(() {
@@ -76,21 +69,23 @@ class _ShowQRState extends State<ShowQRPage> {
         }
       }
     }
+    } on AppError catch (err) {
+      debugPrint(err.toString());
+    } catch (err) {
+      debugPrint('generateNewQr unexpected error: $err');
+    }
   }
 
   Widget build(BuildContext context) {
     /// Application top Bar
     final topBar = AppBar(
-      brightness: Brightness.dark,
       leading: IconButton(
         color: GlobalConstants.appFg,
         icon: Icon(
           Icons.menu,
           // size: 32,
         ),
-        onPressed: () => _scaffoldKey != null
-            ? _scaffoldKey.currentState?.openDrawer()
-            : Navigator.of(context).pop(),
+        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
@@ -153,11 +148,11 @@ class _ShowQRState extends State<ShowQRPage> {
                       ),
                       SizedBox(height: 20.0),
                       (_qrEndpoint.length > 0)
-                          ? QrImage(
+                          ? QrImageView(
                               errorCorrectionLevel: QrErrorCorrectLevel.M,
                               data: _qrEndpoint,
                               version: QrVersions.auto,
-                              size: 240,
+                              size: 240.0,
                               gapless: true,
                               backgroundColor: Colors.white,
                             )

@@ -1,26 +1,20 @@
-// @dart=2.11
+///
 import 'dart:async';
-import 'dart:io';
 import 'dart:ui';
-import 'package:admob_flutter/admob_flutter.dart';
-import 'package:back_button_interceptor/back_button_interceptor.dart';
-import 'package:dio/dio.dart';
-import 'package:flutter_inapp_purchase/flutter_inapp_purchase.dart';
-import 'package:flutter/material.dart';
-import 'package:loading_overlay/loading_overlay.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter_offline/flutter_offline.dart';
 import 'package:encrypt/encrypt.dart' as enq;
+import 'package:go_router/go_router.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_offline/flutter_offline.dart';
+import 'package:loading_overlay/loading_overlay.dart';
 
 //import 'package:logger/logger.dart';
 
 ///
-import '../app_localizations.dart';
+import '../models/app_error.dart';
 import '../models/mine.dart';
 import '../models/secret.dart';
 import '../models/user.dart';
 import '../providers/api_provider.dart';
-import '../providers/custom_interceptors.dart';
 import '../providers/stream_location.dart';
 import '../screens/map/map_explore.dart' show PoiMap;
 import '../shared/constants.dart';
@@ -48,6 +42,7 @@ enum PopupMenuChoice {
   showCoinSheet
 }
 
+///
 class BodyWidget extends StatelessWidget {
   final Color color;
 
@@ -69,12 +64,12 @@ class PlacesPage extends StatefulWidget {
   final String name = 'Places';
 
   ///
-  int mineTypeFilter = 0;
+  final int mineTypeFilter;
 
   ///
   PlacesPage({
-    Key key,
-    @required this.mineTypeFilter,
+    Key? key,
+    required this.mineTypeFilter,
   }) : super(key: key);
 
   @override
@@ -82,21 +77,8 @@ class PlacesPage extends StatefulWidget {
 }
 
 class _PlacesState extends State<PlacesPage> {
-  /// Make sure back button is pressed twice
-  bool ifPop = false;
-
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  bool _isIapAvailable = false;
-  List<String> _productIds = ["tgh.gold.coins.xs"];
-  List<String> _productDescriptions = ["Direct payment\nComing soon"];
-  List<String> _productPrices = ["N/A"];
-  List<IAPItem> _items = [];
-  List<PurchasedItem> _purchases = [];
-  StreamSubscription _iapSubscription;
-  StreamSubscription _purchaseUpdatedSubscription;
-  StreamSubscription _purchaseErrorSubscription;
 
   bool _showCoinSheet = false;
 
@@ -111,29 +93,16 @@ class _PlacesState extends State<PlacesPage> {
   //     printer: PrettyPrinter(
   //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
-  /// Validation token is used to sign every purchase transaction on the API
-  String _validationToken = '';
-
-  /// Transaction Id has to match the database token
-  int _transactionId = 0;
-
-  // Admob variant 1 :(
-  AdmobReward _admobAdvert;
-
   Mine mine = Mine.blank();
   final _places = [];
   final _recommandations = [];
   bool _isLoading = false;
-  bool _isRewarded = false;
-
-  String _admobType = "";
-  int _admobAmount = 0;
 
   int mineId = 0;
   final _apiProvider = ApiProvider();
 
   final _locationStreamBus = getIt.get<StreamLocation>();
-  StreamSubscription<LtLn> _locationStreamSubscription;
+  StreamSubscription<LtLn>? _locationStreamSubscription;
 
   @override
   void initState() {
@@ -146,220 +115,12 @@ class _PlacesState extends State<PlacesPage> {
     _locationStreamSubscription =
         _locationStreamBus.stream$.listen(_updateUserLocation);
 
-    // Admob variant 1 :(
-    _admobAdvert = AdmobReward(
-      adUnitId: AdManager.rewardedAdUnitId,
-      listener: (event, args) {
-        if (event == AdmobAdEvent.loaded) {
-          //print('--- AdmobReward loaded');
-          _admobAdvert?.show();
-          setState(() {
-            _isRewarded = false;
-          });
-        } else if (event == AdmobAdEvent.closed) {
-          //print('--- AdmobReward closed');
-          _admobAdvert?.dispose();
-          if (_isRewarded) {
-            _serverReward();
-          } else {
-            showDialog(
-              context: context,
-              builder: (context) => CustomDialog(
-                title: 'Info',
-                description: "You have to watch the whole commercial "
-                    "to get the materials from that point",
-                buttonText: "Okay",
-                images: [],
-                callback: () {},
-              ),
-            );
-          }
-          _isRewarded = false;
-          setState(() {
-            _admobType = "";
-            _isLoading = false;
-          });
-        } else if (event == AdmobAdEvent.rewarded) {
-          //print('--- AdmobReward rewarded');
-          _admobType = "Reward";
-          _isRewarded = true;
-          var totalAmount = int.tryParse(args['amount'].toString()) ?? 0;
-          setState(() {
-            _admobAmount += totalAmount;
-            _isLoading = false;
-          });
-        } else if (event == AdmobAdEvent.failedToLoad) {
-          //print('--- AdmobReward failed');
-          _isRewarded = false;
-          showDialog(
-            context: context,
-            builder: (context) => CustomDialog(
-              title: 'Error',
-              description: Platform.isAndroid
-                  ? "Google Mobile Ads failed. Please try again later."
-                  : "Apple Mobile Ads failed. Please try again later.",
-              buttonText: "Okay",
-              images: [],
-              callback: () {},
-            ),
-          );
-          _deleteReward();
-          _admobAdvert?.dispose();
-          setState(() {
-            _isLoading = false;
-          });
-        }
-      },
-    );
-
-    BackButtonInterceptor.add(
-      myInterceptor,
-      name: widget.name,
-      context: context,
-    );
-
-    initPlatformState();
   }
 
   @override
   void dispose() {
     _locationStreamSubscription?.cancel();
-    BackButtonInterceptor.remove(myInterceptor);
-    _iapSubscription?.cancel();
-    _admobAdvert?.dispose();
-    endPlatformState();
     super.dispose();
-  }
-
-  // ignore: avoid_positional_boolean_parameters
-  bool myInterceptor(bool stopDefaultButtonEvent, RouteInfo info) {
-    if (stopDefaultButtonEvent) return false;
-    if (ifPop) {
-      return false;
-    } else {
-      setState(() => ifPop = true);
-      if (_scaffoldKey != null) {
-        Navigator.of(context).pop();
-        Navigator.of(context).pushNamed(GlobalConstants.backButtonPage);
-      }
-    }
-    return true;
-  }
-
-  // Platform messages are asynchronous, so we initialize in an async method.
-  Future<void> initPlatformState() async {
-    String platformVersion = "";
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    try {
-      platformVersion = await FlutterInappPurchase.instance.platformVersion;
-    } on Exception {
-      platformVersion = 'platform version unknown';
-    }
-
-    // prepare
-    var result = await FlutterInappPurchase.instance.initConnection;
-    //print('IAP init: $result');
-
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
-    if (!mounted) return;
-
-    // refresh items for android
-    try {
-      String msg = await FlutterInappPurchase.instance.consumeAllItems;
-      print('consumeAllItems: $msg');
-    } on Exception catch (err) {
-      print('consumeAllItems error: $err');
-    }
-
-    _iapSubscription =
-        FlutterInappPurchase.connectionUpdated.listen((connected) {
-      //print('connected: $connected');
-    });
-
-    _purchaseUpdatedSubscription =
-        FlutterInappPurchase.purchaseUpdated.listen((productItem) {
-      if (productItem != null) {
-        _callbackPurchase(productItem.productId);
-      }
-    });
-
-    _purchaseErrorSubscription =
-        FlutterInappPurchase.purchaseError.listen((purchaseError) {
-      //print('purchase-error: $purchaseError');
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _isLoading = false;
-        _isRewarded = false;
-      });
-    });
-
-    await _getProducts();
-    await _getPurchases();
-  }
-
-  void endPlatformState() async {
-    await FlutterInappPurchase.instance.endConnection;
-  }
-
-  Future _getProducts() async {
-    // ignore: omit_local_variable_types
-    List<IAPItem> items =
-        await FlutterInappPurchase.instance.getProducts(_productIds);
-    var idx = 0;
-    for (var item in items) {
-      _productPrices[idx] = item.localizedPrice;
-      _productDescriptions[idx] = item.description;
-      _productIds[idx] = item.productId;
-      idx++;
-    }
-
-    setState(() {
-      _items.addAll(items.toList());
-    });
-  }
-
-  Future _getPurchases() async {
-    // ignore: omit_local_variable_types
-    List<PurchasedItem> items =
-        await FlutterInappPurchase.instance.getAvailablePurchases();
-    // for (var item in items) {
-    //   print('${item.toString()}');
-    //   _purchases.add(item);
-    // }
-
-    setState(() {
-      _purchases.addAll(items.toList());
-    });
-  }
-
-  void _callbackPurchase(String productId) {
-    if (productId != _productIds[0]) {
-      _deleteReward();
-      setState(() {
-        _isLoading = false;
-        _isRewarded = false;
-      });
-      return;
-    }
-    _serverReward();
-    setState(() {
-      _isLoading = false;
-      _isRewarded = true;
-    });
-  }
-
-  void _requestPurchase(int idx) {
-    if (_items.length <= 0) {
-      return;
-    }
-    IAPItem item = _items[idx];
-    // log.d(item.productId);
-    FlutterInappPurchase.instance.requestPurchase(item.productId);
-    _goForReward(item.productId);
   }
 
   void choiceAction(BuildContext context, PopupMenuChoice choice) async {
@@ -560,12 +321,11 @@ class _PlacesState extends State<PlacesPage> {
   Widget build(BuildContext context) {
     /// Application top Bar
     final topBar = AppBar(
-      brightness: Brightness.dark,
       leading: leadingIcon(context),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
       title: Text(
-        AppLocalizations.of(context).translate('drawer_my_points'),
+        "Places",
         style: Style.topBar,
       ),
       actions: <Widget>[
@@ -688,18 +448,7 @@ class _PlacesState extends State<PlacesPage> {
           ),
           side: BorderSide(width: 1, color: Colors.white),
         ),
-        onPressed: () {
-          // Admob variant 1 :(
-          _goForReward("AdReward");
-          _admobAdvert?.load();
-          // Admob variant 2 :(
-          //RewardedVideoAd.instance.load(adUnitId: AdManager.woodchopAdUnitId,targetingInfo: targetingInfo).catchError((e) => print("error in loading ${e.toString()}")).then((v) => setState(() => _adLoaded = v));
-          // Admob variant 3 :(
-          // if (!_rewardedReady) return;
-          // _rewardedAd.show();
-          // _rewardedReady = false;
-          // _rewardedAd = null;
-        },
+        onPressed: () {},
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
@@ -730,15 +479,13 @@ class _PlacesState extends State<PlacesPage> {
             ),
             side: BorderSide(width: 1, color: Colors.white),
           ),
-          onPressed: () {
-            _requestPurchase(idx);
-          },
+          onPressed: () {},
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               Icon(Icons.shopping_cart, color: Color(0xffe6a04e)),
               Text(
-                " ${_productPrices[idx]}",
+                " 0.0",
                 style: TextStyle(
                   color: Color(0xffe6a04e),
                   fontSize: 16,
@@ -813,7 +560,7 @@ class _PlacesState extends State<PlacesPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
                           Text(
-                            _productDescriptions[0],
+                            "Coming soon",
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.white,
@@ -857,10 +604,15 @@ class _PlacesState extends State<PlacesPage> {
     );
 
     // final deviceSize = MediaQuery.of(context).size;
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      //resizeToAvoidBottomPadding: false,
-      appBar: topBar,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) context.go('/poi-map');
+      },
+      child: Scaffold(
+        backgroundColor: GlobalConstants.appBg,
+        //resizeToAvoidBottomPadding: false,
+        appBar: topBar,
       //extendBodyBehindAppBar: true,
       body: OfflineBuilder(
         connectivityBuilder: (
@@ -868,13 +620,13 @@ class _PlacesState extends State<PlacesPage> {
           connectivity,
           child,
         ) {
-          if (connectivity == ConnectivityResult.none) {
+          if (connectivity.isEmpty || connectivity.contains(ConnectivityResult.none)) {
             return Stack(children: <Widget>[
               child,
               BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                 child: Container(
-                    color: Colors.black.withOpacity(0),
+                    color: Colors.black.withValues(alpha: 0),
                     // child: child,
                     child: NetworkStatusMessage()),
               )
@@ -1023,8 +775,9 @@ class _PlacesState extends State<PlacesPage> {
           ),
         ),
       ),
-      key: _scaffoldKey,
-      drawer: DrawerPage(),
+        key: _scaffoldKey,
+        drawer: DrawerPage(),
+      ),
     );
   }
 
@@ -1042,7 +795,7 @@ class _PlacesState extends State<PlacesPage> {
     dynamic response;
     try {
       response = await _apiProvider.get(url);
-    } on Exception catch (err) {
+    } on Exception catch (_) {
       showDialog(
         context: context,
         builder: (context) => CustomDialog(
@@ -1056,10 +809,10 @@ class _PlacesState extends State<PlacesPage> {
       return;
     }
 
-    List<Mine> tmp = [];
-    List<dynamic> places = [];
+    var tmp = <Mine>[];
+    var places = <dynamic>[];
 
-    if (response.containsKey("success")) {
+    if (response is Map && response.containsKey("success")) {
       if (response["success"] == true) {
         if (response.containsKey("places")) {
           response["places"].forEach(
@@ -1086,72 +839,15 @@ class _PlacesState extends State<PlacesPage> {
       _places.clear();
       _recommandations.clear();
       _isLoading = false;
-      _isRewarded = false;
       _places.addAll(places.toList());
       _recommandations.addAll(tmp.toList());
     });
   }
 
-  Future _serverReward() async {
-    dynamic response;
-    try {
-      response = await _apiProvider.post(
-        '/reward',
-        {
-          "token": _validationToken,
-          "tid": _transactionId.toString(),
-        },
-      );
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Error',
-          description:
-              '${err.response?.data['message']} trnx: ${_transactionId.toString()}',
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
-      return;
-    }
-
-    if (response.containsKey("success")) {
-      if (response["success"] == true) {
-        _validationToken = "";
-        _user.details.coins =
-            double.tryParse(response["coins"].toString()) ?? 0.0;
-        _transactionId = 0;
-
-        setState(() {
-          _isLoading = false;
-        });
-
-        /// Retain the current total funds
-        CustomInterceptors.setStoredCookies(
-            GlobalConstants.apiHostUrl, _user.toMap());
-
-        showDialog(
-          context: context,
-          builder: (context) => CustomDialog(
-            title: AppLocalizations.of(context).translate('congrats'),
-            description: "You gained ${response['amount']} coins, "
-                "for a grand total of ${_user.details.coins.toString()} !",
-            buttonText: "Okay",
-            images: [],
-            callback: () {},
-          ),
-        );
-      }
-    }
-    return;
-  }
-
   Future _remoteMine() async {
     //ignore: omit_local_variable_types
     List<Image> imagesArr = [];
-    _getReward(mine.id, _admobType, _admobAmount).then((mineResponse) {
+    _getReward(mine.id, "", 0).then((mineResponse) {
       if (mineResponse == null || mineResponse["success"] != true) {
         // Already showed message, just return
         return;
@@ -1193,10 +889,11 @@ class _PlacesState extends State<PlacesPage> {
             double.tryParse(mineResponse["coins"].toString()) ?? 0.0;
       }
 
+      if (!mounted) return;
       showDialog(
         context: context,
         builder: (context) => CustomDialog(
-          title: AppLocalizations.of(context).translate('congrats'),
+          title: "Congrats",
           description: 'You mined succesfully Point ${mine.id}',
           buttonText: "Okay",
           images: imagesArr,
@@ -1238,103 +935,18 @@ class _PlacesState extends State<PlacesPage> {
     try {
       response = await _apiProvider
           .get("/mine?mine_id=$mineId&enc=${Uri.encodeComponent(ivstr + enc)}");
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Error',
-          description: '${err.response?.data['message']}',
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
-      setState(() {
-        _isLoading = false;
-      });
+    } on AppError catch (err) {
+      if (mounted) err.show(context);
+      if (mounted) setState(() => _isLoading = false);
+      return response;
+    } catch (err) {
+      debugPrint('_getReward unexpected error: $err');
+      if (mounted) setState(() => _isLoading = false);
       return response;
     }
 
-    setState(() {
-      _isLoading = false;
-    });
+    if (mounted) setState(() => _isLoading = false);
     return response;
-  }
-
-  /// First step: get the tokens
-  Future _goForReward(String rtype) async {
-    dynamic response;
-    try {
-      response = await _apiProvider.get("/reward/$rtype");
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Error',
-          description: 'Invalid ad server response. Please try again later.',
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
-      setState(() {
-        _isLoading = false;
-      });
-      return;
-    }
-
-    if (response.containsKey("success")) {
-      if (response["success"] == true) {
-        _validationToken = response["token"] ?? "";
-        _user.details.coins =
-            double.tryParse(response["coins"].toString()) ?? 0.0;
-        _transactionId = response["tid"] ?? 0;
-
-        /// Retain the current total funds
-        CustomInterceptors.setStoredCookies(
-            GlobalConstants.apiHostUrl, _user.toMap());
-        setState(() {
-          _isLoading = true;
-        });
-      }
-    }
-
-    return;
-  }
-
-  /// Failure step: garbage collect
-  Future _deleteReward() async {
-    try {
-      final response = await _apiProvider
-          .delete("/reward/$_validationToken/${_transactionId.toString()}", {});
-
-      if (response.containsKey("success")) {
-        if (response["success"] == true) {
-          _validationToken = "";
-          _transactionId = 0;
-
-          setState(() {
-            _isLoading = false;
-          });
-          return;
-        }
-      }
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Error',
-          description: '${err.response?.data}',
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
-      setState(() {
-        _isLoading = false;
-      });
-      return;
-    }
   }
 
   dynamic remoteClaimTextWidget(Mine mine) {
@@ -1342,7 +954,7 @@ class _PlacesState extends State<PlacesPage> {
     final now =
         DateTime.parse(DateTime.now().toUtc().toIso8601String()).toLocal();
 
-    if (mine.lastVisited != "" && mine.lastVisited != null) {
+    if (mine.lastVisited != "") {
       if (mine.properties.ico == "0") {
         return {
           "status": false,
@@ -1389,12 +1001,13 @@ class _PlacesState extends State<PlacesPage> {
     try {
       final response = await _apiProvider.post("/places", {"mine_id": "13"});
       //log.d(response);
-      if (response.containsKey("success")) {
+      if (response is Map && response.containsKey("success")) {
         if (response["success"] == true) {
+          if (!mounted) return;
           showDialog(
             context: context,
             builder: (context) => CustomDialog(
-              title: AppLocalizations.of(context).translate('congrats'),
+              title: "Congrats",
               description: 'You are now a fighter in the Battle grounds',
               buttonText: "Okay",
               images: [],
@@ -1406,18 +1019,11 @@ class _PlacesState extends State<PlacesPage> {
           return;
         }
       }
-    } on DioError catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: 'Error',
-          description: '${err.response?.data}',
-          buttonText: "Okay",
-          images: [],
-          callback: () {},
-        ),
-      );
-      return;
+    } on AppError catch (err) {
+      if (!mounted) return;
+      err.show(context);
+    } catch (err) {
+      debugPrint('getTutorialBattleGround unexpected error: $err');
     }
   }
 
