@@ -19,6 +19,9 @@ class Item {
   int blueprintId = 0;
 
   ///
+  int itemTypeId = 0;
+
+  ///
   String img = "nothing.png";
 
   ///
@@ -40,6 +43,7 @@ class Item {
     required this.level,
     required this.rarity,
     required this.nr,
+    this.itemTypeId = 0,
   });
 
   ///
@@ -65,6 +69,7 @@ class Item {
     dropChance = int.tryParse(json["drop_chance"].toString()) ?? 0;
     name = json["name"] ?? "";
     blueprintId = int.tryParse(json["blueprint_id"].toString()) ?? 0;
+    itemTypeId = int.tryParse(json["item_type_id"]?.toString() ?? '0') ?? 0;
     img = (json["img"]?.toString().isNotEmpty == true) ? json["img"] : "nothing.png";
     level = int.tryParse(json["level"].toString()) ?? 0;
     rarity = int.tryParse(json["rarity"].toString()) ?? 0;

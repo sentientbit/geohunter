@@ -1,19 +1,17 @@
 /// based on https://proandroiddev.com/flutter-thursday-02-beautiful-list-ui-and-detail-page-a9245f5ceaf0
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-// import 'package:logger/logger.dart';
 
 ///
-import '../../models/app_error.dart';
 import '../../models/item.dart';
 import '../../models/user.dart';
-import '../../providers/api_provider.dart';
+import '../../providers/inventory_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../screens/inventory/itemdetail.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
-
-//import '../app_localizations.dart';
 
 ///
 enum PopupMenuChoice {
@@ -27,53 +25,47 @@ enum PopupMenuChoice {
   intermediate
 }
 
+/// item_type_ids for Main Hand weapons (matches server-side type list)
+const _mainHandTypes = [4, 13, 14, 16];
+
+/// item_type_ids for Intermediate / crafting items
+const _intermediateTypes = [17];
+
 ///
-class InventoryPage extends StatefulWidget {
+class InventoryPage extends ConsumerStatefulWidget {
   ///
   final String name = 'inventory';
 
   ///
-  InventoryPage({
-    Key? key,
-  }) : super(key: key);
+  InventoryPage({Key? key}) : super(key: key);
 
   @override
-  _InventoryState createState() => _InventoryState();
+  ConsumerState<InventoryPage> createState() => _InventoryState();
 }
 
 ///
-class _InventoryState extends State<InventoryPage> {
-  // final Logger log = Logger(
-  //     printer: PrettyPrinter(
-  //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
-
-  ///
-  final ApiProvider _apiProvider = ApiProvider();
-
+class _InventoryState extends ConsumerState<InventoryPage> {
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  /// Curent loggedin user
-  User _user = User.blank();
-
   ///
-  final _items = [];
+  PopupMenuChoice _selectedFilter = PopupMenuChoice.allItems;
 
-  @override
-  void initState() {
-    super.initState();
-    _getUserDetails();
-    _getInventoryItems([0]);
+  /// Returns the currently visible items based on the selected filter.
+  /// Filtering is done client-side from the full inventory already in memory.
+  List<Item> _applyFilter(List<Item> all) {
+    if (_selectedFilter == PopupMenuChoice.mainHand) {
+      return all.where((i) => _mainHandTypes.contains(i.itemTypeId)).toList();
+    }
+    if (_selectedFilter == PopupMenuChoice.intermediate) {
+      return all.where((i) => _intermediateTypes.contains(i.itemTypeId)).toList();
+    }
+    return all; // allItems — no filter
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  Widget _makeListTile(BuildContext context, int index) {
-    var netImg = Image(
-      image: AssetImage('assets/images/items/${_items[index].img}'),
+  Widget _makeListTile(BuildContext context, Item item) {
+    final netImg = Image(
+      image: AssetImage('assets/images/items/${item.img}'),
       height: 76.0,
       width: 76.0,
     );
@@ -95,23 +87,23 @@ class _InventoryState extends State<InventoryPage> {
             Positioned(
                 right: 0.0,
                 bottom: 0.0,
-                child: Text(_items[index].nr.toString(),
+                child: Text(item.nr.toString(),
                     style: TextStyle(color: Colors.white))),
           ])),
       title: Text(
-        _items[index].name,
+        item.name,
         style: TextStyle(
-          color: Item.color(_items[index].rarity),
+          color: Item.color(item.rarity),
           fontFamily: "Cormorant SC",
           fontWeight: FontWeight.bold,
         ),
       ),
       subtitle: Row(
         children: <Widget>[
-          for (var i = 0; i < _items[index].rarity; i++)
+          for (var i = 0; i < item.rarity; i++)
             Icon(Icons.star_border, color: Colors.white),
           Flexible(
-            child: Text(" Level ${_items[index].level}",
+            child: Text(" Level ${item.level}",
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: Colors.white)),
           )
@@ -123,14 +115,14 @@ class _InventoryState extends State<InventoryPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ItemDetailPage(item: _items[index]),
+            builder: (context) => ItemDetailPage(item: item),
           ),
         );
       },
     );
   }
 
-  Widget _makeCard(BuildContext context, int index) {
+  Widget _makeCard(BuildContext context, Item item) {
     return Card(
       color: Color.fromRGBO(19, 21, 20, 0.8),
       elevation: 8.0,
@@ -140,7 +132,6 @@ class _InventoryState extends State<InventoryPage> {
       ),
       child: Container(
         decoration: BoxDecoration(
-          //color: Color.fromRGBO(19, 21, 20, 0.7),
           borderRadius: BorderRadius.circular(8.0),
           boxShadow: <BoxShadow>[
             BoxShadow(
@@ -150,25 +141,20 @@ class _InventoryState extends State<InventoryPage> {
             ),
           ],
         ),
-        child: _makeListTile(context, index),
+        child: _makeListTile(context, item),
       ),
     );
   }
 
   void choiceAction(PopupMenuChoice choice) {
-    if (choice == PopupMenuChoice.allItems) {
-      _getInventoryItems([0]);
-    } else if (choice == PopupMenuChoice.mainHand) {
-      _getInventoryItems([4, 13, 14, 16]);
-    } else if (choice == PopupMenuChoice.intermediate) {
-      _getInventoryItems([17]);
-    }
+    setState(() {
+      _selectedFilter = choice;
+    });
   }
 
   ///
-  Widget leadingIcon(BuildContext context) {
-    // print(" ${_user.details.daily}");
-    if (!GlobalConstants.menuHasNotification(_user.details)) {
+  Widget leadingIcon(BuildContext context, UserData userDetails) {
+    if (!GlobalConstants.menuHasNotification(userDetails)) {
       return IconButton(
         color: Colors.white,
         icon: Icon(
@@ -215,16 +201,6 @@ class _InventoryState extends State<InventoryPage> {
                     color: Colors.red,
                     shape: BoxShape.circle,
                   ),
-                  child: Center(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.red,
-                      ),
-                      width: 10,
-                      height: 10,
-                    ),
-                  ),
                 ),
               )
             ],
@@ -235,6 +211,12 @@ class _InventoryState extends State<InventoryPage> {
   }
 
   Widget build(BuildContext context) {
+    final inventoryState = ref.watch(inventoryProvider);
+    final user = ref.watch(userProvider).valueOrNull ?? User.blank();
+
+    final allItems = inventoryState.valueOrNull?.items ?? [];
+    final displayedItems = _applyFilter(allItems);
+
     //ignore: omit_local_variable_types
     int currentTabIndex = 0;
 
@@ -251,6 +233,25 @@ class _InventoryState extends State<InventoryPage> {
       }
     }
 
+    Widget body;
+    if (inventoryState.isLoading) {
+      body = const Center(child: CircularProgressIndicator());
+    } else if (inventoryState.hasError) {
+      body = Center(
+        child: Text(
+          inventoryState.error.toString(),
+          style: TextStyle(color: Colors.white),
+        ),
+      );
+    } else {
+      body = ListView.builder(
+        scrollDirection: Axis.vertical,
+        shrinkWrap: true,
+        itemCount: displayedItems.length,
+        itemBuilder: (ctx, i) => _makeCard(ctx, displayedItems[i]),
+      );
+    }
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -259,98 +260,91 @@ class _InventoryState extends State<InventoryPage> {
       child: Scaffold(
         backgroundColor: GlobalConstants.appBg,
         appBar: AppBar(
-          leading: leadingIcon(context),
-        elevation: 0.1,
-        backgroundColor: Colors.transparent,
-        title: Text(
-          "Inventory",
-          style: Style.topBar,
-        ),
-        actions: <Widget>[
-          PopupMenuButton<PopupMenuChoice>(
-            onSelected: choiceAction,
-            itemBuilder: (context) => <PopupMenuEntry<PopupMenuChoice>>[
-              PopupMenuItem<PopupMenuChoice>(
-                value: PopupMenuChoice.allItems,
-                child: Row(
-                  children: <Widget>[
-                    Icon(
-                      Icons.business_center,
-                      size: 24,
-                      color: Colors.white,
-                    ),
-                    SizedBox(width: 10.0),
-                    Text(
-                      'All Items',
-                      style: TextStyle(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem<PopupMenuChoice>(
-                value: PopupMenuChoice.mainHand,
-                child: Row(
-                  children: <Widget>[
-                    Icon(
-                      Icons.flash_on,
-                      size: 24,
-                      color: Colors.white,
-                    ),
-                    SizedBox(width: 10.0),
-                    Text(
-                      'Main hand',
-                      style: TextStyle(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem<PopupMenuChoice>(
-                value: PopupMenuChoice.intermediate,
-                child: Row(
-                  children: <Widget>[
-                    Icon(
-                      Icons.category,
-                      size: 24,
-                      color: Colors.white,
-                    ),
-                    SizedBox(width: 10.0),
-                    Text(
-                      'Intermediate',
-                      style: TextStyle(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            color: GlobalConstants.appBg,
+          leading: leadingIcon(context, user.details),
+          elevation: 0.1,
+          backgroundColor: Colors.transparent,
+          title: Text(
+            "Inventory",
+            style: Style.topBar,
           ),
-        ],
-      ),
-      extendBodyBehindAppBar: true,
-      body: Stack(children: <Widget>[
-        Container(
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('assets/images/tools.jpg'),
-              fit: BoxFit.fill,
+          actions: <Widget>[
+            PopupMenuButton<PopupMenuChoice>(
+              onSelected: choiceAction,
+              itemBuilder: (context) => <PopupMenuEntry<PopupMenuChoice>>[
+                PopupMenuItem<PopupMenuChoice>(
+                  value: PopupMenuChoice.allItems,
+                  child: Row(
+                    children: <Widget>[
+                      Icon(
+                        Icons.business_center,
+                        size: 24,
+                        color: Colors.white,
+                      ),
+                      SizedBox(width: 10.0),
+                      Text(
+                        'All Items',
+                        style: TextStyle(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<PopupMenuChoice>(
+                  value: PopupMenuChoice.mainHand,
+                  child: Row(
+                    children: <Widget>[
+                      Icon(
+                        Icons.flash_on,
+                        size: 24,
+                        color: Colors.white,
+                      ),
+                      SizedBox(width: 10.0),
+                      Text(
+                        'Main hand',
+                        style: TextStyle(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<PopupMenuChoice>(
+                  value: PopupMenuChoice.intermediate,
+                  child: Row(
+                    children: <Widget>[
+                      Icon(
+                        Icons.category,
+                        size: 24,
+                        color: Colors.white,
+                      ),
+                      SizedBox(width: 10.0),
+                      Text(
+                        'Intermediate',
+                        style: TextStyle(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              color: GlobalConstants.appBg,
+            ),
+          ],
+        ),
+        extendBodyBehindAppBar: true,
+        body: Stack(children: <Widget>[
+          Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/images/tools.jpg'),
+                fit: BoxFit.fill,
+              ),
             ),
           ),
-        ),
-        Container(
-          child: ListView.builder(
-            scrollDirection: Axis.vertical,
-            shrinkWrap: true,
-            itemCount: _items.length,
-            itemBuilder: _makeCard,
-          ),
-        )
-      ]),
+          body,
+        ]),
         key: _scaffoldKey,
         drawer: DrawerPage(),
         bottomNavigationBar: BottomNavigationBar(
@@ -378,34 +372,5 @@ class _InventoryState extends State<InventoryPage> {
         ),
       ),
     );
-  }
-
-  void _getUserDetails() async {
-    final user = await _apiProvider.getStoredUser();
-    setState(() {
-      _user = user;
-    });
-  }
-
-  void _getInventoryItems(List<int> types) async {
-    try {
-      final response = await _apiProvider.post('/inventory', {"types": types});
-
-      var tmp = [];
-      if (response.containsKey("items")) {
-        for (dynamic elem in response["items"]) {
-          final itm = Item.fromJson(elem);
-          tmp.add(itm);
-        }
-      }
-      setState(() {
-        _items.clear();
-        _items.addAll(tmp.toList());
-      });
-    } on AppError catch (err) {
-      debugPrint(err.toString());
-    } catch (err) {
-      debugPrint('_getInventoryItems unexpected error: $err');
-    }
   }
 }

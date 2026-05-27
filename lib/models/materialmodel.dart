@@ -21,6 +21,12 @@ class Materialmodel {
   ///
   int level = 0;
 
+  /// Hardness stat (0–100 scale)
+  int hardness = 0;
+
+  ///
+  int materialTypeId = 0;
+
   ///
   Materialmodel({
     required this.id,
@@ -29,6 +35,8 @@ class Materialmodel {
     required this.nr,
     required this.needed,
     required this.level,
+    this.hardness = 0,
+    this.materialTypeId = 0,
   });
 
   ///
@@ -58,6 +66,8 @@ class Materialmodel {
     if (json.containsKey("level")) {
       level = int.tryParse(json["level"].toString()) ?? 0;
     }
+    hardness = int.tryParse(json["hardness"]?.toString() ?? '0') ?? 0;
+    materialTypeId = int.tryParse(json["material_type_id"]?.toString() ?? '0') ?? 0;
   }
 
   /// Override toString to have a beautiful log of student object
