@@ -1,18 +1,14 @@
 /// based on https://medium.com/@afegbua/this-is-the-second-part-of-the-beautiful-list-ui-and-detail-page-article-ecb43e203915
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
-//import 'package:logger/logger.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 ///
 import '../../fonts/rpg_awesome_icons.dart';
-import '../../models/app_error.dart';
 import '../../models/blueprint.dart';
-import '../../models/player_stats.dart';
 import '../../models/research.dart';
 import '../../models/user.dart';
-import '../../providers/api_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/research_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../screens/inventory/study.dart';
 import '../../shared/constants.dart';
@@ -30,40 +26,14 @@ class ResearchPage extends ConsumerStatefulWidget {
 
 ///
 class _ResearchState extends ConsumerState<ResearchPage> {
-  /// Curent loggedin user
-  User _user = User.blank();
-
-  // final Logger log = Logger(
-  //     printer: PrettyPrinter(
-  //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
-
-  ///
-  final ApiProvider _apiProvider = ApiProvider();
-
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  ///
-  final _techs = [];
-
-  ///
-  final _blueprints = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _getTechResearches();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  Widget _makeListTile(BuildContext context, int index) {
-    var netImg = (_techs[index].nrInvested > 0)
+  Widget _makeListTile(
+      BuildContext context, Research tech, List<Blueprint> blueprints) {
+    var netImg = (tech.nrInvested > 0)
         ? Image(
-            image: AssetImage('assets/images/research/${_techs[index].img}'),
+            image: AssetImage('assets/images/research/${tech.img}'),
             height: 76.0,
             width: 76.0,
           )
@@ -73,7 +43,7 @@ class _ResearchState extends ConsumerState<ResearchPage> {
             width: 76.0,
           );
 
-    var currentPoints = _techs[index].nrInvested;
+    var currentPoints = tech.nrInvested;
     var currentLvl = researchToCrafting(currentPoints);
     // Points needed to reach next level
     var neededPoints = craftingToResearch(currentLvl + 1);
@@ -99,13 +69,13 @@ class _ResearchState extends ConsumerState<ResearchPage> {
               right: 0.0,
               bottom: 0.0,
               child: Text(
-                _techs[index].nrInvested.toString(),
+                tech.nrInvested.toString(),
                 style: TextStyle(color: Colors.white),
               ),
             ),
           ])),
       title: Text(
-        _techs[index].name,
+        tech.name,
         style: TextStyle(
           color: Colors.white,
           fontFamily: "Cormorant SC",
@@ -117,7 +87,6 @@ class _ResearchState extends ConsumerState<ResearchPage> {
           Expanded(
             flex: 1,
             child: Container(
-              // tag: 'hero',
               child: LinearProgressIndicator(
                 backgroundColor: Color.fromRGBO(209, 224, 224, 0.2),
                 value: percentage,
@@ -130,7 +99,7 @@ class _ResearchState extends ConsumerState<ResearchPage> {
             child: Padding(
               padding: EdgeInsets.only(left: 10.0),
               child: Text(
-                Research.skill(_techs[index].nrInvested),
+                Research.skill(tech.nrInvested),
                 style: TextStyle(color: Colors.white),
               ),
             ),
@@ -144,8 +113,8 @@ class _ResearchState extends ConsumerState<ResearchPage> {
           context,
           MaterialPageRoute(
             builder: (context) => StudyDetailPage(
-              research: _techs[index],
-              blueprints: _blueprints,
+              research: tech,
+              blueprints: blueprints,
             ),
           ),
         );
@@ -153,7 +122,8 @@ class _ResearchState extends ConsumerState<ResearchPage> {
     );
   }
 
-  Widget _makeCard(BuildContext context, int index) {
+  Widget _makeCard(
+      BuildContext context, Research tech, List<Blueprint> blueprints) {
     return Card(
       color: Color.fromRGBO(19, 21, 20, 0.8),
       elevation: 8.0,
@@ -163,7 +133,6 @@ class _ResearchState extends ConsumerState<ResearchPage> {
       ),
       child: Container(
         decoration: BoxDecoration(
-          //color: Color.fromRGBO(19, 21, 20, 0.7),
           borderRadius: BorderRadius.circular(8.0),
           boxShadow: <BoxShadow>[
             BoxShadow(
@@ -173,15 +142,14 @@ class _ResearchState extends ConsumerState<ResearchPage> {
             ),
           ],
         ),
-        child: _makeListTile(context, index),
+        child: _makeListTile(context, tech, blueprints),
       ),
     );
   }
 
   ///
-  Widget leadingIcon(BuildContext context) {
-    // print(" ${_user.details.daily}");
-    if (!GlobalConstants.menuHasNotification(_user.details)) {
+  Widget leadingIcon(BuildContext context, UserData userDetails) {
+    if (!GlobalConstants.menuHasNotification(userDetails)) {
       return IconButton(
         color: Colors.white,
         icon: Icon(
@@ -228,16 +196,6 @@ class _ResearchState extends ConsumerState<ResearchPage> {
                     color: Colors.red,
                     shape: BoxShape.circle,
                   ),
-                  child: Center(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.red,
-                      ),
-                      width: 10,
-                      height: 10,
-                    ),
-                  ),
                 ),
               )
             ],
@@ -249,12 +207,17 @@ class _ResearchState extends ConsumerState<ResearchPage> {
 
   ///
   Widget build(BuildContext context) {
-    //ignore: omit_local_variable_types
+    final researchState = ref.watch(researchProvider);
+    final user = ref.watch(userProvider).valueOrNull ?? User.blank();
+
+    final techs = researchState.valueOrNull?.techs ?? [];
+    final blueprints = researchState.valueOrNull?.blueprints ?? <Blueprint>[];
+
     int currentTabIndex = 1;
 
     /// Application top Bar
     final topBar = AppBar(
-      leading: leadingIcon(context),
+      leading: leadingIcon(context, user.details),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
       title: Text(
@@ -269,7 +232,6 @@ class _ResearchState extends ConsumerState<ResearchPage> {
         currentTabIndex = index;
       });
       if (index == 0) {
-        //Navigator.of(context).pop();
         context.go('/forge');
       }
       /* if index == 1 We are here: Research */
@@ -285,25 +247,31 @@ class _ResearchState extends ConsumerState<ResearchPage> {
         appBar: topBar,
         extendBodyBehindAppBar: true,
         body: Stack(children: <Widget>[
-        Container(
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('assets/images/book_candle.jpg'),
-              fit: BoxFit.fill,
+          Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/images/book_candle.jpg'),
+                fit: BoxFit.fill,
+              ),
             ),
           ),
-        ),
-        Container(
-          child: ListView.builder(
-            scrollDirection: Axis.vertical,
-            shrinkWrap: true,
-            itemCount: _techs.length,
-            itemBuilder: (context, index) {
-              return _makeCard(context, index);
-            },
-          ),
-        )
-      ]),
+          researchState.isLoading
+              ? Center(
+                  child: Image.asset('assets/images/compass.gif', width: 150),
+                )
+              : researchState.hasError
+                  ? Center(
+                      child: Text('Failed to load research',
+                          style: TextStyle(color: Colors.white)),
+                    )
+                  : ListView.builder(
+                      scrollDirection: Axis.vertical,
+                      shrinkWrap: true,
+                      itemCount: techs.length,
+                      itemBuilder: (context, index) =>
+                          _makeCard(context, techs[index], blueprints),
+                    ),
+        ]),
         key: _scaffoldKey,
         drawer: DrawerPage(),
         bottomNavigationBar: BottomNavigationBar(
@@ -327,54 +295,5 @@ class _ResearchState extends ConsumerState<ResearchPage> {
         ),
       ),
     );
-  }
-
-  void _getTechResearches() async {
-    try {
-    final response = await _apiProvider.get('/research');
-
-    var rscs = [];
-    var blps = [];
-    // update local data
-    _user.details.coins =
-        double.tryParse(response["coins"].toString()) ?? 0.0;
-    _user.details.guildId = response["guild"]["id"].toString();
-    _user.details.mining = response["mining"];
-    _user.details.xp = response["xp"];
-    _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
-    _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
-    _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
-    _user.details.daily = response["daily"];
-    if (response.containsKey("settings")) {
-      _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
-    }
-    _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
-
-    ref.invalidate(userProvider);
-
-    if (response.containsKey("techs")) {
-      for (dynamic elem in response["techs"]) {
-        final r = Research.fromJson(elem);
-        rscs.add(r);
-      }
-    }
-    if (response.containsKey("blueprints")) {
-      for (dynamic elem in response["blueprints"]) {
-        final b = Blueprint.fromJson(elem);
-        blps.add(b);
-      }
-    }
-
-    setState(() {
-      _techs.clear();
-      _techs.addAll(rscs.toList());
-      _blueprints.clear();
-      _blueprints.addAll(blps.toList());
-    });
-    } on AppError catch (err) {
-      debugPrint(err.toString());
-    } catch (err) {
-      debugPrint('_getInventoryData unexpected error: $err');
-    }
   }
 }

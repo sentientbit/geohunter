@@ -1,63 +1,33 @@
 ///
 import 'package:flutter/material.dart';
-import 'package:geohunter/models/guild.dart';
 import 'package:go_router/go_router.dart';
-//import 'package:logger/logger.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 ///
-import '../../models/app_error.dart';
+import '../../models/guild_list_response.dart';
 import '../../models/user.dart';
-import '../../providers/api_provider.dart';
-import '../../providers/custom_interceptors.dart';
+import '../../providers/guild_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
 import 'create_group.dart';
 import 'join_group.dart';
 
-//import '../app_localizations.dart';
-
 ///
-class NoGroup extends StatefulWidget {
+class NoGroup extends ConsumerStatefulWidget {
   @override
   _NoGroupState createState() => _NoGroupState();
 }
 
-class _NoGroupState extends State<NoGroup> {
-  final ApiProvider _apiProvider = ApiProvider();
-
+class _NoGroupState extends ConsumerState<NoGroup> {
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  final _guilds = [];
-
-  //final Logger log = Logger(
-  //    printer: PrettyPrinter(
-  //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
-
-  /// Curent loggedin user
-  User _user = User.blank();
-
-  String userGuildId = "0";
-
   ///
-  int maxNrGuilds = 100;
+  final int maxNrGuilds = 100;
 
-  @override
-  void initState() {
-    super.initState();
-    _getUserDetails(context);
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  Widget _makeCard(BuildContext context, int index) {
-    if (_guilds.isEmpty) {
-      return SizedBox(width: 1);
-    }
+  Widget _makeCard(BuildContext context, GuildSummary guild) {
     return Card(
       color: Color.fromRGBO(19, 21, 20, 0.8),
       elevation: 8.0,
@@ -67,7 +37,6 @@ class _NoGroupState extends State<NoGroup> {
       ),
       child: Container(
         decoration: BoxDecoration(
-          //color: Color.fromRGBO(19, 21, 20, 0.7),
           borderRadius: BorderRadius.circular(8.0),
           boxShadow: <BoxShadow>[
             BoxShadow(
@@ -77,20 +46,20 @@ class _NoGroupState extends State<NoGroup> {
             ),
           ],
         ),
-        child: _makeListTile(context, index),
+        child: _makeListTile(context, guild),
       ),
     );
   }
 
-  Widget _makeListTile(BuildContext context, int index) {
+  Widget _makeListTile(BuildContext context, GuildSummary guild) {
     var netImg = Image(
       image: AssetImage('assets/images/guild-ornament.jpg'),
       height: 76.0,
       width: 76.0,
     );
 
-    var nrUsers = _guilds[index].nrUsers.toString();
-    var locked = (_guilds[index].isLocked > 0) ? "Password locked" : "Open";
+    var nrUsers = guild.nrUsers.toString();
+    var locked = (guild.isLocked > 0) ? "Password locked" : "Open";
 
     return ListTile(
       contentPadding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
@@ -110,15 +79,13 @@ class _NoGroupState extends State<NoGroup> {
             Positioned(
               right: 0.0,
               bottom: 0.0,
-              child: Text(
-                '123',
-              ),
+              child: Text('123'),
             ),
           ],
         ),
       ),
       title: Text(
-        _guilds[index].name,
+        guild.name,
         style: TextStyle(
           color: Color(0xffe6a04e),
           fontFamily: "Cormorant SC",
@@ -141,17 +108,16 @@ class _NoGroupState extends State<NoGroup> {
           )
         ],
       ),
-      trailing:
-          Icon(Icons.keyboard_arrow_right, color: Colors.white, size: 30.0),
+      trailing: Icon(Icons.keyboard_arrow_right, color: Colors.white, size: 30.0),
       onTap: () {
         Navigator.of(context).pop();
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => JoinGroup(
-              guid: _guilds[index].guid,
-              isLocked: _guilds[index].isLocked,
-              title: _guilds[index].name,
+              guid: guild.guid,
+              isLocked: guild.isLocked,
+              title: guild.name,
             ),
           ),
         );
@@ -159,15 +125,11 @@ class _NoGroupState extends State<NoGroup> {
     );
   }
 
-  Widget leadingIcon(BuildContext context) {
-    // print(" ${_user.details.daily}");
-    if (!GlobalConstants.menuHasNotification(_user.details)) {
+  Widget leadingIcon(BuildContext context, UserData userDetails) {
+    if (!GlobalConstants.menuHasNotification(userDetails)) {
       return IconButton(
         color: Colors.white,
-        icon: Icon(
-          Icons.menu,
-          color: Colors.white,
-        ),
+        icon: Icon(Icons.menu, color: Colors.white),
         onPressed: () {
           if (_scaffoldKey.currentState != null) {
             _scaffoldKey.currentState?.openDrawer();
@@ -194,10 +156,7 @@ class _NoGroupState extends State<NoGroup> {
           height: 25,
           child: Stack(
             children: [
-              Icon(
-                Icons.menu,
-                color: Colors.white,
-              ),
+              Icon(Icons.menu, color: Colors.white),
               Positioned(
                 left: 25,
                 top: 0,
@@ -207,16 +166,6 @@ class _NoGroupState extends State<NoGroup> {
                   decoration: BoxDecoration(
                     color: Colors.red,
                     shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.red,
-                      ),
-                      width: 10,
-                      height: 10,
-                    ),
                   ),
                 ),
               )
@@ -228,9 +177,14 @@ class _NoGroupState extends State<NoGroup> {
   }
 
   Widget build(BuildContext context) {
+    final guildListState = ref.watch(guildListProvider);
+    final user = ref.watch(userProvider).valueOrNull ?? User.blank();
+
+    final guilds = guildListState.valueOrNull?.guilds ?? [];
+    final userGuildId = user.details.guildId;
+
     ///
     void _goJoin(BuildContext context) {
-      //Navigator.of(context).pushNamed('/quests-full-page', arguments: quest);
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -333,7 +287,7 @@ class _NoGroupState extends State<NoGroup> {
 
     /// Application top Bar
     final topBar = AppBar(
-      leading: leadingIcon(context),
+      leading: leadingIcon(context, user.details),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
       title: Text("Guilds", style: Style.topBar),
@@ -355,185 +309,117 @@ class _NoGroupState extends State<NoGroup> {
               decoration: BoxDecoration(
                 image: DecorationImage(
                   image: AssetImage('assets/images/inn.jpg'),
-                fit: BoxFit.fill,
+                  fit: BoxFit.fill,
+                ),
               ),
             ),
-          ),
-          Column(
-            children: <Widget>[
-              Padding(
-                padding: EdgeInsets.all(40.0),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: Text(
-                  "Welcome to Guilds",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Cormorant SC',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 40.0,
-                    color: Colors.white,
-                    shadows: <Shadow>[
-                      Shadow(
-                        offset: Offset(1.0, 1.0),
-                        blurRadius: 3.0,
-                        color: Color.fromARGB(255, 0, 0, 0),
-                      ),
-                    ],
+            Column(
+              children: <Widget>[
+                Padding(padding: EdgeInsets.all(40.0)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: Text(
+                    "Welcome to Guilds",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Cormorant SC',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 40.0,
+                      color: Colors.white,
+                      shadows: <Shadow>[
+                        Shadow(
+                          offset: Offset(1.0, 1.0),
+                          blurRadius: 3.0,
+                          color: Color.fromARGB(255, 0, 0, 0),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Text(
-                  "Guilds are special groups of players "
-                  "bounded by a common goal.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16.0,
-                    fontFamily: 'Open Sans',
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    shadows: <Shadow>[
-                      Shadow(
-                        offset: Offset(1.0, 1.0),
-                        blurRadius: 3.0,
-                        color: Color.fromARGB(255, 0, 0, 0),
-                      ),
-                    ],
+                Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Text(
+                    "Guilds are special groups of players "
+                    "bounded by a common goal.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16.0,
+                      fontFamily: 'Open Sans',
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      shadows: <Shadow>[
+                        Shadow(
+                          offset: Offset(1.0, 1.0),
+                          blurRadius: 3.0,
+                          color: Color.fromARGB(255, 0, 0, 0),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 20, left: 0),
-                child: Container(
-                  alignment: Alignment.bottomLeft,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: <Widget>[
-                      (userGuildId != "0") ? myguildButton : createButton,
-                      (userGuildId != "0") ? Text("") : joinButton,
-                    ],
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 20, left: 0),
+                  child: Container(
+                    alignment: Alignment.bottomLeft,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: <Widget>[
+                        (userGuildId != "0") ? myguildButton : createButton,
+                        (userGuildId != "0") ? Text("") : joinButton,
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: Container(
-                  child: CustomScrollView(
-                    scrollDirection: Axis.vertical,
-                    shrinkWrap: false,
-                    slivers: <Widget>[
-                      SliverList(
-                        delegate: SliverChildListDelegate(
-                          [
-                            Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Text(
-                                'List of Public Guilds',
-                                textAlign: TextAlign.left,
-                                style: TextStyle(
-                                  color: Color(0xffe6a04e),
-                                  fontSize: 24,
-                                  fontFamily: 'Cormorant SC',
-                                  fontWeight: FontWeight.bold,
-                                  shadows: <Shadow>[
-                                    Shadow(
-                                      offset: Offset(1.0, 1.0),
-                                      blurRadius: 3.0,
-                                      color: Color.fromARGB(255, 0, 0, 0),
+                Expanded(
+                  child: guildListState.isLoading
+                      ? Center(
+                          child: Image.asset('assets/images/compass.gif',
+                              width: 150),
+                        )
+                      : CustomScrollView(
+                          scrollDirection: Axis.vertical,
+                          shrinkWrap: false,
+                          slivers: <Widget>[
+                            SliverList(
+                              delegate: SliverChildListDelegate(
+                                [
+                                  Padding(
+                                    padding: EdgeInsets.all(16),
+                                    child: Text(
+                                      'List of Public Guilds',
+                                      textAlign: TextAlign.left,
+                                      style: TextStyle(
+                                        color: Color(0xffe6a04e),
+                                        fontSize: 24,
+                                        fontFamily: 'Cormorant SC',
+                                        fontWeight: FontWeight.bold,
+                                        shadows: <Shadow>[
+                                          Shadow(
+                                            offset: Offset(1.0, 1.0),
+                                            blurRadius: 3.0,
+                                            color:
+                                                Color.fromARGB(255, 0, 0, 0),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  for (final guild
+                                      in guilds.take(maxNrGuilds))
+                                    _makeCard(context, guild),
+                                ],
                               ),
                             ),
-                            for (var i = 0;
-                                i <
-                                    ((_guilds.length > maxNrGuilds)
-                                        ? maxNrGuilds
-                                        : _guilds.length);
-                                i++)
-                              _makeCard(context, i),
                           ],
                         ),
-                      ),
-                    ],
-                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
+              ],
+            ),
+          ],
+        ),
         key: _scaffoldKey,
         drawer: DrawerPage(),
       ),
     );
-  }
-
-  void _getAllGuilds() async {
-    _guilds.clear();
-    try {
-      final response = await _apiProvider.get('/guilds');
-
-      final guilds = [];
-      for (dynamic elem in response["guilds"]) {
-        guilds.add(
-          Guild(
-            id: int.tryParse(elem["id"]) ?? 0,
-            factionId: 0,
-            leaderId: 0,
-            guid: elem["guid"],
-            name: elem["name"],
-            isHidden: int.tryParse(elem["is_hidden"]) ?? 0,
-            isLocked: int.tryParse(elem["is_locked"]) ?? 0,
-            nrUsers: elem["users"].length,
-            picture: Picture.blank(),
-            users: [],
-            description: "",
-          ),
-        );
-      }
-      setState(() {
-        _guilds.addAll(guilds.toList());
-      });
-    } on AppError catch (err) {
-      debugPrint(err.toString());
-    } catch (err) {
-      debugPrint('_getAllGuilds unexpected error: $err');
-    }
-  }
-
-  void _getUserDetails(BuildContext context) async {
-    try {
-    final response = await _apiProvider.get('/profile');
-    final tmp =
-        await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
-
-    tmp["jwt"] = response["jwt"];
-    tmp["user"] = response["user"];
-    await CustomInterceptors.setStoredCookies(
-        GlobalConstants.apiHostUrl, tmp);
-
-    setState(() {
-      _user = User.fromJson(tmp);
-      userGuildId = _user.details.guildId;
-    });
-
-    //log.d('--- user ---');
-    //log.d(_user.user);
-    /// Make sure if we are in No-Group Screen
-    /// but we should be in a guild do a redirect
-    // if (_user.details.guildId != "0") {
-    //   Navigator.of(context).pushReplacementNamed('/in-group');
-    //   return;
-    // }
-
-    _getAllGuilds();
-    } on AppError catch (err) {
-      debugPrint(err.toString());
-    } catch (err) {
-      debugPrint('_getUserDetails unexpected error: $err');
-    }
   }
 }
