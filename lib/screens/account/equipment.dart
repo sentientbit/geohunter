@@ -1,16 +1,19 @@
 ///
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 ///
 import '../../models/app_error.dart';
 import '../../models/item.dart';
 import '../../providers/api_provider.dart';
+import '../../providers/equipment_provider.dart';
+import '../../providers/inventory_provider.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
 
 ///
-class EquipmentPage extends StatefulWidget {
+class EquipmentPage extends ConsumerStatefulWidget {
   ///
   final int placement;
 
@@ -29,7 +32,7 @@ class EquipmentPage extends StatefulWidget {
 }
 
 ///
-class _EquipmentState extends State<EquipmentPage> {
+class _EquipmentState extends ConsumerState<EquipmentPage> {
   ///
   final ApiProvider _apiProvider = ApiProvider();
 
@@ -75,7 +78,6 @@ class _EquipmentState extends State<EquipmentPage> {
       ),
       child: Container(
         decoration: BoxDecoration(
-          //color: Color.fromRGBO(19, 21, 20, 0.7),
           borderRadius: BorderRadius.circular(8.0),
           boxShadow: <BoxShadow>[
             BoxShadow(
@@ -148,10 +150,7 @@ class _EquipmentState extends State<EquipmentPage> {
     final topBar = AppBar(
       leading: IconButton(
         color: GlobalConstants.appFg,
-        icon: Icon(
-          Icons.menu,
-          // size: 32,
-        ),
+        icon: Icon(Icons.menu),
         onPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       elevation: 0.1,
@@ -241,9 +240,7 @@ class _EquipmentState extends State<EquipmentPage> {
                           ],
                         ),
                       ),
-                SizedBox(
-                  height: 20,
-                ),
+                SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
@@ -283,10 +280,12 @@ class _EquipmentState extends State<EquipmentPage> {
     }
   }
 
-  /// Wear the item and get back
+  /// Wear the item and refresh providers
   void _wearItem(BuildContext context, int itemId) async {
     try {
       await _apiProvider.post('/equipment/$itemId', {});
+      ref.invalidate(equipmentProvider);
+      ref.invalidate(inventoryProvider);
       if (mounted) Navigator.pop(context, true);
     } on AppError catch (err) {
       debugPrint(err.toString());
@@ -296,10 +295,12 @@ class _EquipmentState extends State<EquipmentPage> {
   }
 
   void _unequipItem(BuildContext context, int placement) async {
-    // Our index start with 0 sa we add 1
+    // Our index starts with 0 so we add 1
     var slot = placement + 1;
     try {
       await _apiProvider.delete('/equipment/$slot', {});
+      ref.invalidate(equipmentProvider);
+      ref.invalidate(inventoryProvider);
       if (mounted) Navigator.pop(context, true);
     } on AppError catch (err) {
       debugPrint(err.toString());

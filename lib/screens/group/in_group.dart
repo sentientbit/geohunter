@@ -12,7 +12,9 @@ import '../../models/app_error.dart';
 import '../../models/guild.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
-import '../../providers/custom_interceptors.dart';
+import '../../providers/guild_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/user_provider.dart';
 import '../../screens/friendship/paldetail.dart';
 import '../../screens/group/no_group.dart';
 import '../../shared/constants.dart';
@@ -21,14 +23,14 @@ import '../../widgets/drawer.dart';
 import '../../widgets/network_status_message.dart';
 
 ///
-class InGroup extends StatefulWidget {
+class InGroup extends ConsumerStatefulWidget {
   ///
   final String name = 'in-group';
   @override
   _InGroupState createState() => _InGroupState();
 }
 
-class _InGroupState extends State<InGroup> {
+class _InGroupState extends ConsumerState<InGroup> {
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -75,13 +77,11 @@ class _InGroupState extends State<InGroup> {
 
   final ApiProvider _apiProvider = ApiProvider();
 
-  Guild currentGuild = Guild.blank();
-  String guildUid = "Unique ID";
+  /// Current guild (kept for mutation methods that need guild.id)
+  Guild _currentGuild = Guild.blank();
 
-  /// Curent loggedin user
-  User _user = User.blank();
-
-  List<dynamic> members = [];
+  /// Guards one-time form initialization from provider data
+  bool _initialized = false;
 
   //final Logger log = Logger(
   //    printer: PrettyPrinter(
@@ -90,7 +90,16 @@ class _InGroupState extends State<InGroup> {
   @override
   void initState() {
     super.initState();
-    _getGuildDetails();
+  }
+
+  void _initFormFromGuild(Guild guild, User user) {
+    _guildNameController.text = guild.name;
+    _isHidden = guild.isHidden;
+    _isLocked = guild.isLocked;
+    _passwordController.text = "";
+    _isGroupOwner = (guild.leaderId == user.details.id);
+    _currentGuild = guild;
+    _initialized = true;
   }
 
   @override
@@ -98,10 +107,7 @@ class _InGroupState extends State<InGroup> {
     super.dispose();
   }
 
-  Widget _makeCard(BuildContext context, int index) {
-    if (members.isEmpty) {
-      return SizedBox(width: 1);
-    }
+  Widget _makeCard(BuildContext context, GuildUser member) {
     return Card(
       color: Color.fromRGBO(19, 21, 20, 0.8),
       elevation: 8.0,
@@ -111,7 +117,6 @@ class _InGroupState extends State<InGroup> {
       ),
       child: Container(
         decoration: BoxDecoration(
-          //color: Color.fromRGBO(19, 21, 20, 0.7),
           borderRadius: BorderRadius.circular(8.0),
           boxShadow: <BoxShadow>[
             BoxShadow(
@@ -121,22 +126,21 @@ class _InGroupState extends State<InGroup> {
             ),
           ],
         ),
-        child: _makeListTile(context, index),
+        child: _makeListTile(context, member),
       ),
     );
   }
 
-  Widget _makeListTile(BuildContext context, int index) {
+  Widget _makeListTile(BuildContext context, GuildUser member) {
     var netImg = Image(
       image: NetworkImage(
-          'https://${GlobalConstants.apiHostUrl}${members[index].thumbnail}'),
+          'https://${GlobalConstants.apiHostUrl}${member.thumbnail}'),
       height: 76.0,
       width: 76.0,
     );
 
-    var seniority = timeAgoSinceDate(members[index].created);
-
-    var friend = Friend.fromGuildUser(members[index]);
+    var seniority = timeAgoSinceDate(member.created);
+    var friend = Friend.fromGuildUser(member);
 
     return ListTile(
       contentPadding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
@@ -156,15 +160,13 @@ class _InGroupState extends State<InGroup> {
             Positioned(
               right: 0.0,
               bottom: 0.0,
-              child: Text(
-                '123',
-              ),
+              child: Text('123'),
             ),
           ],
         ),
       ),
       title: Text(
-        members[index].username,
+        member.username,
         style: TextStyle(
           color: Color(0xffe6a04e),
           fontFamily: "Cormorant SC",
@@ -177,7 +179,7 @@ class _InGroupState extends State<InGroup> {
         children: <Widget>[
           SizedBox(height: 10.0),
           Text(
-            "${members[index].role()}",
+            "${member.role()}",
             style: TextStyle(color: Colors.white),
           ),
           SizedBox(height: 10.0),
@@ -190,7 +192,6 @@ class _InGroupState extends State<InGroup> {
       trailing:
           Icon(Icons.keyboard_arrow_right, color: Colors.white, size: 30.0),
       onTap: () {
-        //Navigator.of(context).pop();
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -201,9 +202,8 @@ class _InGroupState extends State<InGroup> {
     );
   }
 
-  Widget leadingIcon(BuildContext context) {
-    // print(" ${_user.details.daily}");
-    if (!GlobalConstants.menuHasNotification(_user.details)) {
+  Widget leadingIcon(BuildContext context, UserData userDetails) {
+    if (!GlobalConstants.menuHasNotification(userDetails)) {
       return IconButton(
         color: Colors.white,
         icon: Icon(
@@ -271,6 +271,20 @@ class _InGroupState extends State<InGroup> {
 
   Widget build(BuildContext context) {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
+
+    final guildAsync = ref.watch(guildProvider);
+    final user = ref.watch(userProvider).valueOrNull ?? User.blank();
+
+    final guild = guildAsync.valueOrNull?.guild ?? Guild.blank();
+    final members = guild.users;
+    final guildUid = (guild.guid != "0" && guild.guid.isNotEmpty) ? guild.guid : "Unique ID";
+
+    // One-time form initialization when guild data first loads
+    if (guildAsync.hasValue && !_initialized) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_initialized) setState(() => _initFormFromGuild(guild, user));
+      });
+    }
 
     // Button to save and update the guild's details
     final saveButton = Padding(
@@ -403,7 +417,7 @@ class _InGroupState extends State<InGroup> {
 
     /// Application top Bar
     final topBar = AppBar(
-      leading: leadingIcon(context),
+      leading: leadingIcon(context, user.details),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
       title: Text("Guild - $guildUid",
@@ -724,8 +738,8 @@ class _InGroupState extends State<InGroup> {
                               ),
                             ),
                           ),
-                          for (var i = 0; i < members.length; i++)
-                            _makeCard(context, i),
+                          for (final member in members)
+                            _makeCard(context, member),
                         ],
                       ),
                     ),
@@ -740,53 +754,6 @@ class _InGroupState extends State<InGroup> {
         drawer: DrawerPage(),
       ),
     );
-  }
-
-  void _getGuildDetails() async {
-    final user = await _apiProvider.getStoredUser();
-
-    if (user.details.guildId == "0") {
-      Navigator.of(context).pop();
-      return;
-    }
-
-    var tmp = [];
-
-    try {
-      dynamic response =
-          await _apiProvider.get("/guild/${user.details.guildId}");
-
-      if (response is! Map || !response.containsKey("guilds") || response["guilds"].isEmpty) {
-        _user = user;
-        _user.details.guildId = '0';
-        await CustomInterceptors.setStoredCookies(
-            GlobalConstants.apiHostUrl, _user.toMap());
-      } else if (response["guilds"][0] != null) {
-        for (dynamic member in response["guilds"][0]["users"]) {
-          final u = GuildUser.fromJson(member);
-          tmp.add(u);
-        }
-        setState(() {
-          members.clear();
-          members.addAll(tmp);
-          _user = user;
-          currentGuild = Guild.fromJson(response["guilds"][0]);
-          guildUid = currentGuild.guid;
-          _isHidden = currentGuild.isHidden;
-          _isLocked = currentGuild.isLocked;
-          _passwordController.text = "";
-          _isGroupOwner = response["guilds"][0]["leader_id"] == user.details.id;
-          _guildNameController.text = currentGuild.name;
-        });
-      }
-    } on AppError catch (err) {
-      err.show(context);
-    } catch (err) {
-      debugPrint('_loadGuildData unexpected error: $err');
-    }
-
-    //log.d('--- currentGuild ---');
-    //log.d(currentGuild.guid);
   }
 
   void _saveGuildDetails() async {
@@ -808,7 +775,7 @@ class _InGroupState extends State<InGroup> {
     }
     try {
       var data = {
-        "guild_id": currentGuild.id,
+        "guild_id": _currentGuild.id,
         "name": _guildNameController.text,
         "is_hidden": _isHidden,
         "is_locked": _isLocked,
@@ -1019,12 +986,11 @@ class _InGroupState extends State<InGroup> {
   void _deleteGuild(BuildContext context) async {
     try {
       final response =
-          await _apiProvider.delete("/guild/${currentGuild.id}", {});
+          await _apiProvider.delete("/guild/${_currentGuild.id}", {});
 
       if (response["success"] == true) {
-        _user.details.guildId = '0';
-        await CustomInterceptors.setStoredCookies(
-            GlobalConstants.apiHostUrl, _user.toMap());
+        ref.invalidate(guildProvider);
+        ref.invalidate(userProvider);
       }
 
       if (!mounted) return;
@@ -1050,12 +1016,12 @@ class _InGroupState extends State<InGroup> {
 
   void _unjoinGuild(BuildContext context) async {
     try {
+      final userId = ref.read(userProvider).valueOrNull?.details.id ?? 0;
       final response = await _apiProvider
-          .delete("/membership/${currentGuild.id}/${_user.details.id}", {});
+          .delete("/membership/${_currentGuild.id}/$userId", {});
 
-      _user.details.guildId = '0';
-      await CustomInterceptors.setStoredCookies(
-          GlobalConstants.apiHostUrl, _user.toMap());
+      ref.invalidate(guildProvider);
+      ref.invalidate(userProvider);
 
       if (!mounted) return;
       showDialog(

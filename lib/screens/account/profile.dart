@@ -12,10 +12,10 @@ import '../../app_localizations.dart';
 import '../../models/app_error.dart';
 import '../../fonts/rpg_awesome_icons.dart';
 import '../../models/item.dart';
-import '../../models/player_stats.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/custom_interceptors.dart';
+import '../../providers/equipment_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/user_provider.dart';
 import '../../screens/account/equipment.dart';
@@ -25,9 +25,6 @@ import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
 import '../../widgets/network_status_message.dart';
 import '../../widgets/profile_info_card.dart';
-
-/// 12 User equiped items with 0 as a starting index
-List<Item> _equipments = List<Item>.filled(12, Item.blank());
 
 ///
 class ProfilePage extends ConsumerStatefulWidget {
@@ -39,9 +36,6 @@ class ProfilePage extends ConsumerStatefulWidget {
 }
 
 class _ProfilePageState extends ConsumerState<ProfilePage> {
-  ///
-  final ApiProvider _apiProvider = ApiProvider();
-
   ImageProvider _avatar = AssetImage("assets/images/avatars/default01.jpg");
 
   ///
@@ -53,6 +47,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   bool _showEmailError = false;
 
   String _currentSex = "1";
+
+  /// Guards one-time form initialization from provider data
+  bool _initialized = false;
 
   //final Logger log = Logger(
   //    printer: PrettyPrinter(
@@ -78,7 +75,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    _getUserDetails();
+  }
+
+  void _initFormFromUser(User user) {
+    _usernameController.text = user.details.username;
+    _currentSex = user.details.sex;
+    _statusTextController.text = user.details.status;
+    currentExperience = user.details.xp;
+    currentLevel = expToLevel(currentExperience);
+    nextExperienceLevel = levelToExp(currentLevel + 1);
+    _avatar = NetworkImage(
+        'https://${GlobalConstants.apiHostUrl}${user.details.picture}');
+    _user = user;
+    _initialized = true;
   }
 
   @override
@@ -205,13 +214,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
     return GestureDetector(
       onTap: () async {
-        final changed = await Navigator.push<bool>(
+        await Navigator.push<bool>(
           context,
           MaterialPageRoute(
             builder: (context) => EquipmentPage(placement: index, item: eqp),
           ),
         );
-        if ((changed == true) && mounted) _getUserDetails();
+        // equipmentProvider is invalidated by EquipmentPage on wear/unequip
       },
       child: Container(
         height: (szWidth - 60) / 3,
@@ -353,6 +362,26 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Widget build(BuildContext context) {
     // Determining the screen width & height
     var szWidth = MediaQuery.of(context).size.width;
+
+    // Watch providers
+    final userAsync = ref.watch(userProvider);
+    final equipmentState = ref.watch(equipmentProvider);
+
+    // One-time form initialization from loaded user data
+    final loadedUser = userAsync.valueOrNull;
+    if (loadedUser != null && !_initialized) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_initialized) setState(() => _initFormFromUser(loadedUser));
+      });
+    }
+
+    // Build 12-slot equipment array from provider
+    final equippedItems = equipmentState.valueOrNull?.equipment ?? [];
+    final equipments = List<Item>.filled(12, Item.blank());
+    for (final e in equippedItems) {
+      final idx = e.placement - 1;
+      if (idx >= 0 && idx < 12) equipments[idx] = e.item;
+    }
 
     /// Application top Bar
     final topBar = AppBar(
@@ -660,19 +689,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                     Expanded(
                                       flex: 10,
                                       child:
-                                          itemLogo(szWidth, 0, _equipments[0]),
+                                          itemLogo(szWidth, 0, equipments[0]),
                                     ),
                                     Spacer(flex: 1),
                                     Expanded(
                                       flex: 10,
                                       child:
-                                          itemLogo(szWidth, 1, _equipments[1]),
+                                          itemLogo(szWidth, 1, equipments[1]),
                                     ),
                                     Spacer(flex: 1),
                                     Expanded(
                                       flex: 10,
                                       child:
-                                          itemLogo(szWidth, 2, _equipments[2]),
+                                          itemLogo(szWidth, 2, equipments[2]),
                                     ),
                                   ],
                                 ),
@@ -683,19 +712,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                     Expanded(
                                       flex: 10,
                                       child:
-                                          itemLogo(szWidth, 3, _equipments[3]),
+                                          itemLogo(szWidth, 3, equipments[3]),
                                     ),
                                     Spacer(flex: 1),
                                     Expanded(
                                       flex: 10,
                                       child:
-                                          itemLogo(szWidth, 4, _equipments[4]),
+                                          itemLogo(szWidth, 4, equipments[4]),
                                     ),
                                     Spacer(flex: 1),
                                     Expanded(
                                       flex: 10,
                                       child:
-                                          itemLogo(szWidth, 5, _equipments[5]),
+                                          itemLogo(szWidth, 5, equipments[5]),
                                     ),
                                   ],
                                 ),
@@ -706,19 +735,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                     Expanded(
                                       flex: 10,
                                       child:
-                                          itemLogo(szWidth, 6, _equipments[6]),
+                                          itemLogo(szWidth, 6, equipments[6]),
                                     ),
                                     Spacer(flex: 1),
                                     Expanded(
                                       flex: 10,
                                       child:
-                                          itemLogo(szWidth, 7, _equipments[7]),
+                                          itemLogo(szWidth, 7, equipments[7]),
                                     ),
                                     Spacer(flex: 1),
                                     Expanded(
                                       flex: 10,
                                       child:
-                                          itemLogo(szWidth, 8, _equipments[8]),
+                                          itemLogo(szWidth, 8, equipments[8]),
                                     ),
                                   ],
                                 ),
@@ -729,19 +758,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                     Expanded(
                                       flex: 10,
                                       child:
-                                          itemLogo(szWidth, 9, _equipments[9]),
+                                          itemLogo(szWidth, 9, equipments[9]),
                                     ),
                                     Spacer(flex: 1),
                                     Expanded(
                                       flex: 10,
                                       child: itemLogo(
-                                          szWidth, 10, _equipments[10]),
+                                          szWidth, 10, equipments[10]),
                                     ),
                                     Spacer(flex: 1),
                                     Expanded(
                                       flex: 10,
                                       child: itemLogo(
-                                          szWidth, 11, _equipments[11]),
+                                          szWidth, 11, equipments[11]),
                                     ),
                                   ],
                                 ),
@@ -1044,6 +1073,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       // print(_user.toMap());
       CustomInterceptors.setStoredCookies(
           GlobalConstants.apiHostUrl, _user.toMap());
+      ref.invalidate(userProvider);
       showDialog<void>(
         context: context,
         builder: (context) {
@@ -1067,67 +1097,4 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
   }
 
-  ///
-  void _getUserDetails() async {
-    /// populate initial data from cookies
-    _user = await ApiProvider().getStoredUser();
-
-    dynamic response;
-    try {
-      response = await _apiProvider.get("/equipment");
-    } on AppError catch (err) {
-      err.show(context);
-      return;
-    } catch (err) {
-      debugPrint('_getUserDetails unexpected error: $err');
-      return;
-    }
-
-    _equipments = List<Item>.filled(12, Item.blank());
-
-    if (response["equipment"].isEmpty) {
-      print('No equipment found');
-    } else if (response["equipment"][0] != null) {
-      if (response["equipment"].length > 0) {
-        for (var eqp in response["equipment"]) {
-          final itm = Item.fromJson(eqp);
-          // GridView Index starts with 0 so we substract 1
-          int idx = eqp['placement'] - 1;
-          _equipments[idx] = itm;
-        }
-      }
-    }
-
-    // update local data
-    _user.details.coins = double.tryParse(response["coins"].toString()) ?? 0.0;
-    _user.details.guildId = response["guild"]["id"].toString();
-    _user.details.mining = response["mining"];
-    _user.details.xp = response["xp"];
-    _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
-    _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
-    _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
-    _user.details.daily = response["daily"];
-    if (response is Map && response.containsKey("settings")) {
-      _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
-    }
-    _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
-
-    //log.d(response);
-
-    ref.invalidate(userProvider);
-
-    setState(() {
-      /// update controller data
-      _usernameController.text = _user.details.username;
-      _currentSex = _user.details.sex;
-      _statusTextController.text = _user.details.status;
-      currentExperience = _user.details.xp;
-      currentLevel = expToLevel(currentExperience);
-      nextExperienceLevel = levelToExp(currentLevel + 1);
-      _avatar = NetworkImage(
-          'https://${GlobalConstants.apiHostUrl}${_user.details.picture}');
-    });
-
-    return;
-  }
 }

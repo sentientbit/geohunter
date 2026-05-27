@@ -14,9 +14,9 @@ import 'package:go_router/go_router.dart';
 ///
 import '../../fonts/rpg_awesome_icons.dart';
 import '../../models/app_error.dart';
-import '../../models/player_stats.dart';
+import '../../models/forge_result.dart';
 import '../../models/user.dart';
-import '../../providers/api_provider.dart';
+import '../../providers/forge_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/user_provider.dart';
 import '../../screens/forge/blueprints.dart';
@@ -59,17 +59,7 @@ class _ForgeState extends ConsumerState<ForgePage> {
   String _craftedItemName = "";
   String _craftedItemRarity = "";
 
-  /// Curent loggedin user
-  User _user = User.blank();
-
   bool _isLoading = false;
-
-  //final Logger log = Logger(
-  //    printer: PrettyPrinter(
-  //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
-
-  ///
-  final ApiProvider _apiProvider = ApiProvider();
 
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -78,7 +68,6 @@ class _ForgeState extends ConsumerState<ForgePage> {
   void initState() {
     super.initState();
     _getPlacements();
-    _getUserDetails();
   }
 
   @override
@@ -193,9 +182,8 @@ class _ForgeState extends ConsumerState<ForgePage> {
   }
 
   ///
-  Widget leadingIcon(BuildContext context) {
-    // print(" ${_user.details.daily}");
-    if (!GlobalConstants.menuHasNotification(_user.details)) {
+  Widget leadingIcon(BuildContext context, UserData userDetails) {
+    if (!GlobalConstants.menuHasNotification(userDetails)) {
       return IconButton(
         color: Colors.white,
         icon: Icon(
@@ -265,10 +253,11 @@ class _ForgeState extends ConsumerState<ForgePage> {
   Widget build(BuildContext context) {
     //ignore: omit_local_variable_types
     int currentTabIndex = 0;
+    final user = ref.watch(userProvider).valueOrNull ?? User.blank();
 
     /// Application top Bar
     final topBar = AppBar(
-      leading: leadingIcon(context),
+      leading: leadingIcon(context, user.details),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
       title: Text(
@@ -736,7 +725,7 @@ class _ForgeState extends ConsumerState<ForgePage> {
                               color: Colors.black,
                             ),
                             child: Text(
-                              "${_user.details.costs.crafting.toString()} Coins",
+                              "${user.details.costs.crafting.toString()} Coins",
                               style: TextStyle(
                                 color: GlobalConstants.appFg,
                                 fontSize: 16.0,
@@ -864,9 +853,6 @@ class _ForgeState extends ConsumerState<ForgePage> {
   }
 
   void _craftItem() async {
-    /// populate initial data from cookies
-    _user = await ApiProvider().getStoredUser();
-
     if (_blueprintId <= 0) {
       _clearPlacements();
       setState(() {
@@ -876,11 +862,14 @@ class _ForgeState extends ConsumerState<ForgePage> {
       });
       return;
     }
-    dynamic response;
+    ForgeResult result;
     try {
-      response = await _apiProvider.post(
-          '/forge/${_blueprintId.toString()}/${_materialsId[0].toString()}/${_materialsId[1].toString()}/${_materialsId[2].toString()}',
-          {});
+      result = await ref.read(forgeRepositoryProvider).craft(
+            _blueprintId,
+            _materialsId[0],
+            _materialsId[1],
+            _materialsId[2],
+          );
     } on AppError catch (err) {
       if (!mounted) return;
       err.show(context);
@@ -890,78 +879,15 @@ class _ForgeState extends ConsumerState<ForgePage> {
       return;
     }
 
-    if (response is Map && response.containsKey("success")) {
-      if (response["success"] == true) {
-        if (response["items"][0]["nr"] > 0) {
-          _clearPlacements();
-          //log.d(response);
-          setState(() {
-            _craftedItemImg = response["items"][0]["img"];
-            _craftedItemName = response["items"][0]["name"];
-            _craftedItemRarity = response["items"][0]["rarity"].toString();
-          });
-          FlameAudio.play('sfx/anvil_1.mp3');
-        }
-
-        // update local data
-        _user.details.coins =
-            double.tryParse(response["coins"].toString()) ?? 0.0;
-        _user.details.guildId = (response["guild"]?["id"] ?? '0').toString();
-        _user.details.mining = response["mining"];
-        _user.details.xp = response["xp"];
-        _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
-        _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
-        _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
-        _user.details.daily = response["daily"];
-        if (response.containsKey("settings")) {
-          _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
-        }
-        _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
-
-        if (response.containsKey("coins")) {
-          ref.invalidate(userProvider);
-        }
-      }
+    if (result.item.nr > 0) {
+      _clearPlacements();
+      setState(() {
+        _craftedItemImg = result.item.img;
+        _craftedItemName = result.item.name;
+        _craftedItemRarity = result.item.rarity.toString();
+      });
+      FlameAudio.play('sfx/anvil_1.mp3');
     }
-    return;
-  }
-
-  ///
-  void _getUserDetails() async {
-    /// populate initial data from cookies
-    _user = await ApiProvider().getStoredUser();
-
-    dynamic response;
-    try {
-      response = await _apiProvider.get("/equipment");
-    } on AppError catch (err) {
-      if (!mounted) return;
-      err.show(context);
-      return;
-    } catch (err) {
-      debugPrint('_getUserDetails unexpected error: $err');
-      return;
-    }
-
-    setState(() {
-      // update local data
-      _user.details.coins =
-          double.tryParse(response["coins"].toString()) ?? 0.0;
-      _user.details.guildId = (response["guild"]?["id"] ?? '0').toString();
-      _user.details.mining = response["mining"];
-      _user.details.xp = response["xp"];
-      _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
-      _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
-      _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
-      _user.details.daily = response["daily"];
-      if (response is Map && response.containsKey("settings")) {
-        _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
-      }
-      _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
-    });
-
     ref.invalidate(userProvider);
-
-    return;
   }
 }
