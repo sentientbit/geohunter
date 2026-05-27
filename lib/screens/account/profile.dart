@@ -394,54 +394,50 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       ),
     );
 
-    setState(() {
-      _sexes = [
-        DropdownMenuItem<String>(
-          value: "1",
-          child:
-              Text(AppLocalizations.of(context)!.translate('gender_male_text')),
+    // Build dropdown items directly — no setState needed since we're already in build()
+    _sexes = [
+      DropdownMenuItem<String>(
+        value: "1",
+        child: Text(AppLocalizations.of(context)!.translate('gender_male_text')),
+      ),
+      DropdownMenuItem<String>(
+        value: "2",
+        child: Text(AppLocalizations.of(context)!.translate('gender_female_text')),
+      )
+    ];
+    _locationPrivacies = [
+      DropdownMenuItem<String>(
+        value: "0",
+        child: Text(
+          AppLocalizations.of(context)!.translate('location_privacy_nobody_text'),
         ),
-        DropdownMenuItem<String>(
-          value: "2",
-          child: Text(
-              AppLocalizations.of(context)!.translate('gender_female_text')),
-        )
-      ];
-      _locationPrivacies = [
-        DropdownMenuItem<String>(
-          value: "0",
-          child: Text(
-            AppLocalizations.of(context)!
-                .translate('location_privacy_nobody_text'),
-          ),
-        ),
-        DropdownMenuItem<String>(
-          value: "1",
-          child: Text(AppLocalizations.of(context)!
-              .translate('location_privacy_just_friends_text')),
-        ),
-        DropdownMenuItem<String>(
-          value: "3",
-          child: Text(AppLocalizations.of(context)!
-              .translate('location_privacy_friends_and_guild_text')),
-        ),
-        DropdownMenuItem<String>(
-          value: "15",
-          child: Text(AppLocalizations.of(context)!
-              .translate('location_privacy_public_text')),
-        ),
-      ];
-      _languages = [
-        DropdownMenuItem<String>(
-          value: "en",
-          child: Text("English"),
-        ),
-        DropdownMenuItem<String>(
-          value: "ro",
-          child: Text("Română"),
-        )
-      ];
-    });
+      ),
+      DropdownMenuItem<String>(
+        value: "1",
+        child: Text(AppLocalizations.of(context)!
+            .translate('location_privacy_just_friends_text')),
+      ),
+      DropdownMenuItem<String>(
+        value: "3",
+        child: Text(AppLocalizations.of(context)!
+            .translate('location_privacy_friends_and_guild_text')),
+      ),
+      DropdownMenuItem<String>(
+        value: "15",
+        child: Text(AppLocalizations.of(context)!
+            .translate('location_privacy_public_text')),
+      ),
+    ];
+    _languages = [
+      DropdownMenuItem<String>(
+        value: "en",
+        child: Text("English"),
+      ),
+      DropdownMenuItem<String>(
+        value: "ro",
+        child: Text("Română"),
+      )
+    ];
 
     final updateProfileButton = OutlinedButton(
       style: OutlinedButton.styleFrom(
