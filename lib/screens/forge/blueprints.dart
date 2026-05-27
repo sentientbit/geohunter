@@ -180,14 +180,10 @@ class _BlueprintSelectState extends State<BlueprintSelectPage> {
       final response = await _apiProvider.post('/inventory', {"types": [17]});
 
       var tmp = [];
-      if (response is Map && response.containsKey("success")) {
-        if (response["success"] == true) {
-          if (response.containsKey("blueprints")) {
-            for (dynamic elem in response["blueprints"]) {
-              final itm = Blueprint.fromJson(elem);
-              tmp.add(itm);
-            }
-          }
+      if (response.containsKey("blueprints")) {
+        for (dynamic elem in response["blueprints"]) {
+          final itm = Blueprint.fromJson(elem);
+          tmp.add(itm);
         }
       }
       setState(() {

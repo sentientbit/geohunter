@@ -192,15 +192,11 @@ class _MaterialSelectState extends State<MaterialSelectPage> {
           .get('/forge/${widget.blueprintId}/${widget.mat0.toString()}');
 
       var tmp = [];
-      if (response is Map && response.containsKey("success")) {
-        if (response["success"] == true) {
-          if (response.containsKey("materials")) {
-            for (dynamic elem in response["materials"]) {
-              final mat = Materialmodel.fromJson(elem);
-              if (mat.nr > 0) {
-                tmp.add(mat);
-              }
-            }
+      if (response.containsKey("materials")) {
+        for (dynamic elem in response["materials"]) {
+          final mat = Materialmodel.fromJson(elem);
+          if (mat.nr > 0) {
+            tmp.add(mat);
           }
         }
       }

@@ -1053,18 +1053,16 @@ class _InGroupState extends State<InGroup> {
       final response = await _apiProvider
           .delete("/membership/${currentGuild.id}/${_user.details.id}", {});
 
-      if (response is Map && response["success"] == true) {
-        _user.details.guildId = '0';
-        await CustomInterceptors.setStoredCookies(
-            GlobalConstants.apiHostUrl, _user.toMap());
-      }
+      _user.details.guildId = '0';
+      await CustomInterceptors.setStoredCookies(
+          GlobalConstants.apiHostUrl, _user.toMap());
 
       if (!mounted) return;
       showDialog(
         context: context,
         builder: (context) => CustomDialog(
           title: AppLocalizations.of(context)!.translate('congrats'),
-          description: response is Map ? response["message"] : "Done",
+          description: response["message"]?.toString() ?? "Done",
           buttonText: "Okay",
           images: [],
           callback: () {

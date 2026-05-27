@@ -88,64 +88,60 @@ class _FriendsPageState extends State<FriendsPage> {
       var privacy = 0;
       var lat = 51.5;
       var lng = 0.0;
-      if (response is Map && response.containsKey("success")) {
-        if (response["success"] == true) {
-          for (dynamic elem in response["friends"]) {
-            privacy = 0;
-            if (elem.containsKey("privacy")) {
-              privacy = int.tryParse(elem["privacy"].toString()) ?? 0;
-              lat = double.tryParse(elem["lat"].toString()) ?? 51.5;
-              lng = double.tryParse(elem["lng"].toString()) ?? 0.0;
-            }
-            friends.add(
-              Friend(
-                id: (int.tryParse(elem["id"].toString()) ?? 0),
-                sex: elem["sex"].toString(),
-                username: elem["username"].toString(),
-                status: elem["status"]?.toString() ?? "",
-                locationPrivacy: privacy,
-                xp: (int.tryParse(elem["xp"].toString()) ?? 0),
-                thumbnail: elem["thumbnail"].toString(),
-                isReq: elem["is_req"].toString(),
-                lat: lat,
-                lng: lng,
-              ),
-            );
-          }
-
-          // update local data
-          _user.details.coins =
-              double.tryParse(response["coins"].toString()) ?? 0.0;
-          _user.details.guildId = response["guild"]["id"].toString();
-          _user.details.mining = response["mining"];
-          _user.details.xp = response["xp"];
-          _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
-          _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
-          _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
-          _user.details.daily = response["daily"];
-          if (response.containsKey("settings")) {
-            _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
-          }
-          _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
-          // log.d(_user.details.unread);
-          ravens = _user.details.unread.asMap();
-
-          // update global data
-          _userdata.updateUserData(
-            'friends',
-            _user.details.coins,
-            _user.details.mining,
-            _user.details.guildId,
-            _user.details.xp,
-            _user.details.unread,
-            _user.details.attack,
-            _user.details.defense,
-            _user.details.daily,
-            _user.details.settings,
-            _user.details.costs,
-          );
+      for (dynamic elem in response["friends"]) {
+        privacy = 0;
+        if (elem.containsKey("privacy")) {
+          privacy = int.tryParse(elem["privacy"].toString()) ?? 0;
+          lat = double.tryParse(elem["lat"].toString()) ?? 51.5;
+          lng = double.tryParse(elem["lng"].toString()) ?? 0.0;
         }
+        friends.add(
+          Friend(
+            id: (int.tryParse(elem["id"].toString()) ?? 0),
+            sex: elem["sex"].toString(),
+            username: elem["username"].toString(),
+            status: elem["status"]?.toString() ?? "",
+            locationPrivacy: privacy,
+            xp: (int.tryParse(elem["xp"].toString()) ?? 0),
+            thumbnail: elem["thumbnail"].toString(),
+            isReq: elem["is_req"].toString(),
+            lat: lat,
+            lng: lng,
+          ),
+        );
       }
+
+      // update local data
+      _user.details.coins =
+          double.tryParse(response["coins"].toString()) ?? 0.0;
+      _user.details.guildId = response["guild"]["id"].toString();
+      _user.details.mining = response["mining"];
+      _user.details.xp = response["xp"];
+      _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
+      _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
+      _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
+      _user.details.daily = response["daily"];
+      if (response.containsKey("settings")) {
+        _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
+      }
+      _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
+      // log.d(_user.details.unread);
+      ravens = _user.details.unread.asMap();
+
+      // update global data
+      _userdata.updateUserData(
+        'friends',
+        _user.details.coins,
+        _user.details.mining,
+        _user.details.guildId,
+        _user.details.xp,
+        _user.details.unread,
+        _user.details.attack,
+        _user.details.defense,
+        _user.details.daily,
+        _user.details.settings,
+        _user.details.costs,
+      );
       setState(() {
         _friends.addAll(friends.toList());
         _isLoading = false;

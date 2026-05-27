@@ -1,6 +1,7 @@
 ///
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 // import 'package:logger/logger.dart';
 
@@ -30,32 +31,64 @@ class ApiProvider {
 
   ///
   bool hookStatus(int? status) {
-    //print('hookStatus');
-    //print(status);
     if (status == 401) {
       CustomInterceptors.clearStoredCookies(GlobalConstants.apiHostUrl);
     }
     return (status == 200);
   }
 
+  /// Unwraps the response envelope: { "success": true, "data": { ... } }
+  ///
+  /// Returns the data keys merged with `success: true` so that existing
+  /// screens using `response["success"] == true` continue to work during
+  /// the screen-by-screen migration to Riverpod.
+  ///
+  /// Throws [AppError] if success is false or the response shape is unexpected.
+  Map<String, dynamic> _unwrap(dynamic body) {
+    if (body is! Map) {
+      throw const AppError(
+        code: 'INVALID_RESPONSE',
+        message: 'Unexpected response format from server.',
+        statusCode: 0,
+      );
+    }
+    final map = Map<String, dynamic>.from(body);
+    if (map['success'] != true) {
+      throw AppError.fromEnvelope(map);
+    }
+    final data = map['data'];
+    if (data is! Map) {
+      throw const AppError(
+        code: 'INVALID_RESPONSE',
+        message: 'Response data field is not an object.',
+        statusCode: 0,
+      );
+    }
+    // Merge success:true into data so existing response["success"] guards pass
+    // during the transition. Remove once all screens are on Riverpod.
+    return {'success': true, ...Map<String, dynamic>.from(data)};
+  }
+
   /// Read
-  Future<dynamic> get(String endpoint, {dynamic headers}) async {
+  Future<Map<String, dynamic>> get(String endpoint, {dynamic headers}) async {
     try {
       final response = await api.get(
         endpoint,
         options: Options(headers: headers, validateStatus: hookStatus),
       );
-      return response.data;
+      return _unwrap(response.data);
     } on DioException catch (e) {
       throw AppError.fromDio(e);
+    } on AppError {
+      rethrow;
     } on Exception catch (error, stacktrace) {
-      print("Exception occured: $error stackTrace: $stacktrace");
-      return null;
+      debugPrint('ApiProvider.get unexpected error: $error\n$stacktrace');
+      rethrow;
     }
   }
 
   /// Create
-  Future<dynamic> post(String endpoint, dynamic body,
+  Future<Map<String, dynamic>> post(String endpoint, dynamic body,
       {dynamic headers}) async {
     try {
       final response = await api.post(
@@ -63,81 +96,81 @@ class ApiProvider {
         data: body,
         options: Options(headers: headers, validateStatus: hookStatus),
       );
-      return response.data;
+      return _unwrap(response.data);
     } on DioException catch (e) {
       throw AppError.fromDio(e);
+    } on AppError {
+      rethrow;
     } on Exception catch (error, stacktrace) {
-      print("Exception occured: $error stackTrace: $stacktrace");
-      return null;
+      debugPrint('ApiProvider.post unexpected error: $error\n$stacktrace');
+      rethrow;
     }
   }
 
   /// Update
-  Future<dynamic> put(String endpoint, dynamic body) async {
+  Future<Map<String, dynamic>> put(String endpoint, dynamic body) async {
     try {
       final response = await api.put(
         endpoint,
         data: body,
         options: Options(validateStatus: hookStatus),
       );
-      return response.data;
+      return _unwrap(response.data);
     } on DioException catch (e) {
       throw AppError.fromDio(e);
+    } on AppError {
+      rethrow;
     } on Exception catch (error, stacktrace) {
-      print("Exception occured: $error stackTrace: $stacktrace");
-      return null;
+      debugPrint('ApiProvider.put unexpected error: $error\n$stacktrace');
+      rethrow;
     }
   }
 
   ///
-  Future<dynamic> save(int isId, String endpoint, dynamic body) async {
+  Future<Map<String, dynamic>> save(
+      int isId, String endpoint, dynamic body) async {
     if (isId == 0) return post(endpoint, body);
     return put(endpoint, body);
   }
 
   /// Delete
-  Future<dynamic> delete(String endpoint, dynamic body) async {
+  Future<Map<String, dynamic>> delete(String endpoint, dynamic body) async {
     try {
       final response = await api.delete(
         endpoint,
         data: body,
         options: Options(validateStatus: hookStatus),
       );
-      return response.data;
+      return _unwrap(response.data);
     } on DioException catch (e) {
       throw AppError.fromDio(e);
+    } on AppError {
+      rethrow;
     } on Exception catch (error, stacktrace) {
-      print("Exception occured: $error stackTrace: $stacktrace");
-      return null;
+      debugPrint('ApiProvider.delete unexpected error: $error\n$stacktrace');
+      rethrow;
     }
   }
 
   ///
   Future<User> getStoredUser() async {
-    //ignore: omit_local_variable_types
     User tmp = User.blank();
-
-    // ignore: omit_local_variable_types
     Map<String, dynamic> userDatastored = {"user": null};
-
-    // print('--- log. getStoredUser() ---');
-    // log.d(userDatastored);
     try {
       userDatastored =
           await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
-
       if (userDatastored["user"] != null) {
         tmp = User.fromJson(userDatastored);
       }
     } on Exception catch (error, stacktrace) {
-      print("Exception occured: $error stackTrace: $stacktrace");
+      debugPrint('getStoredUser unexpected error: $error\n$stacktrace');
       return tmp;
     }
     return tmp;
   }
 
   ///
-  Future updateProfilePicture(File image) async {
+  Future<Map<String, dynamic>> updateProfilePicture(File image) async {
     try {
       final fileName = image.path.split('/').last;
       final formData = FormData.fromMap({
@@ -149,15 +182,20 @@ class ApiProvider {
         data: formData,
         options: Options(validateStatus: hookStatus),
       );
-      return response.data;
+      return _unwrap(response.data);
+    } on DioException catch (e) {
+      throw AppError.fromDio(e);
+    } on AppError {
+      rethrow;
     } on Exception catch (error, stacktrace) {
-      print("Exception occured: $error stackTrace: $stacktrace");
-      return null;
+      debugPrint('updateProfilePicture unexpected error: $error\n$stacktrace');
+      rethrow;
     }
   }
 
   /// Upload pictures [image, mineId] from map with add landmark
-  Future uploadLandmarkPicture(String endpoint, File image) async {
+  Future<Map<String, dynamic>> uploadLandmarkPicture(
+      String endpoint, File image) async {
     try {
       final fileName = image.path.split('/').last;
       final formData = FormData.fromMap({
@@ -169,10 +207,14 @@ class ApiProvider {
         data: formData,
         options: Options(validateStatus: hookStatus),
       );
-      return response.data;
+      return _unwrap(response.data);
+    } on DioException catch (e) {
+      throw AppError.fromDio(e);
+    } on AppError {
+      rethrow;
     } on Exception catch (error, stacktrace) {
-      print("Exception occured: $error stackTrace: $stacktrace");
-      return null;
+      debugPrint('uploadLandmarkPicture unexpected error: $error\n$stacktrace');
+      rethrow;
     }
   }
 }

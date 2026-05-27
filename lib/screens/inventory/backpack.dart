@@ -392,10 +392,7 @@ class _InventoryState extends State<InventoryPage> {
       final response = await _apiProvider.post('/inventory', {"types": types});
 
       var tmp = [];
-      if (response is Map &&
-          response.containsKey("success") &&
-          response["success"] == true &&
-          response.containsKey("items")) {
+      if (response.containsKey("items")) {
         for (dynamic elem in response["items"]) {
           final itm = Item.fromJson(elem);
           tmp.add(itm);

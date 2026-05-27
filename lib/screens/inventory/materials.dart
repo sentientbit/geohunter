@@ -336,15 +336,11 @@ class _MaterialListState extends State<MaterialListPage> {
     final response = await _apiProvider.get('/materials/$types');
 
     var tmp = [];
-    if (response is Map && response.containsKey("success")) {
-      if (response["success"] == true) {
-        if (response.containsKey("materials")) {
-          for (dynamic elem in response["materials"]) {
-            final mat = Materialmodel.fromJson(elem);
-            if (mat.nr > 0) {
-              tmp.add(mat);
-            }
-          }
+    if (response.containsKey("materials")) {
+      for (dynamic elem in response["materials"]) {
+        final mat = Materialmodel.fromJson(elem);
+        if (mat.nr > 0) {
+          tmp.add(mat);
         }
       }
     }

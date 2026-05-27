@@ -999,26 +999,20 @@ class _PlacesState extends State<PlacesPage> {
 
   void getTutorialBattleGround() async {
     try {
-      final response = await _apiProvider.post("/places", {"mine_id": "13"});
-      //log.d(response);
-      if (response is Map && response.containsKey("success")) {
-        if (response["success"] == true) {
-          if (!mounted) return;
-          showDialog(
-            context: context,
-            builder: (context) => CustomDialog(
-              title: "Congrats",
-              description: 'You are now a fighter in the Battle grounds',
-              buttonText: "Okay",
-              images: [],
-              callback: () {
-                loadPlaces();
-              },
-            ),
-          );
-          return;
-        }
-      }
+      await _apiProvider.post("/places", {"mine_id": "13"});
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => CustomDialog(
+          title: "Congrats",
+          description: 'You are now a fighter in the Battle grounds',
+          buttonText: "Okay",
+          images: [],
+          callback: () {
+            loadPlaces();
+          },
+        ),
+      );
     } on AppError catch (err) {
       if (!mounted) return;
       err.show(context);

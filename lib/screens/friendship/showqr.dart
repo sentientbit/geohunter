@@ -60,14 +60,10 @@ class _ShowQRState extends State<ShowQRPage> {
     if (!mounted) return;
     try {
     final response = await _apiProvider.post('/friends', {});
-    if (response is Map && response.containsKey("success")) {
-      if (response["success"] == true) {
-        if (response.containsKey("friendship_qr")) {
-          setState(() {
-            _qrEndpoint = response["friendship_qr"];
-          });
-        }
-      }
+    if (response.containsKey("friendship_qr")) {
+      setState(() {
+        _qrEndpoint = response["friendship_qr"];
+      });
     }
     } on AppError catch (err) {
       debugPrint(err.toString());

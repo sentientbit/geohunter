@@ -139,20 +139,16 @@ class _LoginPageState extends State<LoginPage> {
         await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
     try {
       final response = await _apiProvider.get('/profile');
-      if (response is Map && response.containsKey("success")) {
-        if (response["success"] == true) {
-          tmp["jwt"] = response["jwt"];
-          tmp["user"] = response["user"];
-          Map jwtdata = parseJwt(response["jwt"]);
+      tmp["jwt"] = response["jwt"];
+      tmp["user"] = response["user"];
+      Map jwtdata = parseJwt(response["jwt"]);
 
-          // Todo: better user validation
-          if (jwtdata.containsKey("usr")) {
-            if (jwtdata["usr"] != null) {
-              await CustomInterceptors.setStoredCookies(
-                  GlobalConstants.apiHostUrl, tmp);
-              return true;
-            }
-          }
+      // Todo: better user validation
+      if (jwtdata.containsKey("usr")) {
+        if (jwtdata["usr"] != null) {
+          await CustomInterceptors.setStoredCookies(
+              GlobalConstants.apiHostUrl, tmp);
+          return true;
         }
       }
     } on AppError catch (err) {

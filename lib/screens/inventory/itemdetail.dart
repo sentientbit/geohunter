@@ -411,18 +411,14 @@ class _ItemDetailState extends State<ItemDetailPage> {
     try {
     final response = await _apiProvider.get('/itemdetails/$itemId');
 
-    if (response is Map && response.containsKey("success")) {
-      if (response["success"] == true) {
-        final miscMap = response["misc"] as Map<String, dynamic>;
-        setState(() {
-          _misc.clear();
-          _misc.addAll(miscMap.values.map((v) => v.toString()));
-          _description = response["description"]["en"];
-          _blueprintName = response["blueprint"]["name"];
-          _blueprintImg = response["blueprint"]["img"];
-        });
-      }
-    }
+    final miscMap = response["misc"] as Map<String, dynamic>;
+    setState(() {
+      _misc.clear();
+      _misc.addAll(miscMap.values.map((v) => v.toString()));
+      _description = response["description"]["en"];
+      _blueprintName = response["blueprint"]["name"];
+      _blueprintImg = response["blueprint"]["img"];
+    });
     } on AppError catch (err) {
       debugPrint(err.toString());
     } catch (err) {

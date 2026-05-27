@@ -35,13 +35,26 @@ class AppError implements Exception {
     final message =
         (data is Map ? data['message'] as String? : data?.toString()) ??
             'Server error';
-    final code =
-        (data is Map ? data['code'] as String? : null) ?? 'UNKNOWN';
+    // Backend envelope uses 'error' key; fall back to 'code' for legacy shapes.
+    final code = (data is Map
+            ? (data['error'] as String? ?? data['code'] as String?)
+            : null) ??
+        'UNKNOWN';
 
     return AppError(
       code: code,
       message: message,
       statusCode: e.response!.statusCode ?? 0,
+    );
+  }
+
+  /// Constructs an [AppError] from a HTTP-200 body where [success] is false.
+  /// e.g. { "success": false, "error": "NOT_FOUND", "message": "..." }
+  factory AppError.fromEnvelope(Map<String, dynamic> body) {
+    return AppError(
+      code: body['error'] as String? ?? 'UNKNOWN',
+      message: body['message'] as String? ?? 'An error occurred.',
+      statusCode: 400,
     );
   }
 

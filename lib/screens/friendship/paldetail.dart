@@ -640,7 +640,7 @@ class _PalDetailState extends State<PalDetailPage> {
       return;
     }
     try {
-      final response = await _apiProvider.post(
+      await _apiProvider.post(
         '/message',
         {
           "friend_id": friendId.toString(),
@@ -648,21 +648,17 @@ class _PalDetailState extends State<PalDetailPage> {
         },
       );
 
-      if (response is Map && response.containsKey("success")) {
-        if (response["success"] == true) {
-          setState(() {
-            _controller.text = "";
-            buttonIcon = Icons.done;
-            sentMessage = (_controller.text.length > 0)
-                ? _controller.text
-                : "Send up to 140 chars";
-          });
-          // Poor man's polling: one time after 10 seconds
-          poorManTimer = Timer(Duration(milliseconds: 10000), () {
-            getMessages(friendId);
-          });
-        }
-      }
+      setState(() {
+        _controller.text = "";
+        buttonIcon = Icons.done;
+        sentMessage = (_controller.text.length > 0)
+            ? _controller.text
+            : "Send up to 140 chars";
+      });
+      // Poor man's polling: one time after 10 seconds
+      poorManTimer = Timer(Duration(milliseconds: 10000), () {
+        getMessages(friendId);
+      });
     } on AppError catch (err) {
       err.show(context);
     } catch (err) {

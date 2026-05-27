@@ -336,49 +336,45 @@ class _ResearchState extends State<ResearchPage> {
 
     var rscs = [];
     var blps = [];
-    if (response is Map && response.containsKey("success")) {
-      if (response["success"] == true) {
-        // update local data
-        _user.details.coins =
-            double.tryParse(response["coins"].toString()) ?? 0.0;
-        _user.details.guildId = response["guild"]["id"].toString();
-        _user.details.mining = response["mining"];
-        _user.details.xp = response["xp"];
-        _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
-        _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
-        _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
-        _user.details.daily = response["daily"];
-        if (response.containsKey("settings")) {
-          _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
-        }
-        _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
+    // update local data
+    _user.details.coins =
+        double.tryParse(response["coins"].toString()) ?? 0.0;
+    _user.details.guildId = response["guild"]["id"].toString();
+    _user.details.mining = response["mining"];
+    _user.details.xp = response["xp"];
+    _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
+    _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
+    _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
+    _user.details.daily = response["daily"];
+    if (response.containsKey("settings")) {
+      _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
+    }
+    _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
 
-        _userdata.updateUserData(
-          'research',
-          _user.details.coins,
-          _user.details.mining,
-          _user.details.guildId,
-          _user.details.xp,
-          _user.details.unread,
-          _user.details.attack,
-          _user.details.defense,
-          _user.details.daily,
-          _user.details.settings,
-          _user.details.costs,
-        );
+    _userdata.updateUserData(
+      'research',
+      _user.details.coins,
+      _user.details.mining,
+      _user.details.guildId,
+      _user.details.xp,
+      _user.details.unread,
+      _user.details.attack,
+      _user.details.defense,
+      _user.details.daily,
+      _user.details.settings,
+      _user.details.costs,
+    );
 
-        if (response.containsKey("techs")) {
-          for (dynamic elem in response["techs"]) {
-            final r = Research.fromJson(elem);
-            rscs.add(r);
-          }
-        }
-        if (response.containsKey("blueprints")) {
-          for (dynamic elem in response["blueprints"]) {
-            final b = Blueprint.fromJson(elem);
-            blps.add(b);
-          }
-        }
+    if (response.containsKey("techs")) {
+      for (dynamic elem in response["techs"]) {
+        final r = Research.fromJson(elem);
+        rscs.add(r);
+      }
+    }
+    if (response.containsKey("blueprints")) {
+      for (dynamic elem in response["blueprints"]) {
+        final b = Blueprint.fromJson(elem);
+        blps.add(b);
       }
     }
 

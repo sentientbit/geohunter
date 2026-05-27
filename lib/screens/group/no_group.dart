@@ -477,26 +477,22 @@ class _NoGroupState extends State<NoGroup> {
       final response = await _apiProvider.get('/guilds');
 
       final guilds = [];
-      if (response is Map && response.containsKey("success")) {
-        if (response["success"] == true) {
-          for (dynamic elem in response["guilds"]) {
-            guilds.add(
-              Guild(
-                id: int.tryParse(elem["id"]) ?? 0,
-                factionId: 0,
-                leaderId: 0,
-                guid: elem["guid"],
-                name: elem["name"],
-                isHidden: int.tryParse(elem["is_hidden"]) ?? 0,
-                isLocked: int.tryParse(elem["is_locked"]) ?? 0,
-                nrUsers: elem["users"].length,
-                picture: Picture.blank(),
-                users: [],
-                description: "",
-              ),
-            );
-          }
-        }
+      for (dynamic elem in response["guilds"]) {
+        guilds.add(
+          Guild(
+            id: int.tryParse(elem["id"]) ?? 0,
+            factionId: 0,
+            leaderId: 0,
+            guid: elem["guid"],
+            name: elem["name"],
+            isHidden: int.tryParse(elem["is_hidden"]) ?? 0,
+            isLocked: int.tryParse(elem["is_locked"]) ?? 0,
+            nrUsers: elem["users"].length,
+            picture: Picture.blank(),
+            users: [],
+            description: "",
+          ),
+        );
       }
       setState(() {
         _guilds.addAll(guilds.toList());
@@ -514,14 +510,10 @@ class _NoGroupState extends State<NoGroup> {
     final tmp =
         await CustomInterceptors.getStoredCookies(GlobalConstants.apiHostUrl);
 
-    if (response is Map && response.containsKey("success")) {
-      if (response["success"] == true) {
-        tmp["jwt"] = response["jwt"];
-        tmp["user"] = response["user"];
-        await CustomInterceptors.setStoredCookies(
-            GlobalConstants.apiHostUrl, tmp);
-      }
-    }
+    tmp["jwt"] = response["jwt"];
+    tmp["user"] = response["user"];
+    await CustomInterceptors.setStoredCookies(
+        GlobalConstants.apiHostUrl, tmp);
 
     setState(() {
       _user = User.fromJson(tmp);

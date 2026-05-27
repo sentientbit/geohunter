@@ -265,14 +265,10 @@ class _EquipmentState extends State<EquipmentPage> {
       final response = await _apiProvider.post('/inventory', {"types": types});
 
       var tmp = [];
-      if (response is Map && response.containsKey("success")) {
-        if (response["success"] == true) {
-          if (response.containsKey("items")) {
-            for (dynamic elem in response["items"]) {
-              final itm = Item.fromJson(elem);
-              tmp.add(itm);
-            }
-          }
+      if (response.containsKey("items")) {
+        for (dynamic elem in response["items"]) {
+          final itm = Item.fromJson(elem);
+          tmp.add(itm);
         }
       }
       if (!mounted) return;
@@ -290,12 +286,8 @@ class _EquipmentState extends State<EquipmentPage> {
   /// Wear the item and get back
   void _wearItem(BuildContext context, int itemId) async {
     try {
-      final response = await _apiProvider.post('/equipment/$itemId', {});
-      if (response is Map && response.containsKey("success")) {
-        if (response["success"] == true) {
-          if (mounted) Navigator.pop(context, true);
-        }
-      }
+      await _apiProvider.post('/equipment/$itemId', {});
+      if (mounted) Navigator.pop(context, true);
     } on AppError catch (err) {
       debugPrint(err.toString());
     } catch (err) {
@@ -307,13 +299,8 @@ class _EquipmentState extends State<EquipmentPage> {
     // Our index start with 0 sa we add 1
     var slot = placement + 1;
     try {
-      final response = await _apiProvider.delete('/equipment/$slot', {});
-      //print(response['message']);
-      if (response is Map && response.containsKey("success")) {
-        if (response["success"] == true) {
-          if (mounted) Navigator.pop(context, true);
-        }
-      }
+      await _apiProvider.delete('/equipment/$slot', {});
+      if (mounted) Navigator.pop(context, true);
     } on AppError catch (err) {
       debugPrint(err.toString());
     } catch (err) {
