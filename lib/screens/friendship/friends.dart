@@ -3,18 +3,15 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_offline/flutter_offline.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-
-//import 'package:logger/logger.dart';
 
 ///
 import '../../app_localizations.dart';
 import '../../models/app_error.dart';
-import '../../models/friends.dart';
-import '../../models/player_stats.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/friends_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../screens/friendship/showqr.dart';
 import '../../shared/constants.dart';
@@ -42,102 +39,24 @@ class FriendsPage extends ConsumerStatefulWidget {
 }
 
 class _FriendsPageState extends ConsumerState<FriendsPage> {
-  //final Logger log = Logger(
-  //    printer: PrettyPrinter(
-  //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
-
-  /// Curent loggedin user
-  User _user = User.blank();
-
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  final _friends = [];
-  bool _isLoading = true;
   final _apiProvider = ApiProvider();
 
-  String? _scanBarcode = null;
+  String? _scanBarcode;
   bool qrFound = false;
 
-  MobileScannerController? controllerQr = null;
-
-  Map<int, dynamic> ravens = {};
+  MobileScannerController? controllerQr;
 
   @override
   void initState() {
     super.initState();
-    _loadFriends();
   }
 
   @override
   void dispose() {
     super.dispose();
-  }
-
-  ///
-  Future _loadFriends() async {
-    /// populate initial data from cookies
-    _user = await ApiProvider().getStoredUser();
-    _friends.clear();
-    try {
-      final response = await _apiProvider.get('/friends');
-      final friends = [];
-
-      var privacy = 0;
-      var lat = 51.5;
-      var lng = 0.0;
-      for (dynamic elem in response["friends"]) {
-        privacy = 0;
-        if (elem.containsKey("privacy")) {
-          privacy = int.tryParse(elem["privacy"].toString()) ?? 0;
-          lat = double.tryParse(elem["lat"].toString()) ?? 51.5;
-          lng = double.tryParse(elem["lng"].toString()) ?? 0.0;
-        }
-        friends.add(
-          Friend(
-            id: (int.tryParse(elem["id"].toString()) ?? 0),
-            sex: elem["sex"].toString(),
-            username: elem["username"].toString(),
-            status: elem["status"]?.toString() ?? "",
-            locationPrivacy: privacy,
-            xp: (int.tryParse(elem["xp"].toString()) ?? 0),
-            thumbnail: elem["thumbnail"].toString(),
-            isReq: elem["is_req"].toString(),
-            lat: lat,
-            lng: lng,
-          ),
-        );
-      }
-
-      // update local data
-      _user.details.coins =
-          double.tryParse(response["coins"].toString()) ?? 0.0;
-      _user.details.guildId = response["guild"]["id"].toString();
-      _user.details.mining = response["mining"];
-      _user.details.xp = response["xp"];
-      _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
-      _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
-      _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
-      _user.details.daily = response["daily"];
-      if (response.containsKey("settings")) {
-        _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
-      }
-      _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
-      // log.d(_user.details.unread);
-      ravens = _user.details.unread.asMap();
-
-      ref.invalidate(userProvider);
-      setState(() {
-        _friends.addAll(friends.toList());
-        _isLoading = false;
-      });
-    } on AppError catch (err) {
-      debugPrint(err.toString());
-      if (mounted) setState(() => _isLoading = false);
-    } catch (err) {
-      debugPrint('_loadFriends unexpected error: $err');
-      if (mounted) setState(() => _isLoading = false);
-    }
   }
 
   Widget camButton() {
@@ -174,13 +93,7 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
 
   /// When pressing Start Scan
   void showScan(BuildContext context) async {
-    MobileScannerController controllerQr = MobileScannerController(
-        //torchEnabled: true,
-        // formats: [BarcodeFormat.qrCode]
-        // facing: CameraFacing.front,
-        );
-    // controllerQr auto-starts when passed to MobileScanner widget (mobile_scanner 3.x+)
-    //print('--- resume ---');
+    MobileScannerController controllerQr = MobileScannerController();
     setState(() {
       _scanBarcode = null;
       qrFound = false;
@@ -191,7 +104,6 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(GlobalConstants.padding),
         ),
-        //elevation: 0.0,
         insetPadding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
         backgroundColor: Colors.transparent,
         child: Stack(
@@ -223,7 +135,7 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
                     ],
                   ),
                   child: Column(
-                    mainAxisSize: MainAxisSize.min, // To make the card compact
+                    mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
                       Container(
                         width: 300,
@@ -272,9 +184,8 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
     );
   }
 
-  Widget leadingIcon(BuildContext context) {
-    //print(" ${_user.details.daily}");
-    if (!GlobalConstants.menuHasNotification(_user.details)) {
+  Widget leadingIcon(BuildContext context, UserData userDetails) {
+    if (!GlobalConstants.menuHasNotification(userDetails)) {
       return IconButton(
         color: Colors.white,
         icon: Icon(
@@ -321,16 +232,6 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
                     color: Colors.red,
                     shape: BoxShape.circle,
                   ),
-                  child: Center(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.red,
-                      ),
-                      width: 10,
-                      height: 10,
-                    ),
-                  ),
                 ),
               )
             ],
@@ -341,11 +242,16 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
   }
 
   Widget build(BuildContext context) {
-    // final deviceSize = MediaQuery.of(context).size;
+    final friendsState = ref.watch(friendsProvider);
+    final user = ref.watch(userProvider).valueOrNull ?? User.blank();
+
+    final friends = friendsState.valueOrNull?.friends ?? [];
+    // Map {index: userId} of senders with unread messages — used for raven badge
+    final ravens = user.details.unread.asMap();
 
     /// Application top Bar
     final topBar = AppBar(
-      leading: leadingIcon(context),
+      leading: leadingIcon(context, user.details),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
       title: Text("Friends", style: Style.topBar),
@@ -419,92 +325,88 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
         resizeToAvoidBottomInset: false,
         appBar: topBar,
         extendBodyBehindAppBar: true,
-      body: OfflineBuilder(
-        connectivityBuilder: (
-          context,
-          connectivity,
-          child,
-        ) {
-          if (connectivity.isEmpty || connectivity.contains(ConnectivityResult.none)) {
-            return Stack(
-              children: <Widget>[
-                child,
-                BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                  child: Container(
-                    color: Colors.black.withValues(alpha: 0),
-                    // child: child,
-                    child: NetworkStatusMessage(),
+        body: OfflineBuilder(
+          connectivityBuilder: (
+            context,
+            connectivity,
+            child,
+          ) {
+            if (connectivity.isEmpty ||
+                connectivity.contains(ConnectivityResult.none)) {
+              return Stack(
+                children: <Widget>[
+                  child,
+                  BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0),
+                      child: NetworkStatusMessage(),
+                    ),
+                  )
+                ],
+              );
+            } else {
+              return child;
+            }
+          },
+          child: Stack(
+            alignment: AlignmentDirectional.center,
+            children: <Widget>[
+              Container(
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('assets/images/starry_night.jpg'),
+                    fit: BoxFit.fill,
                   ),
-                )
-              ],
-            );
-          } else {
-            return child;
-          }
-        },
-        child: Stack(
-          alignment: AlignmentDirectional.center,
-          children: <Widget>[
-            Container(
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('assets/images/starry_night.jpg'),
-                  fit: BoxFit.fill,
                 ),
               ),
-            ),
-            Container(
-              alignment: Alignment.topRight,
-              padding: const EdgeInsets.only(top: 68.0),
-              child: (_isLoading)
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: <Widget>[
-                        Center(
-                          child: Image.asset(
-                            'assets/images/compass.gif',
-                            width: 150,
+              Container(
+                alignment: Alignment.topRight,
+                padding: const EdgeInsets.only(top: 68.0),
+                child: friendsState.isLoading
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: <Widget>[
+                          Center(
+                            child: Image.asset(
+                              'assets/images/compass.gif',
+                              width: 150,
+                            ),
                           ),
-                        ),
-                      ],
-                    )
-                  : Column(
-                      children: <Widget>[
-                        SizedBox(
-                          height: 12,
-                        ),
-                        Expanded(
-                          child: Container(
+                        ],
+                      )
+                    : Column(
+                        children: <Widget>[
+                          SizedBox(height: 12),
+                          Expanded(
                             child: CustomScrollView(
                               scrollDirection: Axis.vertical,
                               shrinkWrap: false,
                               slivers: <Widget>[
                                 SliverPadding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 1.0),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 1.0),
                                   sliver: SliverList(
                                     delegate: SliverChildBuilderDelegate(
                                       (context, index) => FriendsSummary(
-                                        _friends[index],
-                                        ravens
-                                            .containsValue(_friends[index].id),
+                                        friends[index],
+                                        ravens.containsValue(
+                                            friends[index].id),
                                       ),
-                                      childCount: _friends.length,
+                                      childCount: friends.length,
                                     ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-            ),
-          ],
+                        ],
+                      ),
+              ),
+            ],
+          ),
         ),
-      ),
         key: _scaffoldKey,
         drawer: DrawerPage(),
       ),
@@ -512,42 +414,36 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
   }
 
   Future afterScan() async {
-    //print('--- afterScan ---');
-    if (_scanBarcode == null) {
-      //print('f');
-      return;
-    }
-    dynamic response;
+    if (_scanBarcode == null) return;
     try {
-      response = await _apiProvider
-          .put('/friends/${_scanBarcode?.split('/')[5]}', {});
-      _loadFriends();
+      await _apiProvider.put('/friends/${_scanBarcode?.split('/')[5]}', {});
+      // Refresh friends list and user state (unread count may change)
+      ref.invalidate(friendsProvider);
+      ref.invalidate(userProvider);
     } on AppError catch (err) {
-      if (!mounted) return;
-      _loadFriends();
-      err.show(context);
+      ref.invalidate(friendsProvider);
       _scanBarcode = null;
+      if (!mounted) return;
+      err.show(context);
       return;
     } catch (err) {
       debugPrint('afterScan unexpected error: $err');
       _scanBarcode = null;
       return;
     }
+
     _scanBarcode = null;
-    if (response is Map && response.containsKey("success")) {
-      if (response["success"] == true) {
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (context) => CustomDialog(
-            title: AppLocalizations.of(context)!.translate('congrats'),
-            description: response["message"],
-            buttonText: "Okay",
-            images: [],
-            callback: () {},
-          ),
-        );
-      }
-    }
+    if (!mounted) return;
+    // The PUT succeeded — _unwrap already validated success:true
+    showDialog(
+      context: context,
+      builder: (context) => CustomDialog(
+        title: AppLocalizations.of(context)!.translate('congrats'),
+        description: "Friend request sent!",
+        buttonText: "Okay",
+        images: [],
+        callback: () {},
+      ),
+    );
   }
 }

@@ -8,19 +8,17 @@ import 'package:flutter_countdown_timer/current_remaining_time.dart';
 import 'package:flutter_countdown_timer/flutter_countdown_timer.dart';
 import 'package:flutter_offline/flutter_offline.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:loading_overlay/loading_overlay.dart';
-
-// import 'package:logger/logger.dart';
 
 ///
 import '../../app_localizations.dart';
 import '../../models/app_error.dart';
 import '../../models/dailyreward.dart';
-import '../../models/player_stats.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/daily_rewards_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
@@ -43,26 +41,13 @@ class QuestLinePage extends ConsumerStatefulWidget {
 }
 
 class _QuestLinePageState extends ConsumerState<QuestLinePage> {
-  /// Curent loggedin user
-  User _user = User.blank();
-
-  // final Logger log = Logger(
-  //     printer: PrettyPrinter(
-  //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
-
   final _apiProvider = ApiProvider();
 
-  bool _isLoading = true;
+  /// True only while a claim action is in flight.
+  bool _isClaiming = false;
 
   ///
   bool horizontal = false;
-
-  final _pastRewards = [];
-
-  DailyReward _nextReward = DailyReward.blank();
-
-  ///
-  int _elapsedSeconds = 0;
 
   final _storage = FlutterSecureStorage();
 
@@ -72,7 +57,6 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
   @override
   void initState() {
     super.initState();
-    _getPastRewards();
   }
 
   @override
@@ -101,27 +85,28 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
     );
   }
 
-  Widget _makeNextReward(BuildContext context) {
+  Widget _makeNextReward(BuildContext context, DailyReward nextReward,
+      int secondsElapsed) {
     var blueprintImg = Image(
       image:
-          AssetImage('assets/images/blueprints/${_nextReward.blueprint.img}'),
+          AssetImage('assets/images/blueprints/${nextReward.blueprint.img}'),
       height: 76.0,
       width: 76.0,
     );
 
     var materialImg = Image(
-      image: AssetImage('assets/images/materials/${_nextReward.material.img}'),
+      image: AssetImage('assets/images/materials/${nextReward.material.img}'),
       height: 76.0,
       width: 76.0,
     );
 
     var itemImg = Image(
-      image: AssetImage('assets/images/items/${_nextReward.item.img}'),
+      image: AssetImage('assets/images/items/${nextReward.item.img}'),
       height: 76.0,
       width: 76.0,
     );
 
-    var rn = new Random();
+    var rn = Random();
     var hintnr = rn.nextInt(4);
     //ignore: omit_local_variable_types
     String hint = 'Better materials will be needed to forge better weapons.';
@@ -142,7 +127,6 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
       ),
       child: Container(
         decoration: BoxDecoration(
-          //color: Color.fromRGBO(19, 21, 20, 0.7),
           borderRadius: BorderRadius.circular(8.0),
           boxShadow: <BoxShadow>[
             BoxShadow(
@@ -173,7 +157,7 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
                         right: 10.0,
                         bottom: 10.0,
                         child: Text(
-                          _nextReward.day.toString(),
+                          nextReward.day.toString(),
                           style: TextStyle(
                             color: Colors.white,
                           ),
@@ -204,23 +188,21 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
               children: <Widget>[
                 Expanded(
                   flex: 5,
-                  child: Container(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        blueprintImg,
-                        Text(
-                          _nextReward.blueprint.name,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                          ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      blueprintImg,
+                      Text(
+                        nextReward.blueprint.name,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
                         ),
-                        SizedBox(height: 10),
-                      ],
-                    ),
+                      ),
+                      SizedBox(height: 10),
+                    ],
                   ),
                 ),
                 Expanded(
@@ -229,23 +211,21 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
                 ),
                 Expanded(
                   flex: 5,
-                  child: Container(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        materialImg,
-                        Text(
-                          _nextReward.material.name,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                          ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      materialImg,
+                      Text(
+                        nextReward.material.name,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
                         ),
-                        SizedBox(height: 10),
-                      ],
-                    ),
+                      ),
+                      SizedBox(height: 10),
+                    ],
                   ),
                 ),
                 Expanded(
@@ -254,30 +234,28 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
                 ),
                 Expanded(
                   flex: 5,
-                  child: Container(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        itemImg,
-                        Text(
-                          _nextReward.item.name,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                          ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      itemImg,
+                      Text(
+                        nextReward.item.name,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
                         ),
-                        SizedBox(height: 10),
-                      ],
-                    ),
+                      ),
+                      SizedBox(height: 10),
+                    ],
                   ),
                 ),
               ],
             ),
             CountdownTimer(
               endTime: DateTime.now().millisecondsSinceEpoch +
-                  (GlobalConstants.dailyGiftFreq - _elapsedSeconds) * 1000,
+                  (GlobalConstants.dailyGiftFreq - secondsElapsed) * 1000,
               widgetBuilder: (context, time) {
                 if (time != null) {
                   return countDownTimer(time);
@@ -302,8 +280,8 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
                           ),
                           onPressed: () {
                             _dailyReward(
-                              _nextReward.day,
-                              _nextReward.blueprint.id,
+                              nextReward.day,
+                              nextReward.blueprint.id,
                               0,
                               0,
                             );
@@ -346,9 +324,9 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
                           ),
                           onPressed: () {
                             _dailyReward(
-                              _nextReward.day,
+                              nextReward.day,
                               0,
-                              _nextReward.material.id,
+                              nextReward.material.id,
                               0,
                             );
                           },
@@ -390,10 +368,10 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
                           ),
                           onPressed: () {
                             _dailyReward(
-                              _nextReward.day,
+                              nextReward.day,
                               0,
                               0,
-                              _nextReward.item.id,
+                              nextReward.item.id,
                             );
                           },
                           child: Row(
@@ -424,10 +402,7 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
     );
   }
 
-  Widget _makeCard(BuildContext context, int index) {
-    if (_pastRewards.isEmpty) {
-      return SizedBox(width: 1);
-    }
+  Widget _makeCard(BuildContext context, DailyReward reward) {
     return Card(
       color: Color.fromRGBO(19, 21, 20, 0.7),
       elevation: 8.0,
@@ -437,7 +412,6 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
       ),
       child: Container(
         decoration: BoxDecoration(
-          //color: Color.fromRGBO(19, 21, 20, 0.7),
           borderRadius: BorderRadius.circular(8.0),
           boxShadow: <BoxShadow>[
             BoxShadow(
@@ -447,12 +421,12 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
             ),
           ],
         ),
-        child: _makeListTile(context, index),
+        child: _makeListTile(context, reward),
       ),
     );
   }
 
-  Widget _makeListTile(BuildContext context, int index) {
+  Widget _makeListTile(BuildContext context, DailyReward reward) {
     var netImg = Image(
       image: AssetImage('assets/images/calendar_day.png'),
       height: 76.0,
@@ -463,27 +437,26 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
 
     //ignore: omit_local_variable_types
     String grabed = 'Grabed';
-    if (_pastRewards[index].blueprintId > 0) {
-      grabed = _pastRewards[index].blueprint.name;
+    if (reward.blueprintId > 0) {
+      grabed = reward.blueprint.name;
       rewardImg = Image(
         image: AssetImage(
-            'assets/images/blueprints/${_pastRewards[index].blueprint.img}'),
+            'assets/images/blueprints/${reward.blueprint.img}'),
         height: 76.0,
         width: 76.0,
       );
-    } else if (_pastRewards[index].materialId > 0) {
-      grabed = _pastRewards[index].material.name;
+    } else if (reward.materialId > 0) {
+      grabed = reward.material.name;
       rewardImg = Image(
         image: AssetImage(
-            'assets/images/materials/${_pastRewards[index].material.img}'),
+            'assets/images/materials/${reward.material.img}'),
         height: 76.0,
         width: 76.0,
       );
-    } else if (_pastRewards[index].itemId > 0) {
-      grabed = _pastRewards[index].item.name;
+    } else if (reward.itemId > 0) {
+      grabed = reward.item.name;
       rewardImg = Image(
-        image:
-            AssetImage('assets/images/items/${_pastRewards[index].item.img}'),
+        image: AssetImage('assets/images/items/${reward.item.img}'),
         height: 76.0,
         width: 76.0,
       );
@@ -508,7 +481,7 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
               right: 0.0,
               bottom: 0.0,
               child: Text(
-                _pastRewards[index].day.toString(),
+                reward.day.toString(),
                 style: TextStyle(
                   color: Colors.white,
                 ),
@@ -546,8 +519,7 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
               Container(width: 7.0),
               Text(
                   DateFormat('dd-MM-yyyy HH:mm')
-                      .format(
-                          DateTime.parse(_pastRewards[index].date).toLocal())
+                      .format(DateTime.parse(reward.date).toLocal())
                       .toString(),
                   style: Style.smallTextStyle),
             ],
@@ -559,9 +531,8 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
     );
   }
 
-  Widget leadingIcon(BuildContext context) {
-    // print(" ${_user.details.daily}");
-    if (!GlobalConstants.menuHasNotification(_user.details)) {
+  Widget leadingIcon(BuildContext context, UserData userDetails) {
+    if (!GlobalConstants.menuHasNotification(userDetails)) {
       return IconButton(
         color: Colors.white,
         icon: Icon(
@@ -608,16 +579,6 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
                     color: Colors.red,
                     shape: BoxShape.circle,
                   ),
-                  child: Center(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.red,
-                      ),
-                      width: 10,
-                      height: 10,
-                    ),
-                  ),
                 ),
               )
             ],
@@ -628,7 +589,15 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
   }
 
   Widget build(BuildContext context) {
-    // final deviceSize = MediaQuery.of(context).size;
+    final rewardsState = ref.watch(dailyRewardsProvider);
+    final user = ref.watch(userProvider).valueOrNull ?? User.blank();
+
+    final rewards = rewardsState.valueOrNull;
+    final pastRewards = rewards?.pastRewards ?? [];
+    final nextReward = rewards?.nextReward ?? DailyReward.blank();
+    final secondsElapsed = rewards?.secondsElapsed ?? 0;
+
+    final isLoading = rewardsState.isLoading || _isClaiming;
 
     return PopScope(
       canPop: false,
@@ -637,60 +606,57 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
       },
       child: Scaffold(
         backgroundColor: GlobalConstants.appBg,
-        //resizeToAvoidBottomPadding: false,
         appBar: AppBar(
-          leading: leadingIcon(context),
-        elevation: 0.1,
-        backgroundColor: Colors.transparent,
-        title: Text(
-          "Quests",
-          style: Style.topBar,
-        ),
-      ),
-      //extendBodyBehindAppBar: true,
-      body: OfflineBuilder(
-        connectivityBuilder: (
-          context,
-          connectivity,
-          child,
-        ) {
-          if (connectivity.isEmpty || connectivity.contains(ConnectivityResult.none)) {
-            return Stack(children: <Widget>[
-              child,
-              BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                child: Container(
-                    color: Colors.black.withValues(alpha: 0),
-                    // child: child,
-                    child: NetworkStatusMessage()),
-              )
-            ]);
-          } else {
-            return child;
-          }
-        },
-        child: LoadingOverlay(
-          isLoading: _isLoading,
-          opacity: 0.5,
-          color: Colors.black,
-          progressIndicator: CircularProgressIndicator(
-            backgroundColor: Colors.black,
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xffe6a04e)),
+          leading: leadingIcon(context, user.details),
+          elevation: 0.1,
+          backgroundColor: Colors.transparent,
+          title: Text(
+            "Quests",
+            style: Style.topBar,
           ),
-          child: Stack(
-            children: <Widget>[
-              Container(
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage('assets/images/temple_stairs.jpg'),
-                    fit: BoxFit.fill,
+        ),
+        body: OfflineBuilder(
+          connectivityBuilder: (
+            context,
+            connectivity,
+            child,
+          ) {
+            if (connectivity.isEmpty ||
+                connectivity.contains(ConnectivityResult.none)) {
+              return Stack(children: <Widget>[
+                child,
+                BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  child: Container(
+                      color: Colors.black.withValues(alpha: 0),
+                      child: NetworkStatusMessage()),
+                )
+              ]);
+            } else {
+              return child;
+            }
+          },
+          child: LoadingOverlay(
+            isLoading: isLoading,
+            opacity: 0.5,
+            color: Colors.black,
+            progressIndicator: CircularProgressIndicator(
+              backgroundColor: Colors.black,
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xffe6a04e)),
+            ),
+            child: Stack(
+              children: <Widget>[
+                Container(
+                  decoration: BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage('assets/images/temple_stairs.jpg'),
+                      fit: BoxFit.fill,
+                    ),
                   ),
                 ),
-              ),
-              Column(
-                children: <Widget>[
-                  Expanded(
-                    child: Container(
+                Column(
+                  children: <Widget>[
+                    Expanded(
                       child: CustomScrollView(
                         scrollDirection: Axis.vertical,
                         shrinkWrap: false,
@@ -712,12 +678,14 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
                                         Shadow(
                                             offset: Offset(1.0, 1.0),
                                             blurRadius: 3.0,
-                                            color: Color.fromARGB(255, 0, 0, 0))
+                                            color: Color.fromARGB(
+                                                255, 0, 0, 0))
                                       ],
                                     ),
                                   ),
                                 ),
-                                _makeNextReward(context),
+                                _makeNextReward(
+                                    context, nextReward, secondsElapsed),
                                 Padding(
                                   padding: EdgeInsets.all(16),
                                   child: Text(
@@ -732,172 +700,85 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
                                         Shadow(
                                             offset: Offset(1.0, 1.0),
                                             blurRadius: 3.0,
-                                            color: Color.fromARGB(255, 0, 0, 0))
+                                            color: Color.fromARGB(
+                                                255, 0, 0, 0))
                                       ],
                                     ),
                                   ),
                                 ),
-                                for (var i = 0;
-                                    i <
-                                        ((_pastRewards.length > 5)
-                                            ? 5
-                                            : _pastRewards.length);
-                                    i++)
-                                  _makeCard(context, i),
+                                for (final reward in pastRewards.take(5))
+                                  _makeCard(context, reward),
                               ],
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-      ),
         key: _scaffoldKey,
         drawer: DrawerPage(),
       ),
     );
   }
 
-  void _getPastRewards() async {
-    /// populate initial data from cookies
-    _user = await ApiProvider().getStoredUser();
-
-    try {
-    final response = await _apiProvider.get('/dailyrewards');
-
-    var past = [];
-    var secs = 0;
-    if (response.containsKey("past_rewards")) {
-      for (dynamic elem in response["past_rewards"]) {
-        final r = DailyReward.fromJson(elem);
-        past.add(r);
-      }
-    }
-    if (response.containsKey("next_reward")) {
-      setState(() {
-        secs = int.tryParse(response["seconds_elapsed"].toString()) ?? 0;
-        _nextReward = DailyReward.fromJson(response["next_reward"]);
-      });
-    }
-
-    // update local data
-    _user.details.coins =
-        double.tryParse(response["coins"].toString()) ?? 0.0;
-    _user.details.guildId = (response["guild"]?["id"] ?? '0').toString();
-    _user.details.mining = response["mining"];
-    _user.details.xp = response["xp"];
-    _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
-    _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
-    _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
-    _user.details.daily = response["daily"];
-    if (response.containsKey("settings")) {
-      _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
-    }
-    _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
-
-    ref.invalidate(userProvider);
-
-    setState(() {
-      _isLoading = false;
-      _elapsedSeconds = secs;
-      _pastRewards.clear();
-      _pastRewards.addAll(past.toList());
-    });
-    } on AppError catch (err) {
-      debugPrint(err.toString());
-      if (mounted) setState(() => _isLoading = false);
-    } catch (err) {
-      debugPrint('_getPastRewards unexpected error: $err');
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
   ///
   Future _dailyReward(
       int day, int blueprintId, int materialId, int itemId) async {
-    // print(' --- _dailyReward ---');
-    // print(blueprintId);
-    // print(materialId);
-    // print(itemId);
-    dynamic response;
+    setState(() => _isClaiming = true);
     try {
-      response = await _apiProvider.post(
+      final response = await _apiProvider.post(
         '/dailyrewards/$day/$blueprintId/$materialId/$itemId',
         {},
       );
+
+      // Build the images list from returned blueprints/materials/items
+      final List<Image> imagesArr = [];
+      for (dynamic value in (response["blueprints"] ?? [])) {
+        if (value?.containsKey("img") == true && value["img"] != "") {
+          imagesArr.add(Image.asset("assets/images/blueprints/${value['img']}"));
+        }
+      }
+      for (dynamic value in (response["materials"] ?? [])) {
+        if (value?.containsKey("img") == true && value["img"] != "") {
+          imagesArr.add(Image.asset("assets/images/materials/${value['img']}"));
+        }
+      }
+      for (dynamic value in (response["items"] ?? [])) {
+        if (value?.containsKey("img") == true && value["img"] != "") {
+          imagesArr.add(Image.asset("assets/images/items/${value['img']}"));
+        }
+      }
+
+      await _storage.delete(key: "dailyrewardsIds");
+
+      // Refresh both feature data and user state
+      ref.invalidate(dailyRewardsProvider);
+      ref.invalidate(userProvider);
+
+      if (!mounted) return;
+      setState(() => _isClaiming = false);
+      showDialog(
+        context: context,
+        builder: (context) => CustomDialog(
+          title: AppLocalizations.of(context)!.translate('congrats'),
+          description: "You grabed a daily reward!",
+          buttonText: "Okay",
+          images: imagesArr,
+          callback: () {},
+        ),
+      );
     } on AppError catch (err) {
       if (!mounted) return;
+      setState(() => _isClaiming = false);
       err.show(context, title: 'Daily Reward');
-      return;
     } catch (err) {
       debugPrint('_dailyReward unexpected error: $err');
-      return;
+      if (mounted) setState(() => _isClaiming = false);
     }
-
-    // ignore: omit_local_variable_types
-    List<Image> imagesArr = [];
-
-    if (response is Map && response.containsKey("success")) {
-      if (response["success"] == true) {
-        if (response["blueprints"].isNotEmpty) {
-          for (dynamic value in response["blueprints"]) {
-            if (value != null) {
-              if (value.containsKey("img") && value["img"] != "") {
-                imagesArr.add(
-                    Image.asset("assets/images/blueprints/${value['img']}"));
-              }
-            }
-          }
-        }
-        if (response["materials"].isNotEmpty) {
-          for (dynamic value in response["materials"]) {
-            if (value != null) {
-              if (value.containsKey("img") && value["img"] != "") {
-                imagesArr.add(
-                    Image.asset("assets/images/materials/${value['img']}"));
-              }
-            }
-          }
-        }
-        if (response["items"].isNotEmpty) {
-          for (dynamic value in response["items"]) {
-            if (value != null) {
-              if (value.containsKey("img") && value["img"] != "") {
-                imagesArr
-                    .add(Image.asset("assets/images/items/${value['img']}"));
-              }
-            }
-          }
-        }
-
-        _storage.delete(
-          key: "dailyrewardsIds",
-        );
-
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (context) => CustomDialog(
-            title: AppLocalizations.of(context)!.translate('congrats'),
-            description: "You grabed a daily reward!",
-            buttonText: "Okay",
-            images: imagesArr,
-            callback: () async {
-              _getPastRewards();
-              setState(() {
-                _isLoading = false;
-                _elapsedSeconds = 0;
-              });
-            },
-          ),
-        );
-      }
-    }
-    return;
   }
 }

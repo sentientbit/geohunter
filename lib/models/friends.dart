@@ -55,6 +55,7 @@ class Friend {
     xp = int.tryParse(json["xp"].toString()) ?? 0;
     locationPrivacy = int.tryParse(json["privacy"].toString()) ?? 0;
     thumbnail = json["thumbnail"].toString();
+    isReq = json["is_req"]?.toString() ?? "";
     lat = double.tryParse(json["lat"].toString()) ?? 51.5;
     lng = double.tryParse(json["lng"].toString()) ?? 0.0;
   }
