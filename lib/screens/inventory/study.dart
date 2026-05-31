@@ -8,14 +8,13 @@ import 'package:percent_indicator/linear_percent_indicator.dart';
 import '../../app_localizations.dart';
 import '../../models/app_error.dart';
 import '../../fonts/rpg_awesome_icons.dart';
-import '../../models/blueprint_page.dart';
 import '../../models/player_stats.dart';
 import '../../models/research.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/blueprint_pages_provider.dart';
 import '../../providers/blueprint_pages_repository.dart';
+import '../../providers/blueprint_pages_provider.dart';
 import '../../providers/research_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../shared/constants.dart';
@@ -33,6 +32,16 @@ const _sectionLabel = TextStyle(
   fontWeight: FontWeight.bold,
   letterSpacing: 2.0,
 );
+
+/// Rarity colours: Common / Uncommon / Rare / Epic / Legendary
+const _rarityColors = [
+  Color(0xff888888),
+  Color(0xff4caf50),
+  Color(0xff2196f3),
+  Color(0xff9c27b0),
+  Color(0xffff8c00),
+];
+const _rarityLabels = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
 
 ///
 class StudyDetailPage extends ConsumerStatefulWidget {
@@ -91,18 +100,6 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
-  /// Placeholder crafting bonus derived from mastery level.
-  /// Replace with server-supplied value once the backend ships it.
-  String _craftingBonus(int level) {
-    switch (level) {
-      case 1: return '+6%';
-      case 2: return '+12%';
-      case 3: return '+18%';
-      case 4: return '+25%';
-      default: return '—';
-    }
-  }
-
   Widget _statCell(String label, String value, Color valueColor) {
     return Column(
       children: [
@@ -128,22 +125,19 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Providers
-    final pagesList = ref.watch(blueprintPagesProvider).valueOrNull ?? [];
-    final BlueprintPage? matchedPage =
-        pagesList.cast<BlueprintPage?>().firstWhere(
-              (p) => p?.blueprintId == widget.research.blueprint.id,
-              orElse: () => null,
-            );
-    final int pagesNr = matchedPage?.quantity ?? 0;
-    final int pagesRequired = widget.research.blueprint.pagesRequired;
-    final bool canAssemble = pagesRequired > 0 && pagesNr >= pagesRequired;
     final user = ref.watch(userProvider).valueOrNull ?? User.blank();
 
-    // Derived values
+    // Pages data now comes directly from the tech node — no second provider needed
+    final int pagesNr = widget.research.pagesOwned;
+    final int pagesRequired = widget.research.blueprint.pagesRequired;
+    final int? assemblePageId = widget.research.pageId;
+    final bool canAssemble =
+        pagesRequired > 0 && pagesNr >= pagesRequired && assemblePageId != null;
+
+    // Derived values — use server-supplied crafting bonus
     final int currentLevel = researchToCrafting(_currentPoints);
     final String skillLabel = Research.skill(_currentPoints);
-    final String bonusLabel = _craftingBonus(currentLevel);
+    final String bonusLabel = widget.research.craftingBonusLabel;
     final double pageRatio = pagesRequired > 0
         ? (pagesNr / pagesRequired).clamp(0.0, 1.0)
         : 0.0;
@@ -380,7 +374,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                                 const EdgeInsets.symmetric(vertical: 10),
                           ),
                           onPressed: canAssemble
-                              ? () => _assemble(matchedPage!.id)
+                              ? () => _assemble(assemblePageId)
                               : null,
                           child: Column(
                             children: [
@@ -617,6 +611,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                   heroCard,
                   if (assemblyCard != null) assemblyCard,
                   investCard,
+                  _buildDisciplineCard(widget.research),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -629,9 +624,215 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     );
   }
 
+  // ── Discipline Effects card ───────────────────────────────────────────────────
+
+  Widget _buildDisciplineCard(Research tech) {
+    final hasRarity = tech.rarityPcts.any((p) => p > 0);
+    final hasRecipes = tech.recipes.isNotEmpty;
+    final hasAffinity = tech.affinityMats.isNotEmpty;
+
+    if (!hasRarity && !hasRecipes && !hasAffinity) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Heading
+          Row(children: [
+            const Icon(Icons.auto_awesome, color: _gold, size: 14),
+            const SizedBox(width: 8),
+            const Text('DISCIPLINE EFFECTS', style: _sectionLabel),
+          ]),
+          const SizedBox(height: 16),
+
+          // ── Rarity Influence ─────────────────────────────────────────
+          if (hasRarity) ...[
+            const Text('RARITY INFLUENCE',
+                style: TextStyle(
+                    color: Colors.white38,
+                    fontSize: 10,
+                    letterSpacing: 1.5)),
+            const SizedBox(height: 10),
+            for (int i = 0; i < 5; i++)
+              if (tech.rarityPcts.length > i)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 72,
+                        child: Text(
+                          _rarityLabels[i],
+                          style: TextStyle(
+                              color: _rarityColors[i], fontSize: 12),
+                        ),
+                      ),
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(3),
+                          child: LinearProgressIndicator(
+                            value: tech.rarityPcts[i] / 100.0,
+                            backgroundColor: Colors.white10,
+                            valueColor: AlwaysStoppedAnimation(
+                                _rarityColors[i]),
+                            minHeight: 5,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 32,
+                        child: Text(
+                          '${tech.rarityPcts[i]}%',
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 11),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            if (hasRecipes || hasAffinity)
+              const Divider(color: Colors.white12, height: 24),
+          ],
+
+          // ── Unlocked Recipes ─────────────────────────────────────────
+          if (hasRecipes) ...[
+            const Text('UNLOCKED RECIPES',
+                style: TextStyle(
+                    color: Colors.white38,
+                    fontSize: 10,
+                    letterSpacing: 1.5)),
+            const SizedBox(height: 10),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 1,
+              ),
+              itemCount: tech.recipes.length.clamp(0, 6),
+              itemBuilder: (ctx, i) {
+                final recipe = tech.recipes[i];
+                return Container(
+                  decoration: BoxDecoration(
+                    color: recipe.unlocked
+                        ? const Color(0xff1e2800)
+                        : Colors.white10,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: recipe.unlocked
+                          ? const Color(0xff4caf50).withValues(alpha: 0.6)
+                          : Colors.white12,
+                    ),
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      if (recipe.unlocked && recipe.img.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Image.asset(
+                            'assets/images/items/${recipe.img}',
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(
+                                Icons.help_outline,
+                                color: Colors.white24,
+                                size: 28),
+                          ),
+                        )
+                      else
+                        const Icon(Icons.lock_outline,
+                            color: Colors.white24, size: 28),
+                      if (recipe.unlocked)
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: Container(
+                            width: 14,
+                            height: 14,
+                            decoration: const BoxDecoration(
+                              color: Color(0xff4caf50),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.check,
+                                size: 10, color: Colors.white),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            if (hasAffinity)
+              const Divider(color: Colors.white12, height: 24),
+          ],
+
+          // ── Material Affinities ──────────────────────────────────────
+          if (hasAffinity) ...[
+            const Text('MATERIAL AFFINITIES',
+                style: TextStyle(
+                    color: Colors.white38,
+                    fontSize: 10,
+                    letterSpacing: 1.5)),
+            const SizedBox(height: 10),
+            for (int i = 0; i < tech.affinityMats.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    if (tech.affinityMats[i].img.isNotEmpty)
+                      Image.asset(
+                        'assets/images/materials/${tech.affinityMats[i].img}',
+                        width: 20,
+                        height: 20,
+                        errorBuilder: (_, __, ___) =>
+                            const SizedBox(width: 20, height: 20),
+                      )
+                    else
+                      const SizedBox(width: 20, height: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        tech.affinityMats[i].name,
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 13),
+                      ),
+                    ),
+                    Text(
+                      i < tech.affinityPcts.length
+                          ? '+${tech.affinityPcts[i]}% Yield'
+                          : '',
+                      style: const TextStyle(
+                          color: _gold,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
   // ── Actions ──────────────────────────────────────────────────────────────────
 
-  Future<void> _assemble(int pageId) async {
+  Future<void> _assemble(int? pageId) async {
+    if (pageId == null) return;
     try {
       await ref.read(blueprintPagesRepositoryProvider).assemble(pageId);
       ref.invalidate(blueprintPagesProvider);
