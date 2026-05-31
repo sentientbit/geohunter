@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/library_mine.dart';
-import '../models/mine.dart';
 import '../models/radar_response.dart';
 import '../shared/constants.dart';
 import 'api_provider.dart';
@@ -16,47 +15,45 @@ class RadarRepository {
   final ApiProvider _api = ApiProvider();
 
   /// Fetches Library mines (mine_type=7) nearest to [lat]/[lng].
-  /// Uses GET /api/places?mine_type=7&lat=…&lng=… — the consolidated
-  /// places endpoint (no separate /research/libraries needed).
-  /// Pages drop from any Library mine regardless of discipline.
+  /// Uses GET /api/places?mine_type=7&lat=…&lng=… (consolidated endpoint).
+  ///
+  /// Response shape (PlaceFeature — flat, not GeoJSON):
+  ///   places[]         → visited mines   (lastVisited != null)
+  ///   recommandations[] → unvisited mines
+  /// Fields: id, desc (name), lat, lng, distance_km (server-computed, km).
   Future<LibraryMinesResponse> findNearestLibraries(
       double lat, double lng) async {
     final response =
         await _api.get('/places?mine_type=7&lat=$lat&lng=$lng');
 
-    final location = LtLn(lat, lng);
-    final mines = <Mine>[];
-
-    if (response is Map && response['success'] == true) {
-      for (final key in ['places', 'recommandations']) {
-        final items = response[key];
-        if (items is List) {
-          mines.addAll(
-              items.map((e) => Mine.fromJson(e, 1, location)));
-        }
-      }
-    }
-
-    // Sort nearest first (distanceToPoint is metres, computed in Mine.fromJson).
-    mines.sort((a, b) => a.distanceToPoint.compareTo(b.distanceToPoint));
-
-    final libraryMines = mines.take(5).map((m) {
-      // lastVisited default "1980-01-01 01:01:01Z" means never visited.
-      final visited = m.lastVisited != '1980-01-01 01:01:01Z' &&
-          m.lastVisited.isNotEmpty;
+    LibraryMine _parse(dynamic e, bool visited) {
       return LibraryMine(
-        id: m.id,
-        name: m.properties.title.isNotEmpty
-            ? m.properties.title
+        id: int.tryParse((e['id'] ?? 0).toString()) ?? 0,
+        name: (e['desc'] as String?)?.isNotEmpty == true
+            ? e['desc'] as String
             : 'Library Mine',
-        lat: m.geometry.coordinates[1],
-        lng: m.geometry.coordinates[0],
-        distanceKm: m.distanceToPoint / 1000,
+        lat: double.tryParse((e['lat'] ?? 0).toString()) ?? 0.0,
+        lng: double.tryParse((e['lng'] ?? 0).toString()) ?? 0.0,
+        distanceKm:
+            double.tryParse((e['distance_km'] ?? 0).toString()) ?? 0.0,
         visited: visited,
       );
-    }).toList();
+    }
 
-    return LibraryMinesResponse(message: '', mines: libraryMines);
+    final mines = <LibraryMine>[];
+    if (response is Map && response['success'] == true) {
+      final places = response['places'] as List? ?? [];
+      mines.addAll(places.map((e) => _parse(e, true)));
+
+      final recs = response['recommandations'] as List? ?? [];
+      mines.addAll(recs.map((e) => _parse(e, false)));
+    }
+
+    // Both arrays already come sorted by distance from the server;
+    // re-sort after merging so the combined list is still nearest-first.
+    mines.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+
+    return LibraryMinesResponse(message: '', mines: mines.take(5).toList());
   }
 
   Future<RadarResponse> getRadar({
