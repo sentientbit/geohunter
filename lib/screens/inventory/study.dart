@@ -14,8 +14,11 @@ import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/disassemble_result.dart';
+import '../../models/mine.dart';
 import '../../providers/blueprint_pages_repository.dart';
 import '../../providers/blueprint_pages_provider.dart';
+import '../../providers/location_provider.dart';
+import '../../providers/radar_repository.dart';
 import '../../providers/research_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../shared/constants.dart';
@@ -84,6 +87,12 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
 
   /// How many volumes to disassemble (1 … volumesOwned).
   int _nrToDisassemble = 1;
+
+  /// Result of the "find nearest Library" search. Null = not searched yet.
+  List<Mine>? _nearbyLibraries;
+
+  /// True while the Library search network call is in flight.
+  bool _searchingLibraries = false;
 
   User _user = User.blank();
   final ApiProvider _apiProvider = ApiProvider();
@@ -474,6 +483,90 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                 ),
               ],
             ),
+            // ── Find nearest Library ───────────────────────────────────────
+            if (pagesNr < pagesRequired) ...[
+              const Divider(color: Colors.white12, height: 28),
+              Row(children: [
+                const Icon(Icons.location_searching,
+                    color: Colors.white38, size: 13),
+                const SizedBox(width: 6),
+                const Text('NEED MORE PAGES?',
+                    style: TextStyle(
+                        color: Colors.white38,
+                        fontSize: 10,
+                        letterSpacing: 1.5)),
+              ]),
+              const SizedBox(height: 10),
+              // Results
+              if (_nearbyLibraries != null) ...[
+                if (_nearbyLibraries!.isEmpty)
+                  const Text('No Library mines found within 10 km.',
+                      style: TextStyle(color: Colors.white38, fontSize: 12))
+                else
+                  ..._nearbyLibraries!.take(3).map((mine) => Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Row(children: [
+                          const Icon(Icons.fort, color: _gold, size: 14),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(mine.properties.title,
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 13),
+                                overflow: TextOverflow.ellipsis),
+                          ),
+                          Text(
+                            formatMineDistance(mine.distanceToPoint),
+                            style: const TextStyle(
+                                color: _gold,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ]),
+                      )),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () => context.go('/poi-map'),
+                  icon: const Icon(Icons.map_outlined,
+                      color: Colors.white54, size: 16),
+                  label: const Text('Open Map',
+                      style:
+                          TextStyle(color: Colors.white54, fontSize: 13)),
+                  style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                ),
+              ] else
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                      side: const BorderSide(color: Colors.white24),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    onPressed: _searchingLibraries
+                        ? null
+                        : _findNearestLibraries,
+                    icon: _searchingLibraries
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white38))
+                        : const Icon(Icons.fort,
+                            color: Colors.white54, size: 16),
+                    label: Text(
+                      _searchingLibraries
+                          ? 'Searching…'
+                          : 'Find nearest Library mine',
+                      style: const TextStyle(
+                          color: Colors.white54, fontSize: 13),
+                    ),
+                  ),
+                ),
+            ],
           ],
         ),
       );
@@ -899,6 +992,35 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
         ],
       ),
     );
+  }
+
+  // ── Library search ───────────────────────────────────────────────────────────
+
+  Future<void> _findNearestLibraries() async {
+    final location = ref.read(locationProvider).valueOrNull;
+    if (location == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Waiting for GPS fix — try again in a moment.')));
+      return;
+    }
+    setState(() => _searchingLibraries = true);
+    try {
+      final results = await ref
+          .read(radarRepositoryProvider)
+          .findNearestLibraries(location,
+              blueprintId: widget.research.blueprint.id);
+      if (!mounted) return;
+      setState(() {
+        _nearbyLibraries = results;
+        _searchingLibraries = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _searchingLibraries = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not reach server. Try again.')));
+    }
   }
 
   // ── Disassemble card ─────────────────────────────────────────────────────────
