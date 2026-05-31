@@ -15,16 +15,48 @@ import 'api_provider.dart';
 class RadarRepository {
   final ApiProvider _api = ApiProvider();
 
-  /// Fetches up to 5 Library mines nearest to [lat]/[lng].
-  /// Uses GET /api/research/libraries — a dedicated lightweight endpoint
-  /// that returns typed results with distance_km and visited flag.
-  /// Pages drop from any Library mine (not tied to a specific discipline).
+  /// Fetches Library mines (mine_type=7) nearest to [lat]/[lng].
+  /// Uses GET /api/places?mine_type=7&lat=…&lng=… — the consolidated
+  /// places endpoint (no separate /research/libraries needed).
+  /// Pages drop from any Library mine regardless of discipline.
   Future<LibraryMinesResponse> findNearestLibraries(
       double lat, double lng) async {
     final response =
-        await _api.get('/research/libraries?lat=$lat&lng=$lng');
-    return LibraryMinesResponse.fromJson(
-        response as Map<String, dynamic>);
+        await _api.get('/places?mine_type=7&lat=$lat&lng=$lng');
+
+    final location = LtLn(lat, lng);
+    final mines = <Mine>[];
+
+    if (response is Map && response['success'] == true) {
+      for (final key in ['places', 'recommandations']) {
+        final items = response[key];
+        if (items is List) {
+          mines.addAll(
+              items.map((e) => Mine.fromJson(e, 1, location)));
+        }
+      }
+    }
+
+    // Sort nearest first (distanceToPoint is metres, computed in Mine.fromJson).
+    mines.sort((a, b) => a.distanceToPoint.compareTo(b.distanceToPoint));
+
+    final libraryMines = mines.take(5).map((m) {
+      // lastVisited default "1980-01-01 01:01:01Z" means never visited.
+      final visited = m.lastVisited != '1980-01-01 01:01:01Z' &&
+          m.lastVisited.isNotEmpty;
+      return LibraryMine(
+        id: m.id,
+        name: m.properties.title.isNotEmpty
+            ? m.properties.title
+            : 'Library Mine',
+        lat: m.geometry.coordinates[1],
+        lng: m.geometry.coordinates[0],
+        distanceKm: m.distanceToPoint / 1000,
+        visited: visited,
+      );
+    }).toList();
+
+    return LibraryMinesResponse(message: '', mines: libraryMines);
   }
 
   Future<RadarResponse> getRadar({
