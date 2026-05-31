@@ -20,10 +20,10 @@
         android:icon="@mipmap/ic_launcher">
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="GOOGLE_API_KEY_REMOVED_FROM_HISTORY"/>
+            android:value="${googleApiKey}"/>
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ADMOB_APP_ID_REMOVED_FROM_HISTORY"/>
+            android:value="${admobAppId}"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"

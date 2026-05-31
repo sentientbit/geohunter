@@ -57,6 +57,10 @@ android {
         targetSdk flutter.targetSdkVersion
         versionCode generateVersionCode(flutterVersionName)
         versionName flutterVersionName
+        manifestPlaceholders += [
+            googleApiKey: localProperties.getProperty('googleApiKey', ''),
+            admobAppId  : localProperties.getProperty('admobAppId', ''),
+        ]
     }
 
     signingConfigs {
