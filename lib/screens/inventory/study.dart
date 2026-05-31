@@ -1,6 +1,7 @@
 ///
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 
@@ -14,7 +15,7 @@ import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/disassemble_result.dart';
-import '../../models/mine.dart';
+import '../../models/library_mine.dart';
 import '../../providers/blueprint_pages_repository.dart';
 import '../../providers/blueprint_pages_provider.dart';
 import '../../providers/location_provider.dart';
@@ -89,7 +90,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
   int _nrToDisassemble = 1;
 
   /// Result of the "find nearest Library" search. Null = not searched yet.
-  List<Mine>? _nearbyLibraries;
+  List<LibraryMine>? _nearbyLibraries;
 
   /// True while the Library search network call is in flight.
   bool _searchingLibraries = false;
@@ -500,42 +501,60 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
               // Results
               if (_nearbyLibraries != null) ...[
                 if (_nearbyLibraries!.isEmpty)
-                  const Text('No Library mines found within 10 km.',
+                  const Text('No Library mines found nearby.',
                       style: TextStyle(color: Colors.white38, fontSize: 12))
-                else
-                  ..._nearbyLibraries!.take(3).map((mine) => Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(children: [
-                          const Icon(Icons.fort, color: _gold, size: 14),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(mine.properties.title,
-                                style: const TextStyle(
-                                    color: Colors.white70, fontSize: 13),
-                                overflow: TextOverflow.ellipsis),
-                          ),
-                          Text(
-                            formatMineDistance(mine.distanceToPoint),
-                            style: const TextStyle(
-                                color: _gold,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold),
-                          ),
-                        ]),
+                else ...[
+                  ..._nearbyLibraries!.map((mine) => InkWell(
+                        onTap: () => _openMapsUrl(mine.mapsUrl),
+                        borderRadius: BorderRadius.circular(6),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 6, horizontal: 2),
+                          child: Row(children: [
+                            Icon(Icons.fort,
+                                color:
+                                    mine.visited ? Colors.white38 : _gold,
+                                size: 14),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(mine.name,
+                                  style: TextStyle(
+                                      color: mine.visited
+                                          ? Colors.white38
+                                          : Colors.white70,
+                                      fontSize: 13),
+                                  overflow: TextOverflow.ellipsis),
+                            ),
+                            if (mine.visited)
+                              const Padding(
+                                padding: EdgeInsets.only(right: 6),
+                                child: Text('visited',
+                                    style: TextStyle(
+                                        color: Colors.white24,
+                                        fontSize: 10)),
+                              ),
+                            Text(
+                              formatLibraryDistance(mine.distanceKm),
+                              style: TextStyle(
+                                  color: mine.visited
+                                      ? Colors.white38
+                                      : _gold,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.open_in_new,
+                                color: Colors.white24, size: 12),
+                          ]),
+                        ),
                       )),
-                const SizedBox(height: 8),
-                TextButton.icon(
-                  onPressed: () => context.go('/poi-map'),
-                  icon: const Icon(Icons.map_outlined,
-                      color: Colors.white54, size: 16),
-                  label: const Text('Open Map',
-                      style:
-                          TextStyle(color: Colors.white54, fontSize: 13)),
-                  style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Tap a mine to open in Google Maps.',
+                    style: const TextStyle(
+                        color: Colors.white24, fontSize: 11),
+                  ),
+                ],
               ] else
                 SizedBox(
                   width: double.infinity,
@@ -1006,13 +1025,12 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     }
     setState(() => _searchingLibraries = true);
     try {
-      final results = await ref
+      final result = await ref
           .read(radarRepositoryProvider)
-          .findNearestLibraries(location,
-              blueprintId: widget.research.blueprint.id);
+          .findNearestLibraries(location.latitude, location.longitude);
       if (!mounted) return;
       setState(() {
-        _nearbyLibraries = results;
+        _nearbyLibraries = result.mines;
         _searchingLibraries = false;
       });
     } catch (_) {
@@ -1020,6 +1038,13 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
       setState(() => _searchingLibraries = false);
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not reach server. Try again.')));
+    }
+  }
+
+  Future<void> _openMapsUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/library_mine.dart';
 import '../models/mine.dart';
 import '../models/radar_response.dart';
 import '../shared/constants.dart';
@@ -14,27 +15,16 @@ import 'api_provider.dart';
 class RadarRepository {
   final ApiProvider _api = ApiProvider();
 
-  /// Finds Library mines (ico == "7") within roughly 10 km of [location].
-  /// Returns them sorted by [Mine.distanceToPoint] (metres), nearest first.
-  ///
-  /// Once the radar API carries `blueprint_id` on Library features, callers
-  /// can pass an optional [blueprintId] to filter to the exact page type.
-  Future<List<Mine>> findNearestLibraries(LtLn location,
-      {int? blueprintId}) async {
-    const double span = 0.09; // ~10 km latitude span
-    final response = await getRadar(
-      userLocation: location,
-      zoom: 12,
-      swLat: location.latitude - span,
-      swLng: location.longitude - span * 1.4,
-      neLat: location.latitude + span,
-      neLng: location.longitude + span * 1.4,
-    );
-    var libs =
-        response.pois.where((m) => m.properties.ico == '7').toList();
-    // Future: filter by blueprintId once radar carries that field.
-    libs.sort((a, b) => a.distanceToPoint.compareTo(b.distanceToPoint));
-    return libs;
+  /// Fetches up to 5 Library mines nearest to [lat]/[lng].
+  /// Uses GET /api/research/libraries — a dedicated lightweight endpoint
+  /// that returns typed results with distance_km and visited flag.
+  /// Pages drop from any Library mine (not tied to a specific discipline).
+  Future<LibraryMinesResponse> findNearestLibraries(
+      double lat, double lng) async {
+    final response =
+        await _api.get('/research/libraries?lat=$lat&lng=$lng');
+    return LibraryMinesResponse.fromJson(
+        response as Map<String, dynamic>);
   }
 
   Future<RadarResponse> getRadar({
@@ -61,8 +51,14 @@ class RadarRepository {
 final radarRepositoryProvider =
     Provider<RadarRepository>((ref) => RadarRepository());
 
-/// Distance formatter shared across UI that uses [Mine.distanceToPoint] (metres).
+/// Formats [Mine.distanceToPoint] (metres, from radar) for display.
 String formatMineDistance(double metres) {
   if (metres < 1000) return '${metres.toStringAsFixed(0)} m';
   return '${(metres / 1000).toStringAsFixed(1)} km';
+}
+
+/// Formats a distance already in kilometres (from LibraryMine.distanceKm).
+String formatLibraryDistance(double km) {
+  if (km < 1.0) return '${(km * 1000).toStringAsFixed(0)} m';
+  return '${km.toStringAsFixed(1)} km';
 }
