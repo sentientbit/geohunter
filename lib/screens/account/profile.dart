@@ -84,8 +84,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     currentExperience = user.details.xp;
     currentLevel = expToLevel(currentExperience);
     nextExperienceLevel = levelToExp(currentLevel + 1);
-    _avatar = NetworkImage(
-        'https://${GlobalConstants.apiHostUrl}${user.details.picture}');
+    if (user.details.picture.isNotEmpty) {
+      _avatar = NetworkImage(
+          'https://${GlobalConstants.apiHostUrl}${user.details.picture}');
+    }
     _user = user;
     _initialized = true;
   }
@@ -530,6 +532,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             radius: szWidth / 5,
                             backgroundImage: _avatar,
                             backgroundColor: Colors.transparent,
+                            onBackgroundImageError: (_, __) {
+                              if (mounted) {
+                                setState(() {
+                                  _avatar = AssetImage(
+                                      'assets/images/avatars/default01.jpg');
+                                });
+                              }
+                            },
                           ),
                         ],
                       ),
