@@ -31,95 +31,143 @@ class _ResearchState extends ConsumerState<ResearchPage> {
 
   Widget _makeListTile(
       BuildContext context, Research tech, List<Blueprint> blueprints) {
-    var netImg = (tech.nrInvested > 0)
-        ? Image(
-            image: AssetImage('assets/images/research/${tech.img}'),
-            height: 76.0,
-            width: 76.0,
-          )
-        : Image(
-            image: AssetImage('assets/images/research/unknown.png'),
-            height: 76.0,
-            width: 76.0,
-          );
+    final currentPoints = tech.nrInvested;
+    final currentLvl = researchToCrafting(currentPoints);
+    final neededPoints = craftingToResearch(currentLvl + 1);
+    final lowerPoints = craftingToResearch(currentLvl);
+    final percentage = (neededPoints > lowerPoints)
+        ? ((currentPoints - lowerPoints) / (neededPoints - lowerPoints))
+            .clamp(0.0, 1.0)
+        : 1.0;
+    final skillLabel = Research.skill(currentPoints);
+    final isLocked = currentPoints == 0 && tech.blueprint.pagesRequired > 0;
 
-    var currentPoints = tech.nrInvested;
-    var currentLvl = researchToCrafting(currentPoints);
-    // Absolute point threshold for next level
-    var neededPoints = craftingToResearch(currentLvl + 1);
-    // Absolute point threshold for current level (floor)
-    var lowerPoints = craftingToResearch(currentLvl);
-    // Progress within the current level band (0.0 – 1.0)
-    var percentage = (currentPoints - lowerPoints) / (neededPoints - lowerPoints);
-
-    return ListTile(
-      contentPadding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
-      leading: Container(
-          padding: EdgeInsets.only(right: 12.0),
-          decoration: BoxDecoration(
-            border: Border(
-              right: BorderSide(
-                width: 1.0,
-                color: Color(0xff333333),
-              ),
-            ),
-          ),
-          child: Stack(children: <Widget>[
-            netImg,
-            Positioned(
-              right: 0.0,
-              bottom: 0.0,
-              child: Text(
-                tech.nrInvested.toString(),
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ])),
-      title: Text(
-        tech.name,
-        style: TextStyle(
-          color: Colors.white,
-          fontFamily: "Cormorant SC",
-          fontWeight: FontWeight.bold,
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              StudyDetailPage(research: tech, blueprints: blueprints),
         ),
       ),
-      subtitle: Row(
-        children: <Widget>[
-          Expanded(
-            flex: 1,
-            child: Container(
-              child: LinearProgressIndicator(
-                backgroundColor: Color.fromRGBO(209, 224, 224, 0.2),
-                value: percentage,
-                valueColor: AlwaysStoppedAnimation(Color(0xfffeb53b)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            // Tech image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: ColorFiltered(
+                colorFilter: isLocked
+                    ? const ColorFilter.matrix(<double>[
+                        0.2126, 0.7152, 0.0722, 0, 0,
+                        0.2126, 0.7152, 0.0722, 0, 0,
+                        0.2126, 0.7152, 0.0722, 0, 0,
+                        0,      0,      0,      1, 0,
+                      ])
+                    : const ColorFilter.mode(
+                        Colors.transparent, BlendMode.multiply),
+                child: Image(
+                  image: AssetImage(currentPoints > 0
+                      ? 'assets/images/research/${tech.img}'
+                      : 'assets/images/research/unknown.png'),
+                  height: 56,
+                  width: 56,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
-          ),
-          Expanded(
-            flex: 4,
-            child: Padding(
-              padding: EdgeInsets.only(left: 10.0),
-              child: Text(
-                Research.skill(tech.nrInvested),
-                style: TextStyle(color: Colors.white),
+            const SizedBox(width: 14),
+            // Name + progress
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          tech.name,
+                          style: TextStyle(
+                            color: isLocked
+                                ? Colors.white38
+                                : Colors.white,
+                            fontFamily: 'Cormorant SC',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      // Mastery badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isLocked
+                              ? Colors.white10
+                              : const Color(0xff3a2800),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                              color: isLocked
+                                  ? Colors.white12
+                                  : const Color(0xffe6a04e),
+                              width: 0.5),
+                        ),
+                        child: Text(
+                          isLocked ? 'Locked' : skillLabel,
+                          style: TextStyle(
+                            color: isLocked
+                                ? Colors.white24
+                                : const Color(0xffe6a04e),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(3),
+                          child: LinearProgressIndicator(
+                            value: isLocked ? 0.0 : percentage,
+                            backgroundColor:
+                                Colors.white12,
+                            valueColor:
+                                const AlwaysStoppedAnimation(
+                                    Color(0xffe6a04e)),
+                            minHeight: 4,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        '$currentPoints / $neededPoints',
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          )
-        ],
+            const SizedBox(width: 8),
+            Icon(
+              isLocked
+                  ? Icons.lock_outline
+                  : Icons.keyboard_arrow_right,
+              color: isLocked
+                  ? Colors.white24
+                  : Colors.white54,
+              size: 22,
+            ),
+          ],
+        ),
       ),
-      trailing:
-          Icon(Icons.keyboard_arrow_right, color: Colors.white, size: 30.0),
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => StudyDetailPage(
-              research: tech,
-              blueprints: blueprints,
-            ),
-          ),
-        );
-      },
     );
   }
 

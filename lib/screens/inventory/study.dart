@@ -1,16 +1,15 @@
 ///
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
-
-//import 'package:logger/logger.dart';
 
 ///
 import '../../app_localizations.dart';
 import '../../models/app_error.dart';
 import '../../fonts/rpg_awesome_icons.dart';
-import '../../models/player_stats.dart';
 import '../../models/blueprint_page.dart';
+import '../../models/player_stats.dart';
 import '../../models/research.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
@@ -24,18 +23,23 @@ import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
 
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const _gold = Color(0xffe6a04e);
+const _cardColor = Color(0xee1c1c1c);
+const _sectionLabel = TextStyle(
+  color: _gold,
+  fontSize: 11,
+  fontFamily: 'Open Sans',
+  fontWeight: FontWeight.bold,
+  letterSpacing: 2.0,
+);
+
 ///
 class StudyDetailPage extends ConsumerStatefulWidget {
-  /// Widget name
-  final String name = "Study";
-
-  ///
+  final String name = 'Study';
   final Research research;
-
-  ///
   final List<dynamic> blueprints;
 
-  ///
   StudyDetailPage({
     Key? key,
     required this.research,
@@ -49,53 +53,34 @@ class StudyDetailPage extends ConsumerStatefulWidget {
 ///
 class _StudyDetailState extends ConsumerState<StudyDetailPage> {
   double _nrInvBlueprints = 0;
-  String _btnDisText = "0";
-  String _blueprintImg = "";
-  String _blueprintName = "";
+  String _blueprintName = '';
   int _currentPoints = 0;
   int _neededPoints = 1;
   int _lowerPoints = 0;
   int _nrAvailBlueprints = 0;
   int _maxNr = 0;
 
-  /// Curent loggedin user
   User _user = User.blank();
-
-  // final Logger log = Logger(
-  //     printer: PrettyPrinter(
-  //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
-
-  ///
   final ApiProvider _apiProvider = ApiProvider();
-
-  ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
-
     _currentPoints = widget.research.nrInvested;
-    var currentLvl = researchToCrafting(_currentPoints);
-    // Points needed to reach next level
+    final currentLvl = researchToCrafting(_currentPoints);
     _neededPoints = craftingToResearch(currentLvl + 1);
-    // Points needed to be at the current level (used as zero indicator)
     _lowerPoints = craftingToResearch(currentLvl);
-    //var percentage = currentXp / neededXp;
 
-    for (dynamic blp in widget.blueprints) {
+    for (final blp in widget.blueprints) {
       if (widget.research.blueprint.id == blp.id) {
         _nrAvailBlueprints = blp.nr;
       }
     }
+    _maxNr = _nrAvailBlueprints > (_neededPoints - _currentPoints)
+        ? (_neededPoints - _currentPoints)
+        : _nrAvailBlueprints;
 
-    if (_nrAvailBlueprints > (_neededPoints - _currentPoints)) {
-      _maxNr = (_neededPoints - _currentPoints);
-    } else {
-      _maxNr = _nrAvailBlueprints;
-    }
-
-    _blueprintImg = widget.research.blueprint.img;
     _blueprintName = widget.research.blueprint.name;
   }
 
@@ -104,348 +89,501 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     super.dispose();
   }
 
-  Widget build(BuildContext context) {
-    //ignore: omit_local_variable_types
-    double halfScreenSize =
-        (MediaQuery.of(context).size.height * 0.5) - 40 /* appbar is 80px */;
+  // ── Helpers ─────────────────────────────────────────────────────────────────
 
-    // Blueprint pages — cross-reference by blueprint id to find page count
+  /// Placeholder crafting bonus derived from mastery level.
+  /// Replace with server-supplied value once the backend ships it.
+  String _craftingBonus(int level) {
+    switch (level) {
+      case 1: return '+6%';
+      case 2: return '+12%';
+      case 3: return '+18%';
+      case 4: return '+25%';
+      default: return '—';
+    }
+  }
+
+  Widget _statCell(String label, String value, Color valueColor) {
+    return Column(
+      children: [
+        Text(label,
+            style: const TextStyle(
+                color: Colors.white54, fontSize: 10, letterSpacing: 1.2)),
+        const SizedBox(height: 4),
+        Text(value,
+            style: TextStyle(
+              color: valueColor,
+              fontSize: 18,
+              fontFamily: 'Cormorant SC',
+              fontWeight: FontWeight.bold,
+            )),
+      ],
+    );
+  }
+
+  Widget _vDivider() =>
+      Container(height: 36, width: 1, color: Colors.white12);
+
+  // ── Build ────────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    // Providers
     final pagesList = ref.watch(blueprintPagesProvider).valueOrNull ?? [];
-    final BlueprintPage? matchedPage = pagesList.cast<BlueprintPage?>().firstWhere(
-          (p) => p?.blueprintId == widget.research.blueprint.id,
-          orElse: () => null,
-        );
+    final BlueprintPage? matchedPage =
+        pagesList.cast<BlueprintPage?>().firstWhere(
+              (p) => p?.blueprintId == widget.research.blueprint.id,
+              orElse: () => null,
+            );
     final int pagesNr = matchedPage?.quantity ?? 0;
     final int pagesRequired = widget.research.blueprint.pagesRequired;
     final bool canAssemble = pagesRequired > 0 && pagesNr >= pagesRequired;
+    final user = ref.watch(userProvider).valueOrNull ?? User.blank();
 
-    /// Application top Bar
-    final topBar = AppBar(
+    // Derived values
+    final int currentLevel = researchToCrafting(_currentPoints);
+    final String skillLabel = Research.skill(_currentPoints);
+    final String bonusLabel = _craftingBonus(currentLevel);
+    final double pageRatio = pagesRequired > 0
+        ? (pagesNr / pagesRequired).clamp(0.0, 1.0)
+        : 0.0;
+    final double levelProgress =
+        (_neededPoints > _lowerPoints)
+            ? ((_currentPoints - _lowerPoints) /
+                    (_neededPoints - _lowerPoints))
+                .clamp(0.0, 1.0)
+            : 1.0;
+    final String coinCost =
+        (_nrInvBlueprints * user.details.costs.research).toStringAsFixed(2);
+
+    // ── AppBar ─────────────────────────────────────────────────────────────
+    final appBar = AppBar(
       leading: IconButton(
-        color: GlobalConstants.appFg,
-        icon: Icon(
-          Icons.menu,
-          // size: 32,
-        ),
-        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
       ),
-      elevation: 0.1,
+      elevation: 0,
       backgroundColor: Colors.transparent,
-      title: Text("Study", style: Style.topBar),
-      actions: <Widget>[
+      title: Text(widget.research.name, style: Style.topBar),
+      actions: [
         IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        )
+          icon: const Icon(Icons.menu, color: Colors.white),
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+        ),
       ],
     );
 
-    final topContentText = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        (widget.research.nrInvested > 0)
-            ? Image(
-                image:
-                    AssetImage('assets/images/research/${widget.research.img}'),
-                height: 180.0,
-                width: 180.0,
-              )
-            : Image(
-                image: AssetImage('assets/images/research/unknown.png'),
-                height: 180.0,
-                width: 180.0,
+    // ── Hero card ──────────────────────────────────────────────────────────
+    final heroCard = Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              // Tech image
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image(
+                  image: AssetImage(widget.research.nrInvested > 0
+                      ? 'assets/images/research/${widget.research.img}'
+                      : 'assets/images/research/unknown.png'),
+                  height: 76,
+                  width: 76,
+                  fit: BoxFit.cover,
+                ),
               ),
-        Text(
-          widget.research.name,
-          style: TextStyle(
-            color: GlobalConstants.appFg,
-            fontSize: 24.0,
-            fontFamily: "Cormorant SC",
-            fontWeight: FontWeight.bold,
-            shadows: <Shadow>[
-              Shadow(
-                  offset: Offset(1.0, 1.0),
-                  blurRadius: 3.0,
-                  color: Color.fromARGB(255, 0, 0, 0))
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.research.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontFamily: 'Cormorant SC',
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _blueprintName.isNotEmpty
+                          ? _blueprintName
+                          : 'Knowledge Discipline',
+                      style: const TextStyle(
+                          color: Colors.white54, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
-        ),
-        SizedBox(height: 5.0),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: <Widget>[
-            Expanded(
-              flex: 4,
-              child: SizedBox(
-                height: 40,
-                width: 180,
-                child: LinearPercentIndicator(
-                  lineHeight: 14.0,
-                  percent: ((_currentPoints - _lowerPoints) / (_neededPoints - _lowerPoints)),
-                  center: Text(
-                    "$_currentPoints / $_neededPoints",
-                    style:
-                        TextStyle(fontSize: 12.0, fontWeight: FontWeight.bold),
-                  ),
-                  
-                  backgroundColor: Colors.white,
-                  progressColor: Colors.orange,
-                ),
-              ),
-            ),
-            Expanded(
-              flex: 3,
-              child: Container(
-                child: Row(
-                  children: <Widget>[
-                    Padding(
-                      padding: EdgeInsets.only(left: 10.0),
-                      child: Text(
-                        Research.skill(widget.research.nrInvested),
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                    Text(' '),
-                  ],
-                ),
-              ),
-            ),
-            Expanded(
-              flex: 2,
-              child: Text(
-                '',
-                style: TextStyle(color: Colors.white),
-              ),
-            )
-          ],
-        ),
-      ],
-    );
-
-    final topContent = Stack(
-      children: <Widget>[
-        Container(
-          height: halfScreenSize,
-          padding: EdgeInsets.only(top: 10.0, left: 40.0, right: 40.0),
-          width: MediaQuery.of(context).size.width,
-          decoration: BoxDecoration(color: Color(0xcc222222)),
-          child: Center(
-            child: topContentText,
+          const SizedBox(height: 18),
+          // Stats row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _statCell('MASTERY', '$currentLevel', _gold),
+              _vDivider(),
+              _statCell('INVESTED',
+                  '$_currentPoints / $_neededPoints', Colors.white),
+              _vDivider(),
+              _statCell('BONUS', bonusLabel, const Color(0xff66bb6a)),
+            ],
           ),
-        ),
-      ],
-    );
-
-    final researchButton = Padding(
-      padding: EdgeInsets.all(0),
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          padding:
-              EdgeInsets.only(top: 8.0, left: 0.0, bottom: 8.0, right: 0.0),
-          backgroundColor: GlobalConstants.appBg,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
+          const SizedBox(height: 14),
+          // Level progress bar
+          LinearPercentIndicator(
+            lineHeight: 7.0,
+            percent: levelProgress,
+            backgroundColor: Colors.white12,
+            progressColor: _gold,
+            barRadius: const Radius.circular(4),
+            padding: EdgeInsets.zero,
           ),
-          side: BorderSide(width: 1, color: Colors.white),
-        ),
-        onPressed: () => _studyResearch(context, widget.research.id),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(RPGAwesome.book, color: Color(0xffe6a04e)),
-            Text(
-              " $_btnDisText",
-              style: TextStyle(
-                  color: Color(0xffe6a04e),
-                  fontSize: 24,
-                  fontFamily: 'Cormorant SC',
-                  fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('$_currentPoints pts',
+                  style: const TextStyle(
+                      color: Colors.white38, fontSize: 10)),
+              Text(skillLabel,
+                  style: const TextStyle(
+                      color: _gold,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold)),
+              Text('$_neededPoints pts',
+                  style: const TextStyle(
+                      color: Colors.white38, fontSize: 10)),
+            ],
+          ),
+        ],
       ),
     );
 
-    final bottomContent = Stack(
-      children: <Widget>[
-        Container(
-          padding: EdgeInsets.all(40.0),
-          //width: MediaQuery.of(context).size.width,
-          decoration: BoxDecoration(color: Color(0xcc000000)),
-          child: Center(
-            child: Column(
+    // ── Volume Assembly card ───────────────────────────────────────────────
+    Widget? assemblyCard;
+    if (pagesRequired > 0) {
+      assemblyCard = Container(
+        margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: _cardColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Heading
+            Row(children: [
+              const Icon(Icons.auto_stories, color: _gold, size: 14),
+              const SizedBox(width: 8),
+              const Text('VOLUME ASSEMBLY', style: _sectionLabel),
+            ]),
+            const SizedBox(height: 4),
+            const Text('Collect pages to bind a new volume.',
+                style: TextStyle(color: Colors.white38, fontSize: 12)),
+            const SizedBox(height: 20),
+            // Ring + next reward
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                // ── Assemble panel ──────────────────────────────────────
-                if (pagesRequired > 0) ...[
-                  Text(
-                    'Assemble',
-                    style: TextStyle(
-                        color: Color(0xffe6a04e),
-                        fontSize: 24,
-                        fontFamily: 'Cormorant SC',
-                        fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    '$pagesNr / $pagesRequired pages available',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                  SizedBox(height: 8),
-                  OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.all(12),
-                      backgroundColor: canAssemble
-                          ? GlobalConstants.appBg
-                          : Colors.grey.shade900,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.0),
+              children: [
+                // Circular page progress
+                Expanded(
+                  child: Column(
+                    children: [
+                      CircularPercentIndicator(
+                        radius: 66.0,
+                        lineWidth: 7.0,
+                        animation: true,
+                        animateFromLastPercent: true,
+                        percent: pageRatio,
+                        center: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '$pagesNr',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontFamily: 'Cormorant SC',
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              '/ $pagesRequired',
+                              style: const TextStyle(
+                                  color: _gold, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                        progressColor: _gold,
+                        backgroundColor: Colors.white10,
+                        circularStrokeCap: CircularStrokeCap.round,
                       ),
-                      side: BorderSide(
-                          width: 1,
-                          color:
-                              canAssemble ? Colors.white : Colors.grey),
-                    ),
-                    onPressed:
-                        canAssemble ? () => _assemble(matchedPage!.id) : null,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(RPGAwesome.book,
-                            color: canAssemble
-                                ? Color(0xffe6a04e)
-                                : Colors.grey),
-                        Text(
-                          canAssemble
-                              ? ' Assemble volume'
-                              : ' Need $pagesRequired pages',
+                      const SizedBox(height: 8),
+                      const Text('Pages Collected',
                           style: TextStyle(
-                              color: canAssemble
-                                  ? Color(0xffe6a04e)
-                                  : Colors.grey,
-                              fontSize: 18,
+                              color: Colors.white60, fontSize: 12)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Next reward panel
+                Expanded(
+                  child: Column(
+                    children: [
+                      const Text('NEXT REWARD',
+                          style: TextStyle(
+                              color: Colors.white38,
+                              fontSize: 10,
+                              letterSpacing: 1.5)),
+                      const SizedBox(height: 10),
+                      const Icon(RPGAwesome.book, color: _gold, size: 36),
+                      const SizedBox(height: 6),
+                      const Text('+1 Volume',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
                               fontFamily: 'Cormorant SC',
-                              fontWeight: FontWeight.bold),
+                              fontWeight: FontWeight.bold)),
+                      if (_blueprintName.isNotEmpty)
+                        Text(_blueprintName,
+                            style: const TextStyle(
+                                color: Colors.white38,
+                                fontSize: 11),
+                            textAlign: TextAlign.center),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: canAssemble
+                                ? const Color(0xff3a2800)
+                                : Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                            side: BorderSide(
+                                color: canAssemble
+                                    ? _gold
+                                    : Colors.white24),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                          onPressed: canAssemble
+                              ? () => _assemble(matchedPage!.id)
+                              : null,
+                          child: Column(
+                            children: [
+                              Text(
+                                'Bind Volume',
+                                style: TextStyle(
+                                  color: canAssemble
+                                      ? _gold
+                                      : Colors.white30,
+                                  fontSize: 14,
+                                  fontFamily: 'Cormorant SC',
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                'Requires $pagesRequired pages',
+                                style: const TextStyle(
+                                    color: Colors.white38,
+                                    fontSize: 10),
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
-                  ),
-                  Divider(color: Colors.white30, height: 32),
-                ],
-                // ── Study panel ──────────────────────────────────────────
-                Text(
-                  'Study',
-                  textAlign: TextAlign.left,
-                  style: TextStyle(
-                      color: Color(0xffe6a04e),
-                      fontSize: 24,
-                      fontFamily: 'Cormorant SC',
-                      fontWeight: FontWeight.bold),
-                ),
-                (_blueprintImg != "")
-                    ? Image.asset(
-                        "assets/images/blueprints/$_blueprintImg",
-                        height: 180.0,
-                        width: 180.0,
-                      )
-                    : Image.asset(
-                        "assets/images/blueprints/nothing.png",
-                        height: 180.0,
-                        width: 180.0,
                       ),
-                Text(
-                  " ${_nrInvBlueprints.toInt().toString()} / $_nrAvailBlueprints $_blueprintName",
-                  style:
-                      TextStyle(color: GlobalConstants.appFg, fontSize: 18.0),
-                ),
-                SizedBox(height: 18),
-                Text(
-                  "Study enough blueprints to advance to the next "
-                  "knowledge level. Better skills come with better bonuses.",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
+                    ],
                   ),
                 ),
-                Row(
-                  children: <Widget>[
-                    Image.asset(
-                      "assets/images/items/gold3coins.png",
-                      height: 80.0,
-                      width: 80.0,
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ── Invest Knowledge card ──────────────────────────────────────────────
+    final investCard = Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Icon(Icons.school, color: _gold, size: 14),
+            const SizedBox(width: 8),
+            const Text('INVEST KNOWLEDGE', style: _sectionLabel),
+          ]),
+          const SizedBox(height: 4),
+          const Text('Invest volumes to advance your mastery.',
+              style: TextStyle(color: Colors.white38, fontSize: 12)),
+          const SizedBox(height: 16),
+          // Volumes available
+          Row(children: [
+            const Icon(RPGAwesome.book, color: _gold, size: 16),
+            const SizedBox(width: 8),
+            Text(
+              '$_nrAvailBlueprints volume${_nrAvailBlueprints == 1 ? '' : 's'} available',
+              style: const TextStyle(color: Colors.white, fontSize: 15),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          if (_maxNr > 0) ...[
+            // Slider row with −/+ buttons
+            Row(
+              children: [
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: _nrInvBlueprints > 0
+                      ? () => setState(() {
+                            _nrInvBlueprints =
+                                (_nrInvBlueprints - 1)
+                                    .clamp(0, _maxNr.toDouble());
+                          })
+                      : null,
+                  icon: Icon(Icons.remove_circle_outline,
+                      color: _nrInvBlueprints > 0
+                          ? Colors.white
+                          : Colors.white24),
+                ),
+                Expanded(
+                  child: SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      activeTrackColor: _gold,
+                      inactiveTrackColor: Colors.white12,
+                      trackHeight: 4.0,
+                      thumbColor: _gold,
+                      thumbShape: const RoundSliderThumbShape(
+                          enabledThumbRadius: 10),
+                      overlayColor: _gold.withAlpha(30),
+                      overlayShape: const RoundSliderOverlayShape(
+                          overlayRadius: 22),
                     ),
-                    Flexible(
-                      child: Text(
-                        "${(_nrInvBlueprints * _user.details.costs.research).toStringAsFixed(2)} Coins needed",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                    child: Slider(
+                      min: 0,
+                      max: _maxNr.toDouble(),
+                      value: _nrInvBlueprints,
+                      divisions: _maxNr,
+                      onChanged: (v) =>
+                          setState(() => _nrInvBlueprints = v),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: _nrInvBlueprints < _maxNr
+                      ? () => setState(() {
+                            _nrInvBlueprints =
+                                (_nrInvBlueprints + 1)
+                                    .clamp(0, _maxNr.toDouble());
+                          })
+                      : null,
+                  icon: Icon(Icons.add_circle_outline,
+                      color: _nrInvBlueprints < _maxNr
+                          ? Colors.white
+                          : Colors.white24),
+                ),
+              ],
+            ),
+            // Investment preview
+            Center(
+              child: Text(
+                'New investment: ${_currentPoints + _nrInvBlueprints.toInt()} / $_neededPoints',
+                style: const TextStyle(
+                    color: Colors.white54, fontSize: 13),
+              ),
+            ),
+            const SizedBox(height: 10),
+            // Coin cost
+            Row(children: [
+              const Icon(Icons.monetization_on,
+                  color: _gold, size: 16),
+              const SizedBox(width: 6),
+              Text('$coinCost coins',
+                  style: const TextStyle(
+                      color: Colors.white60, fontSize: 13)),
+            ]),
+            const SizedBox(height: 14),
+            // Invest button
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: _nrInvBlueprints > 0
+                      ? const Color(0xff3a2800)
+                      : Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  side: BorderSide(
+                      color: _nrInvBlueprints > 0
+                          ? _gold
+                          : Colors.white24),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                onPressed: _nrInvBlueprints > 0
+                    ? () =>
+                        _studyResearch(context, widget.research.id)
+                    : null,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.upload,
+                        color: _nrInvBlueprints > 0
+                            ? _gold
+                            : Colors.white30),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Invest Volume  ${_nrInvBlueprints.toInt()}',
+                      style: TextStyle(
+                        color: _nrInvBlueprints > 0
+                            ? _gold
+                            : Colors.white30,
+                        fontSize: 16,
+                        fontFamily: 'Cormorant SC',
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
-                (_maxNr > 0)
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: <Widget>[
-                          Container(
-                            width: 180,
-                            child: SliderTheme(
-                              data: SliderTheme.of(context).copyWith(
-                                activeTrackColor: Color(0xffe6a04e),
-                                inactiveTrackColor: Colors.white,
-                                trackShape: RectangularSliderTrackShape(),
-                                trackHeight: 4.0,
-                                thumbColor: Color(0xffe6a04e),
-                                thumbShape: RoundSliderThumbShape(
-                                    enabledThumbRadius: 12.0),
-                                overlayColor: Colors.red.withAlpha(32),
-                                overlayShape: RoundSliderOverlayShape(
-                                    overlayRadius: 28.0),
-                              ),
-                              // min 0, max 100, div 5, means 20 per division
-                              child: Slider(
-                                min: 0,
-                                max: _maxNr.toDouble(),
-                                value: _nrInvBlueprints,
-                                divisions: _maxNr,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _nrInvBlueprints = value;
-                                    _btnDisText =
-                                        _nrInvBlueprints.toInt().toString();
-                                  });
-                                },
-                              ),
-                            ),
-                          ),
-                          Flexible(child: researchButton),
-                        ],
-                      )
-                    : Column(
-                        children: [
-                          SizedBox(height: 12),
-                          Text(
-                            'Not enough blueprints',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                            ),
-                          ),
-                        ],
-                      ),
-                SizedBox(height: 58),
-              ],
+              ),
             ),
-          ),
-        ),
-      ],
+          ] else ...[
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  _nrAvailBlueprints == 0
+                      ? 'No volumes available.\nAssemble pages first.'
+                      : 'Already at maximum level for current tier.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      color: Colors.white38, fontSize: 14),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
 
     return PopScope(
@@ -454,53 +592,48 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
         if (!didPop) context.go('/poi-map');
       },
       child: Scaffold(
-        backgroundColor: GlobalConstants.appBg,
-        appBar: topBar,
+        backgroundColor: const Color(0xff121212),
+        appBar: appBar,
         extendBodyBehindAppBar: true,
-        body: Stack(children: <Widget>[
-        Container(
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('assets/images/research_study.jpg'),
-              fit: BoxFit.fill,
+        body: Stack(children: [
+          // Background with darkening overlay
+          Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image:
+                    const AssetImage('assets/images/research_study.jpg'),
+                fit: BoxFit.cover,
+                colorFilter: ColorFilter.mode(
+                    Colors.black.withValues(alpha: 0.65), BlendMode.darken),
+              ),
             ),
           ),
-        ),
-        Container(
-          alignment: Alignment.topRight,
-          padding: const EdgeInsets.only(top: 80.0),
-          child: Column(
-            children: <Widget>[
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Container(
-                    child: Column(
-                      children: <Widget>[
-                        topContent,
-                        bottomContent,
-                      ],
-                    ),
-                  ),
-                ),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 32),
+              child: Column(
+                children: [
+                  const SizedBox(height: 8),
+                  heroCard,
+                  if (assemblyCard != null) assemblyCard,
+                  investCard,
+                  const SizedBox(height: 16),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ]),
+        ]),
         key: _scaffoldKey,
         drawer: DrawerPage(),
       ),
     );
   }
 
-  /// Assemble one blueprint volume from pages.
-  /// The server decides the quantity consumed — client sends only [pageId].
+  // ── Actions ──────────────────────────────────────────────────────────────────
+
   Future<void> _assemble(int pageId) async {
     try {
-      await ref
-          .read(blueprintPagesRepositoryProvider)
-          .assemble(pageId);
-      // Refresh page count, blueprint volume count, and user coins/xp
+      await ref.read(blueprintPagesRepositoryProvider).assemble(pageId);
       ref.invalidate(blueprintPagesProvider);
       ref.invalidate(researchProvider);
       ref.invalidate(userProvider);
@@ -524,18 +657,13 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
   }
 
   void _studyResearch(context, researchId) async {
-    /// populate initial data from cookies
     _user = await ApiProvider().getStoredUser();
-
-    var nrBlp = _nrInvBlueprints.toInt();
-
-    if (nrBlp <= 0) {
-      return;
-    }
+    final nrBlp = _nrInvBlueprints.toInt();
+    if (nrBlp <= 0) return;
 
     dynamic response;
     try {
-      response = await _apiProvider.post("/research/$researchId/$nrBlp", {});
+      response = await _apiProvider.post('/research/$researchId/$nrBlp', {});
     } on AppError catch (err) {
       if (!mounted) return;
       err.show(context);
@@ -544,22 +672,30 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
       debugPrint('_studyResearch unexpected error: $err');
       return;
     }
-    if (response is Map && response.containsKey("success")) {
-      if (response["success"] == true) {
-        // update local data
+
+    if (response is Map && response.containsKey('success')) {
+      if (response['success'] == true) {
         _user.details.coins =
-            double.tryParse(response["coins"].toString()) ?? 0.0;
-        _user.details.guildId = response["guild"]["id"].toString();
-        _user.details.mining = response["mining"];
-        _user.details.xp = response["xp"];
-        _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
-        _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
-        _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
-        _user.details.daily = response["daily"];
-        if (response.containsKey("settings")) {
-          _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
+            double.tryParse(response['coins'].toString()) ?? 0.0;
+        _user.details.guildId =
+            response['guild']['id'].toString();
+        _user.details.mining = response['mining'];
+        _user.details.xp = response['xp'];
+        _user.details.unread =
+            ((response['unread'] ?? []) as List)
+                .map((e) => (e as num).toInt())
+                .toList();
+        _user.details.attack = StatRange.fromList(
+            (response['attack'] ?? []) as List);
+        _user.details.defense = StatRange.fromList(
+            (response['defense'] ?? []) as List);
+        _user.details.daily = response['daily'];
+        if (response.containsKey('settings')) {
+          _user.details.settings = PlayerSettings.fromList(
+              (response['settings'] ?? [0, 0, 0]) as List);
         }
-        _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
+        _user.details.costs = ActionCosts.fromList(
+            (response['costs'] ?? [0.1, 0.1, 0.1]) as List);
 
         ref.invalidate(userProvider);
 
@@ -567,9 +703,11 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
         showDialog(
           context: context,
           builder: (context) => CustomDialog(
-            title: AppLocalizations.of(context)!.translate('congrats'),
-            description: AppLocalizations.of(context)!.translate('research_success'),
-            buttonText: "Okay",
+            title:
+                AppLocalizations.of(context)!.translate('congrats'),
+            description: AppLocalizations.of(context)!
+                .translate('research_success'),
+            buttonText: 'Okay',
             images: [],
             callback: () {
               Navigator.of(context).pop();
@@ -579,6 +717,5 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
         );
       }
     }
-    return;
   }
 }
