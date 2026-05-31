@@ -130,30 +130,17 @@ class Research {
           rawPcts.map((e) => int.tryParse(e.toString()) ?? 0).toList();
     }
 
-    // Level thresholds — server is single source of truth.
-    // currentLevelFloor: always an int (0 for Untrained).
-    // nextLevelThreshold: null when player is at max crafting level (4).
-    //   In that case we collapse the progress bar to full by setting
-    //   nextLevelThreshold == currentLevelFloor (triggers the 1.0 branch).
-    // Falls back to local formula only when API key is absent entirely
-    // (old server version during deploy window).
-    final rawFloor = json['current_level_floor'];
-    currentLevelFloor = rawFloor != null
-        ? (int.tryParse(rawFloor.toString()) ??
-            craftingToResearch(craftingLevel))
-        : craftingToResearch(craftingLevel);
+    // Level thresholds — backend is sole source of truth (Research.php enrichment).
+    // current_level_floor : always int  — [0, 1, 3, 7, 15]
+    // next_level_threshold: int or null — null when Grandmaster (level 4, no ceiling)
+    //   null → collapse progress bar to full by keeping nextLevelThreshold == currentLevelFloor
+    currentLevelFloor =
+        int.tryParse((json['current_level_floor'] ?? 0).toString()) ?? 0;
 
     final rawNext = json['next_level_threshold'];
-    if (rawNext == null && json.containsKey('next_level_threshold')) {
-      // Key present but null → max level, no further threshold.
-      nextLevelThreshold = currentLevelFloor;
-    } else if (rawNext != null) {
-      nextLevelThreshold =
-          int.tryParse(rawNext.toString()) ?? craftingToResearch(craftingLevel + 1);
-    } else {
-      // Key absent entirely → old API, use formula fallback.
-      nextLevelThreshold = craftingToResearch(craftingLevel + 1);
-    }
+    nextLevelThreshold = rawNext != null
+        ? (int.tryParse(rawNext.toString()) ?? currentLevelFloor)
+        : currentLevelFloor; // Grandmaster — full bar
   }
 
   ///
