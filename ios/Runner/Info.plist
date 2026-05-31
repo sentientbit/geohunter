@@ -28,8 +28,6 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>MGLMapboxAccessToken</key>
-	<string>MAPBOX_TOKEN_REMOVED_FROM_HISTORY</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Needed to take Pictures and scan QR codes for solving quests and joining friends</string>
 	<key>NSLocationAlwaysUsageDescription</key>

@@ -15,12 +15,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <application
-        android:name="io.flutter.app.FlutterApplication"
+        android:name="${applicationName}"
         android:label="GeoHunter"
         android:icon="@mipmap/ic_launcher">
-        <meta-data
-            android:name="com.mapbox.token"
-            android:value="MAPBOX_TOKEN_REMOVED_FROM_HISTORY" />
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="GOOGLE_API_KEY_REMOVED_FROM_HISTORY"/>
@@ -29,6 +26,7 @@
             android:value="ADMOB_APP_ID_REMOVED_FROM_HISTORY"/>
         <activity
             android:name=".MainActivity"
+            android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
