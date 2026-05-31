@@ -568,12 +568,18 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Text(
-                  _nrAvailBlueprints == 0
-                      ? 'No volumes available.\nAssemble pages first.'
-                      : 'Already at maximum level for current tier.',
+                  widget.research.isMaxLevel
+                      ? 'Mastery complete. This discipline is fully unlocked.'
+                      : _nrAvailBlueprints == 0
+                          ? 'No volumes available.\nAssemble pages first.'
+                          : 'Already at maximum level for current tier.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      color: Colors.white38, fontSize: 14),
+                  style: TextStyle(
+                    color: widget.research.isMaxLevel
+                        ? _gold
+                        : Colors.white38,
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ),

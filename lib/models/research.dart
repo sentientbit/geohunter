@@ -130,19 +130,30 @@ class Research {
           rawPcts.map((e) => int.tryParse(e.toString()) ?? 0).toList();
     }
 
-    // Level thresholds — use server values when present (single source of truth).
-    // Falls back to local formula for backward compat while backend transitions.
-    final rawNext = json['next_level_threshold'];
-    nextLevelThreshold = rawNext != null
-        ? (int.tryParse(rawNext.toString()) ??
-            craftingToResearch(craftingLevel + 1))
-        : craftingToResearch(craftingLevel + 1);
-
+    // Level thresholds — server is single source of truth.
+    // currentLevelFloor: always an int (0 for Untrained).
+    // nextLevelThreshold: null when player is at max crafting level (4).
+    //   In that case we collapse the progress bar to full by setting
+    //   nextLevelThreshold == currentLevelFloor (triggers the 1.0 branch).
+    // Falls back to local formula only when API key is absent entirely
+    // (old server version during deploy window).
     final rawFloor = json['current_level_floor'];
     currentLevelFloor = rawFloor != null
         ? (int.tryParse(rawFloor.toString()) ??
             craftingToResearch(craftingLevel))
         : craftingToResearch(craftingLevel);
+
+    final rawNext = json['next_level_threshold'];
+    if (rawNext == null && json.containsKey('next_level_threshold')) {
+      // Key present but null → max level, no further threshold.
+      nextLevelThreshold = currentLevelFloor;
+    } else if (rawNext != null) {
+      nextLevelThreshold =
+          int.tryParse(rawNext.toString()) ?? craftingToResearch(craftingLevel + 1);
+    } else {
+      // Key absent entirely → old API, use formula fallback.
+      nextLevelThreshold = craftingToResearch(craftingLevel + 1);
+    }
   }
 
   ///
@@ -151,7 +162,12 @@ class Research {
     if (craftingLevel == 1) return 'Novice';
     if (craftingLevel == 2) return 'Amateur';
     if (craftingLevel == 3) return 'Expert';
-    if (craftingLevel == 4) return 'Master';
+    if (craftingLevel >= 4) return 'Master';
     return 'Untrained';
   }
+
+  /// True when the player is at the maximum crafting level for this tech.
+  /// In this state nextLevelThreshold == currentLevelFloor and the progress
+  /// bar collapses to full; the Invest slider is also hidden (_maxNr == 0).
+  bool get isMaxLevel => nextLevelThreshold == currentLevelFloor;
 }
