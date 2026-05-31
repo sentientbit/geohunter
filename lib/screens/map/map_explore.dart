@@ -552,6 +552,13 @@ class _PoiMapState extends ConsumerState<PoiMap>
       _loadPois(LtLn(_remoteLat, _remoteLng));
       _goToRemoteLocation = false;
       _mapZoom = 16;
+      // initialCenter races against the GPS listener in flutter_map 8.x —
+      // belt-and-suspenders: also move via controller after first frame.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          mapController.move(LatLng(_remoteLat, _remoteLng), 16);
+        }
+      });
       return LatLng(_remoteLat, _remoteLng);
     }
 
