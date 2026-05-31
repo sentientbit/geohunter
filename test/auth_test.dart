@@ -239,9 +239,14 @@ void main() {
   group('LoginPage › network', () {
     testWidgets('HTTP 200 with no jwt key → shows "Invalid credentials"',
         (tester) async {
+      // _unwrap needs success:true to pass; no jwt key in data simulates the
+      // server returning a successful HTTP 200 but without a JWT (e.g. wrong
+      // credentials that the server reports as success but without a token).
+      // LoginPage then falls through to its "no jwt" branch and shows the
+      // hardcoded "Invalid credentials" inline message.
       _setAdapter(const _FakeAdapter(
         statusCode: 200,
-        body: {'success': false, 'message': 'Bad credentials'},
+        body: {'success': true, 'data': {}},
       ));
 
       await _pumpApp(tester, LoginPage());
@@ -261,12 +266,17 @@ void main() {
         'iat': 1000000,
         'exp': 9999999999,
       });
+      // _unwrap expects {success:true, data:{…}} envelope.
+      // LoginPage reads jwt/api_key/user from the merged data map.
       _setAdapter(_FakeAdapter(
         statusCode: 200,
         body: {
-          'jwt':     jwt,
-          'api_key': 'testapikey',
-          'user':    {'username': 'testuser'},
+          'success': true,
+          'data': {
+            'jwt':     jwt,
+            'api_key': 'testapikey',
+            'user':    {'username': 'testuser'},
+          },
         },
       ));
 
@@ -277,8 +287,12 @@ void main() {
       await tester.tap(find.text('Log in with email'));
       await tester.pumpAndSettle();
 
-      // LoginPage pushed /poi-map; the stub route renders "MapPage".
-      expect(find.text('MapPage'), findsOneWidget);
+      // LoginPage calls context.go('/poi-map') which uses go_router — it does
+      // not push via MaterialApp.routes, so we can't verify the route stub.
+      // Instead verify the side-effect that proves a successful login: the JWT
+      // api_key was persisted to secure storage.
+      final storedKey = await FlutterSecureStorage().read(key: 'api_key');
+      expect(storedKey, equals('testapikey'));
     });
 
     testWidgets('network error → "Check internet connection" dialog',
@@ -292,8 +306,9 @@ void main() {
       await tester.tap(find.text('Log in with email'));
       await tester.pumpAndSettle();
 
+      // AppError.fromDio for connectionError produces this exact message:
       expect(
-        find.text('Check internet connection, or try again later'),
+        find.text('Check your internet connection and try again.'),
         findsOneWidget,
       );
     });
@@ -318,9 +333,11 @@ void main() {
   group('ForgotPage › network', () {
     testWidgets('success response → dialog shows server message',
         (tester) async {
+      // _unwrap requires {success:true, data:{…}} envelope.
+      // ForgotPage reads response['message'] from the merged data map.
       _setAdapter(const _FakeAdapter(
         statusCode: 200,
-        body: {'success': true, 'message': 'Please check your email'},
+        body: {'success': true, 'data': {'message': 'Please check your email'}},
       ));
 
       await _pumpApp(tester, ForgotPage());

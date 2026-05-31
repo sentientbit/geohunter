@@ -25,8 +25,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:geohunter/app_localizations.dart';
+import 'package:geohunter/models/user.dart';
+import 'package:geohunter/providers/user_provider.dart';
 import 'package:geohunter/widgets/drawer.dart';
+
+/// Returns User.blank() without hitting the API — satisfies userProvider
+/// which DrawerPage now watches (ConsumerStatefulWidget migration).
+class _FakeUserNotifier extends UserNotifier {
+  @override
+  Future<User> build() async => User.blank();
+}
 
 // ── Fake connectivity ──────────────────────────────────────────────────────────
 
@@ -58,33 +69,46 @@ class _FakeConnectivity
 /// Mounting DrawerPage directly as `home` breaks this: Navigator.pop() removes
 /// the only route, leaving the stack empty, so pushReplacementNamed throws
 /// "Navigator has no active routes to replace".
-Widget _app() => MaterialApp(
-      home: Scaffold(
-        // Host body — just needs to exist so the Scaffold route is present.
-        body: const Center(child: Text('HostPage')),
-        drawer: DrawerPage(),
-      ),
-      routes: {
-        '/login':     (_) => const Scaffold(body: Text('LoginPage')),
-        '/profile':   (_) => const Scaffold(body: Text('ProfilePage')),
-        '/poi-map':   (_) => const Scaffold(body: Text('MapPage')),
-        '/inventory': (_) => const Scaffold(body: Text('InventoryPage')),
-        '/forge':     (_) => const Scaffold(body: Text('ForgePage')),
-        '/questline': (_) => const Scaffold(body: Text('QuestlinePage')),
-        '/places':    (_) => const Scaffold(body: Text('PlacesPage')),
-        '/friends':   (_) => const Scaffold(body: Text('FriendsPage')),
-        '/group':     (_) => const Scaffold(body: Text('GroupPage')),
-        '/battle':    (_) => const Scaffold(body: Text('BattlePage')),
-        '/help':      (_) => const Scaffold(body: Text('HelpPage')),
-        '/settings':  (_) => const Scaffold(body: Text('SettingsPage')),
-      },
-      locale: const Locale('en'),
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
+/// GoRouter stub — DrawerPage.logout() uses context.go('/login') which
+/// requires GoRouter in the context tree. MaterialApp.routes does not
+/// satisfy GoRouter.of(), so we switch to MaterialApp.router here.
+GoRouter _router() => GoRouter(
+      initialLocation: '/host',
+      routes: [
+        GoRoute(
+          path: '/host',
+          builder: (_, __) => Scaffold(
+            body: const Center(child: Text('HostPage')),
+            drawer: DrawerPage(),
+          ),
+        ),
+        GoRoute(path: '/login',     builder: (_, __) => const Scaffold(body: Text('LoginPage'))),
+        GoRoute(path: '/profile',   builder: (_, __) => const Scaffold(body: Text('ProfilePage'))),
+        GoRoute(path: '/poi-map',   builder: (_, __) => const Scaffold(body: Text('MapPage'))),
+        GoRoute(path: '/inventory', builder: (_, __) => const Scaffold(body: Text('InventoryPage'))),
+        GoRoute(path: '/forge',     builder: (_, __) => const Scaffold(body: Text('ForgePage'))),
+        GoRoute(path: '/questline', builder: (_, __) => const Scaffold(body: Text('QuestlinePage'))),
+        GoRoute(path: '/places',    builder: (_, __) => const Scaffold(body: Text('PlacesPage'))),
+        GoRoute(path: '/friends',   builder: (_, __) => const Scaffold(body: Text('FriendsPage'))),
+        GoRoute(path: '/group',     builder: (_, __) => const Scaffold(body: Text('GroupPage'))),
+        GoRoute(path: '/battle',    builder: (_, __) => const Scaffold(body: Text('BattlePage'))),
+        GoRoute(path: '/help',      builder: (_, __) => const Scaffold(body: Text('HelpPage'))),
+        GoRoute(path: '/settings',  builder: (_, __) => const Scaffold(body: Text('SettingsPage'))),
       ],
-      supportedLocales: const [Locale('en')],
+    );
+
+Widget _app() => ProviderScope(
+      overrides: [userProvider.overrideWith(_FakeUserNotifier.new)],
+      child: MaterialApp.router(
+        routerConfig: _router(),
+        locale: const Locale('en'),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('en')],
+      ),
     );
 
 // ── Pump helper ────────────────────────────────────────────────────────────────
@@ -187,7 +211,8 @@ void main() {
       await tester.tap(find.text('Logout'));
       await tester.pumpAndSettle();
 
-      // logout() calls pushReplacementNamed('/login'); the stub renders this.
+      // logout() calls context.go('/login') — GoRouter navigates to the stub
+      // route which renders "LoginPage".
       expect(find.text('LoginPage'), findsOneWidget);
 
       // api_key must have been wiped from the in-memory mock store.

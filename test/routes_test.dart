@@ -22,6 +22,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:geohunter/models/app_error.dart';
 import 'package:geohunter/providers/api_provider.dart';
 
 // ── Capturing adapter ──────────────────────────────────────────────────────────
@@ -86,8 +87,10 @@ void main() {
       _setAdapter(adapter);
 
       const mineId = 42;
-      // Same string that map_explore.dart _goMine() builds:
-      await ApiProvider().get('/mine/$mineId');
+      // Same string that map_explore.dart _goMine() builds.
+      // Ignore AppError — these tests only care about the URL shape, not the
+      // response envelope (which _unwrap validates separately).
+      try { await ApiProvider().get('/mine/$mineId'); } on AppError { /**/ }
 
       expect(adapter.capturedMethod, equals('GET'));
       expect(adapter.capturedPath,   equals('/mine/42'));
@@ -109,7 +112,7 @@ void main() {
       final token = qrUrl.split('/')[5];
 
       // Same call that friends.dart afterScan() makes after the migration:
-      await ApiProvider().put('/friends/$token', {});
+      try { await ApiProvider().put('/friends/$token', {}); } on AppError { /**/ }
 
       expect(adapter.capturedMethod, equals('PUT'));
       expect(adapter.capturedPath,   equals('/friends/TOKEN123'));
@@ -131,10 +134,9 @@ void main() {
 
       const day = 3, blueprintId = 5, materialId = 10, itemId = 15;
       // Same call that questline.dart _dailyReward() makes after the migration:
-      await ApiProvider().post(
-        '/dailyrewards/$day/$blueprintId/$materialId/$itemId',
-        {},
-      );
+      try {
+        await ApiProvider().post('/dailyrewards/$day/$blueprintId/$materialId/$itemId', {});
+      } on AppError { /**/ }
 
       expect(adapter.capturedMethod, equals('POST'));
       expect(adapter.capturedPath,   equals('/dailyrewards/3/5/10/15'));
@@ -157,7 +159,7 @@ void main() {
       const guid = 'GUILD-ABC-123';
       // Same call that join_group.dart _joinGuild() makes after the migration
       // (body is empty when guild is not locked; password would go here if set):
-      await ApiProvider().post('/membership/$guid', {});
+      try { await ApiProvider().post('/membership/$guid', {}); } on AppError { /**/ }
 
       expect(adapter.capturedMethod, equals('POST'));
       expect(adapter.capturedPath,   equals('/membership/GUILD-ABC-123'));
