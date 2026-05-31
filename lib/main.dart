@@ -11,22 +11,14 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:get_it/get_it.dart';
 import 'package:workmanager/workmanager.dart';
 
 import 'app_localizations.dart';
 import 'providers/api_provider.dart';
 import 'providers/custom_interceptors.dart';
-import 'providers/stream_location.dart';
-import 'providers/stream_mines.dart';
-import 'providers/stream_userdata.dart';
-import 'providers/stream_visit.dart';
 import 'router.dart';
 import 'shared/auth_utils.dart';
 import 'shared/constants.dart';
-
-/// GetIt service locator instance
-GetIt getIt = GetIt.instance;
 
 /// assert debug mode
 bool get isInDebugMode {
@@ -74,10 +66,11 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   ///
-  getIt.registerSingleton<StreamLocation>(StreamLocation());
-  getIt.registerSingleton<StreamMines>(StreamMines());
-  getIt.registerSingleton<StreamUserData>(StreamUserData());
-  getIt.registerSingleton<StreamVisit>(StreamVisit());
+  // GetIt stream singletons removed — replaced by Riverpod providers:
+  //   StreamLocation  → locationProvider  (lib/providers/location_provider.dart)
+  //   StreamVisit     → visitEventProvider (lib/providers/visit_provider.dart)
+  //   StreamMines     → dead code (never written to externally)
+  //   StreamUserData  → userProvider       (lib/providers/user_provider.dart)
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   // This captures errors reported by the Flutter framework.

@@ -16,7 +16,7 @@ import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/user_provider.dart';
-import '../../providers/stream_visit.dart';
+import '../../providers/visit_provider.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
@@ -57,9 +57,6 @@ class _RockPaperScissorsState extends ConsumerState<RockPaperScissorsPage> {
 
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  ///
-  final _visiteventdata = getIt.get<StreamVisit>();
 
   /// Curent loggedin user
   User _user = User.blank();
@@ -322,7 +319,7 @@ class _RockPaperScissorsState extends ConsumerState<RockPaperScissorsPage> {
                     side: BorderSide(width: 1, color: Colors.white),
                   ),
                   onPressed: () {
-                    _visiteventdata.updateEvent(
+                    ref.read(visitEventProvider.notifier).update(
                       VisitEvent(-1, "3", widget.mineId),
                     );
                     Navigator.pop(context);
@@ -375,7 +372,7 @@ class _RockPaperScissorsState extends ConsumerState<RockPaperScissorsPage> {
                     side: BorderSide(width: 1, color: Colors.white),
                   ),
                   onPressed: () {
-                    _visiteventdata.updateEvent(
+                    ref.read(visitEventProvider.notifier).update(
                       VisitEvent(1, "3", widget.mineId),
                     );
                     Navigator.pop(context);

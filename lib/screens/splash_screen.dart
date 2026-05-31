@@ -10,7 +10,6 @@ import 'package:flutter_offline/flutter_offline.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 import 'package:double_back_to_close_app/double_back_to_close_app.dart';
@@ -18,16 +17,10 @@ import 'package:workmanager/workmanager.dart';
 
 import '../fonts/rpg_awesome_icons.dart';
 import '../models/user.dart';
-import '../models/visitevent.dart';
 import '../providers/custom_interceptors.dart';
-import '../providers/stream_location.dart';
-import '../providers/stream_visit.dart';
 import '../providers/user_provider.dart';
 import '../shared/auth_utils.dart';
 import '../shared/constants.dart';
-
-/// GetIt service locator instance
-GetIt getIt = GetIt.instance;
 
 ///
 class SplashScreen extends ConsumerStatefulWidget {
@@ -47,12 +40,6 @@ class SplashScreenState extends ConsumerState<SplashScreen> {
           printEmojis: true,
           dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
           lineLength: 80));
-
-  /// Send periodical GPS updates to all dart files
-  final _location = getIt.get<StreamLocation>();
-
-  ///
-  final _visiteventdata = getIt.get<StreamVisit>();
 
   ///
   LocationPermission gpsPermission = LocationPermission.denied;
@@ -108,11 +95,12 @@ class SplashScreenState extends ConsumerState<SplashScreen> {
       locationEnabled = true;
     }
 
+    // locationProvider (StreamProvider) will start the GPS stream automatically
+    // the first time it is watched in map_explore.dart.
+    // Here we just record that permission is granted so the adventure button shows.
     if (locationEnabled == true) {
       _streamLocation(locationEnabled);
     }
-
-    _visiteventdata.stream$.listen(_visitEventData);
 
     Timer(Duration(milliseconds: 800), buttonContinue);
   }
@@ -146,12 +134,9 @@ class SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   ///
-  void _streamLocation(bool locationEnabled) async {
-    Geolocator.getPositionStream(
-            locationSettings: LocationSettings(distanceFilter: 1))
-        .listen((position) {
-      _location.updateLocation(LtLn(position.latitude, position.longitude));
-    });
+  void _streamLocation(bool locationEnabled) {
+    // GPS stream is now owned by locationProvider (Riverpod StreamProvider).
+    // map_explore.dart starts it automatically when it first watches the provider.
     setState(() {
       isPositionStreaming = locationEnabled;
     });
@@ -495,10 +480,4 @@ class SplashScreenState extends ConsumerState<SplashScreen> {
     }
   }
 
-  /// What outcome did a visit had
-  /// VisitEvent({outcome: ?, icoProperty: ?, mineId: ?})
-  void _visitEventData(VisitEvent ve) async {
-    print('--- _visitEventData ---');
-    print(ve);
-  }
 }

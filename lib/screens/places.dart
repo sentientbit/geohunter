@@ -14,8 +14,9 @@ import '../models/app_error.dart';
 import '../models/mine.dart';
 import '../models/secret.dart';
 import '../models/user.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/api_provider.dart';
-import '../providers/stream_location.dart';
+import '../providers/location_provider.dart';
 import '../screens/map/map_explore.dart' show PoiMap;
 import '../shared/constants.dart';
 import '../text_style.dart';
@@ -59,7 +60,7 @@ class BodyWidget extends StatelessWidget {
 }
 
 ///
-class PlacesPage extends StatefulWidget {
+class PlacesPage extends ConsumerStatefulWidget {
   ///
   final String name = 'Places';
 
@@ -76,7 +77,7 @@ class PlacesPage extends StatefulWidget {
   _PlacesState createState() => _PlacesState();
 }
 
-class _PlacesState extends State<PlacesPage> {
+class _PlacesState extends ConsumerState<PlacesPage> {
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -101,25 +102,15 @@ class _PlacesState extends State<PlacesPage> {
   int mineId = 0;
   final _apiProvider = ApiProvider();
 
-  final _locationStreamBus = getIt.get<StreamLocation>();
-  StreamSubscription<LtLn>? _locationStreamSubscription;
-
   @override
   void initState() {
     super.initState();
     _mineTypeFilter = widget.mineTypeFilter;
-
-    //_initializeIAP();
     _getUserDetails();
-
-    _locationStreamSubscription =
-        _locationStreamBus.stream$.listen(_updateUserLocation);
-
   }
 
   @override
   void dispose() {
-    _locationStreamSubscription?.cancel();
     super.dispose();
   }
 
@@ -319,6 +310,11 @@ class _PlacesState extends State<PlacesPage> {
   }
 
   Widget build(BuildContext context) {
+    // Keep _userLocation in sync with GPS via locationProvider
+    ref.listen<AsyncValue<LtLn>>(locationProvider, (_, next) {
+      next.whenData(_updateUserLocation);
+    });
+
     /// Application top Bar
     final topBar = AppBar(
       leading: leadingIcon(context),

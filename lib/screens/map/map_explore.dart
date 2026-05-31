@@ -1,11 +1,9 @@
 ///
 import 'dart:async';
-import 'dart:core';
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:geohunter/fonts/rpg_awesome_icons.dart';
-import 'package:get_it/get_it.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:image_picker/image_picker.dart';
@@ -22,23 +20,23 @@ import '../../models/location.dart';
 import '../../models/mine.dart';
 import '../../models/user.dart';
 import '../../models/visitevent.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/api_provider.dart';
-import '../../providers/stream_location.dart';
-import '../../providers/stream_mines.dart';
-import '../../providers/stream_visit.dart';
+import '../../providers/location_provider.dart';
+import '../../providers/mine_repository.dart';
+import '../../providers/radar_repository.dart';
+import '../../providers/user_provider.dart';
+import '../../providers/visit_provider.dart';
 import '../battle/rock_paper_scissors.dart';
 import '../../shared/constants.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
 
-///
-GetIt getIt = GetIt.instance;
-
 final _debouncer = Debouncer(milliseconds: 500);
 
 ///
-class PoiMap extends StatefulWidget {
+class PoiMap extends ConsumerStatefulWidget {
   /// Widget name
   final String name = "poi-map";
 
@@ -63,8 +61,8 @@ class PoiMap extends StatefulWidget {
   _PoiMapState createState() => _PoiMapState();
 }
 
-class _PoiMapState extends State<PoiMap>
-    with SingleTickerProviderStateMixin<PoiMap> {
+class _PoiMapState extends ConsumerState<PoiMap>
+    with SingleTickerProviderStateMixin {
   // final Logger log = Logger(
   //     printer: PrettyPrinter(
   //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
@@ -170,15 +168,20 @@ class _PoiMapState extends State<PoiMap>
     // await _storage.write(key: 'neLat', value: neLat.toString());
     // await _storage.write(key: 'mapZoom', value: _mapZoom.toString());
 
-    var url =
-        '/radar?cntr_lng=${location.longitude.toString()}&cntr_lat=${location.latitude.toString()}&zoom=$_mapZoom&sw_lng=${swLng.toString()}&sw_lat=${swLat.toString()}&ne_lng=${neLng.toString()}&ne_lat=${neLat.toString()}';
-
     final features = [];
     final players = [];
-    dynamic response;
     if (_isOnline) {
       try {
-        response = await _apiProvider.get(url);
+        final result = await ref.read(radarRepositoryProvider).getRadar(
+          userLocation: _userLocation,
+          zoom: _mapZoom,
+          swLat: swLat,
+          swLng: swLng,
+          neLat: neLat,
+          neLng: neLng,
+        );
+        features.addAll(result.pois);
+        players.addAll(result.players);
       } on AppError catch (err) {
         if (err.isNetworkError) return;
         if (err.isUnauthorized) {
@@ -189,29 +192,6 @@ class _PoiMapState extends State<PoiMap>
       } catch (err) {
         debugPrint('_loadPois unexpected error: $err');
         return;
-      }
-
-      if (response.containsKey("success")) {
-        if (response["success"] == true) {
-          //add the mines to the map
-          if (response.containsKey("geojson")) {
-            if (response["geojson"]["features"] != null) {
-              for (dynamic elem in response["geojson"]["features"]) {
-                final mine = Mine.fromJson(elem, 1, _userLocation);
-                features.add(mine);
-              }
-            }
-          }
-          // add the players to the map
-          if (response.containsKey("players")) {
-            if (response["players"]["features"] != null) {
-              for (dynamic elem in response["players"]["features"]) {
-                final mine = Mine.fromJson(elem, 2, _userLocation);
-                players.add(mine);
-              }
-            }
-          }
-        }
       }
 
       var _locationMarker = Marker(
@@ -352,16 +332,8 @@ class _PoiMapState extends State<PoiMap>
   //   // }
   // }
 
-  final _minesStreamBus = getIt.get<StreamMines>();
-  StreamSubscription<List<Mine>>? _minesStreamSubscription;
-
-  /// Receive GPS updates from main.dart
-  final _locationStreamBus = getIt.get<StreamLocation>();
-  StreamSubscription<LtLn>? _locationStreamSubscription;
-
-  /// Receive battle wins / looses from other screens
-  final _visitStreamBus = getIt.get<StreamVisit>();
-  StreamSubscription<VisitEvent>? _visitStreamSubscription;
+  // GPS and battle-outcome streams are now Riverpod providers.
+  // Subscriptions are set up via ref.listen() in build().
 
   @override
   void didChangeDependencies() {
@@ -381,12 +353,7 @@ class _PoiMapState extends State<PoiMap>
     _remoteLat = widget.latitude;
     _remoteLng = widget.longitude;
 
-    _getCurrentUser();
-    _minesStreamSubscription = _minesStreamBus.stream$.listen(_loadMines);
-    _locationStreamSubscription =
-        _locationStreamBus.stream$.listen(_updateUserLocation);
-    _visitStreamSubscription =
-        _visitStreamBus.stream$.listen(_updateVisitEvent);
+    // GPS + visit-event streams are wired via ref.listen() in build().
 
     timer = Timer.periodic(
       Duration(minutes: 30),
@@ -401,18 +368,8 @@ class _PoiMapState extends State<PoiMap>
   void dispose() {
     timer?.cancel();
     _pois.clear();
-    _minesStreamSubscription?.cancel();
-    _locationStreamSubscription?.cancel();
-    _visitStreamSubscription?.cancel();
     //if (mapController != null) { mapController.removeListener(_onMapChanged); }
     super.dispose();
-  }
-
-  Future _getCurrentUser() async {
-    final tmp = await _apiProvider.getStoredUser();
-    setState(() {
-      _user = tmp;
-    });
   }
 
   // Upload all the pins from when you were offline
@@ -603,84 +560,70 @@ class _PoiMapState extends State<PoiMap>
 
   ///
   Future _goMine(int idx) async {
-    dynamic response;
-    var mineId = _pois[idx].id;
-    var mineComment = _pois[idx]?.properties?.comment;
-    if (mineId < 1) {
-      return;
-    }
+    final mineId = _pois[idx].id;
+    final mineComment = _pois[idx]?.properties?.comment ?? '';
+    if (mineId < 1) return;
+
     try {
-      response = await _apiProvider.get(
-        '/mine/$mineId',
-      );
+      final result =
+          await ref.read(mineRepositoryProvider).getMine(mineId);
 
-      if (response is Map && response.containsKey("success")) {
-        //ignore: omit_local_variable_types
-        List<Image> imagesArr = [];
+      //ignore: omit_local_variable_types
+      final List<Image> imagesArr = [];
 
-        if (response["items"].isNotEmpty) {
-          for (dynamic value in response["items"]) {
-            if (value.containsKey("img") && value["img"] != "") {
-              //mine.addItem(value);
-              imagesArr.add(Image.asset("assets/images/items/${value['img']}"));
-              //} else { log.d(value);
-            }
-          }
+      for (final item in result.items) {
+        if (item.img.isNotEmpty) {
+          imagesArr.add(Image.asset('assets/images/items/${item.img}'));
         }
-
-        for (dynamic value in response["materials"]) {
-          if (value.containsKey("img") && value["img"] != "") {
-            //mine.addMaterial(value);
-            imagesArr
-                .add(Image.asset("assets/images/materials/${value['img']}"));
-            //} else { log.d(value);
-          }
-        }
-
-        for (dynamic value in response["blueprints"]) {
-          if (value.containsKey("img") && value["img"] != "") {
-            imagesArr
-                .add(Image.asset("assets/images/blueprints/${value['img']}"));
-            //} else { log.d(value);
-          }
-        }
-
-        // Show this mine as already mined
-        _pois[idx].properties.ico = "0";
-        _pois[idx].lastVisited =
-            DateTime.parse(DateTime.now().toUtc().toIso8601String())
-                .toLocal()
-                .toString();
-        selectPoint(-1, 0, _userLocation, "");
-        setState(() {
-          _infoWindowVisible = false;
-          _textFieldController.text = "";
-          _images.clear();
-        });
-
-        Timer(
-          Duration(seconds: 1),
-          () {
-            if (!mounted) return;
-            //ignore: omit_local_variable_types
-            String mining =
-                AppLocalizations.of(context)!.translate('you_found_point');
-            showDialog(
-              context: context,
-              builder: (context) => CustomDialog(
-                title: AppLocalizations.of(context)!.translate('congrats'),
-                description: "$mining $mineId, $mineComment",
-                buttonText: "Okay",
-                images: imagesArr,
-                callback: () {},
-              ),
-            );
-          },
-        );
       }
+      for (final mat in result.materials) {
+        if (mat.img.isNotEmpty) {
+          imagesArr.add(Image.asset('assets/images/materials/${mat.img}'));
+        }
+      }
+      for (final bp in result.blueprints) {
+        // Blueprint.blank() has img == 'nothing.png'; skip it
+        if (bp.img.isNotEmpty && bp.img != 'nothing.png') {
+          imagesArr.add(Image.asset('assets/images/blueprints/${bp.img}'));
+        }
+      }
+
+      // Mark this point as depleted on the local map
+      _pois[idx].properties.ico = '0';
+      _pois[idx].lastVisited =
+          DateTime.parse(DateTime.now().toUtc().toIso8601String())
+              .toLocal()
+              .toString();
+      selectPoint(-1, 0, _userLocation, '');
+      setState(() {
+        _infoWindowVisible = false;
+        _textFieldController.text = '';
+        _images.clear();
+      });
+
+      // Refresh user coins/xp in drawer
+      ref.invalidate(userProvider);
+
+      Timer(Duration(seconds: 1), () {
+        if (!mounted) return;
+        final mining =
+            AppLocalizations.of(context)!.translate('you_found_point');
+        showDialog(
+          context: context,
+          builder: (context) => CustomDialog(
+            title: AppLocalizations.of(context)!.translate('congrats'),
+            description: '$mining $mineId, $mineComment',
+            buttonText: 'Okay',
+            images: imagesArr,
+            callback: () {},
+          ),
+        );
+      });
     } on AppError catch (err) {
       Timer(Duration(seconds: 1), () {
         if (!mounted) return;
+        // COOLDOWN_ACTIVE → err.message has "Visited Xs ago. Wait Ys"
+        // FORBIDDEN       → err.message has "Did you somehow teleported X km ?"
         err.show(context);
       });
     } catch (err) {
@@ -1248,9 +1191,18 @@ class _PoiMapState extends State<PoiMap>
 
   ///
   Widget build(BuildContext context) {
-    // Determining the screen width & height
-    //var szHeight = MediaQuery.of(context).size.height;
-    //var szWidth = MediaQuery.of(context).size.width;
+    // Populate _user from provider so mining cooldown + notification badge are current
+    _user = ref.watch(userProvider).valueOrNull ?? User.blank();
+
+    // GPS position updates → update local position + trigger radar refresh
+    ref.listen<AsyncValue<LtLn>>(locationProvider, (_, next) {
+      next.whenData(_updateUserLocation);
+    });
+
+    // Battle outcome from RockPaperScissorsPage → trigger _goMine on win
+    ref.listen<VisitEvent>(visitEventProvider, (_, event) {
+      _updateVisitEvent(event);
+    });
 
     final mapWidget = FlutterMap(
       options: MapOptions(
@@ -1473,14 +1425,6 @@ class _PoiMapState extends State<PoiMap>
         callback: () {},
       ),
     );
-  }
-
-  void _loadMines(List<Mine> mines) async {
-    //print(' --- _loadMines from Stream --- ');
-    setState(() {
-      _pois.clear();
-      _pois.addAll(mines.toList());
-    });
   }
 
   void _updateUserLocation(LtLn location) async {
