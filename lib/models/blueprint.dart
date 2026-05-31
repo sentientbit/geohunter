@@ -12,8 +12,13 @@ class Blueprint {
   ///
   String img = "nothing.png";
 
-  /// Nr of blueprints available to the player
+  /// Nr of blueprint volumes the player currently holds.
   int nr = 0;
+
+  /// How many blueprint pages are required to assemble one volume.
+  /// 0 means this blueprint has not yet been assigned pages (legacy / not
+  /// yet migrated). Show the assemble panel only when pagesRequired > 0.
+  int pagesRequired = 0;
 
   ///
   Blueprint({
@@ -21,6 +26,7 @@ class Blueprint {
     required this.name,
     required this.img,
     required this.nr,
+    this.pagesRequired = 0,
   });
 
   ///
@@ -30,6 +36,7 @@ class Blueprint {
       name: "",
       img: "nothing.png",
       nr: 0,
+      pagesRequired: 0,
     );
   }
 
@@ -43,6 +50,10 @@ class Blueprint {
     img = json["img"];
     if (json.containsKey("nr")) {
       nr = int.tryParse(json["nr"].toString()) ?? 0;
+    }
+    if (json.containsKey("pages_required")) {
+      pagesRequired =
+          int.tryParse(json["pages_required"].toString()) ?? 0;
     }
   }
 }

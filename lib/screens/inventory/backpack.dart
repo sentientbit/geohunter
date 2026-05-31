@@ -230,6 +230,8 @@ class _InventoryState extends ConsumerState<InventoryPage> {
         context.go('/blueprints');
       } else if (index == 2) {
         context.go('/materials');
+      } else if (index == 3) {
+        context.go('/pages');
       }
     }
 
@@ -367,7 +369,11 @@ class _InventoryState extends ConsumerState<InventoryPage> {
             BottomNavigationBarItem(
               icon: Icon(Icons.widgets, color: Colors.white),
               label: 'Materials',
-            )
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.article_outlined, color: Colors.white),
+              label: 'Pages',
+            ),
           ],
         ),
       ),

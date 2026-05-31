@@ -16,6 +16,7 @@ import 'screens/help/settings.dart';
 import 'screens/inventory/backpack.dart';
 import 'screens/inventory/blueprints.dart';
 import 'screens/inventory/materials.dart';
+import 'screens/inventory/pages.dart';
 import 'screens/inventory/research.dart';
 import 'screens/login.dart';
 import 'screens/map/map_explore.dart';
@@ -80,6 +81,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/materials',
       builder: (context, state) => MaterialListPage(),
+    ),
+    GoRoute(
+      path: '/pages',
+      builder: (context, state) => const PagesPage(),
     ),
     GoRoute(
       path: '/forge',

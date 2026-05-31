@@ -10,10 +10,14 @@ import '../../app_localizations.dart';
 import '../../models/app_error.dart';
 import '../../fonts/rpg_awesome_icons.dart';
 import '../../models/player_stats.dart';
+import '../../models/blueprint_page.dart';
 import '../../models/research.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/blueprint_pages_provider.dart';
+import '../../providers/blueprint_pages_repository.dart';
+import '../../providers/research_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
@@ -104,6 +108,16 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     //ignore: omit_local_variable_types
     double halfScreenSize =
         (MediaQuery.of(context).size.height * 0.5) - 40 /* appbar is 80px */;
+
+    // Blueprint pages — cross-reference by blueprint id to find page count
+    final pagesList = ref.watch(blueprintPagesProvider).valueOrNull ?? [];
+    final BlueprintPage? matchedPage = pagesList.cast<BlueprintPage?>().firstWhere(
+          (p) => p?.blueprintId == widget.research.blueprint.id,
+          orElse: () => null,
+        );
+    final int pagesNr = matchedPage?.quantity ?? 0;
+    final int pagesRequired = widget.research.blueprint.pagesRequired;
+    final bool canAssemble = pagesRequired > 0 && pagesNr >= pagesRequired;
 
     /// Application top Bar
     final topBar = AppBar(
@@ -267,6 +281,62 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
+                // ── Assemble panel ──────────────────────────────────────
+                if (pagesRequired > 0) ...[
+                  Text(
+                    'Assemble',
+                    style: TextStyle(
+                        color: Color(0xffe6a04e),
+                        fontSize: 24,
+                        fontFamily: 'Cormorant SC',
+                        fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    '$pagesNr / $pagesRequired pages available',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                  SizedBox(height: 8),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.all(12),
+                      backgroundColor: canAssemble
+                          ? GlobalConstants.appBg
+                          : Colors.grey.shade900,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      side: BorderSide(
+                          width: 1,
+                          color:
+                              canAssemble ? Colors.white : Colors.grey),
+                    ),
+                    onPressed:
+                        canAssemble ? () => _assemble(matchedPage!.id) : null,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(RPGAwesome.book,
+                            color: canAssemble
+                                ? Color(0xffe6a04e)
+                                : Colors.grey),
+                        Text(
+                          canAssemble
+                              ? ' Assemble volume'
+                              : ' Need $pagesRequired pages',
+                          style: TextStyle(
+                              color: canAssemble
+                                  ? Color(0xffe6a04e)
+                                  : Colors.grey,
+                              fontSize: 18,
+                              fontFamily: 'Cormorant SC',
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(color: Colors.white30, height: 32),
+                ],
+                // ── Study panel ──────────────────────────────────────────
                 Text(
                   'Study',
                   textAlign: TextAlign.left,
@@ -421,6 +491,36 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
         drawer: DrawerPage(),
       ),
     );
+  }
+
+  /// Assemble one blueprint volume from pages.
+  /// The server decides the quantity consumed — client sends only [pageId].
+  Future<void> _assemble(int pageId) async {
+    try {
+      await ref
+          .read(blueprintPagesRepositoryProvider)
+          .assemble(pageId);
+      // Refresh page count, blueprint volume count, and user coins/xp
+      ref.invalidate(blueprintPagesProvider);
+      ref.invalidate(researchProvider);
+      ref.invalidate(userProvider);
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => CustomDialog(
+          title: AppLocalizations.of(context)!.translate('congrats'),
+          description: 'Blueprint volume assembled!',
+          buttonText: 'Okay',
+          images: [],
+          callback: () {},
+        ),
+      );
+    } on AppError catch (err) {
+      if (!mounted) return;
+      err.show(context);
+    } catch (err) {
+      debugPrint('_assemble unexpected error: $err');
+    }
   }
 
   void _studyResearch(context, researchId) async {
