@@ -40,7 +40,7 @@ dependencies:
   flame_audio: ^2.10.1
   flutter_countdown_timer: ^4.0.0
   #flutter_local_notifications: ^9.6.0
-  flutter_map: ^8.1.0
+  flutter_map: ^8.3.0
   get_it: ^7.2.0
   geolocator: ^9.0.0
   image_picker: ^1.0.0
@@ -54,7 +54,7 @@ dependencies:
   url_launcher: ^6.0.6
   workmanager: ^0.9.0
   percent_indicator: ^4.2.2
-  rxdart: ^0.27.0
+  rxdart: ^0.28.0
   flutter_offline: ^6.0.0
   flutter_secure_storage: ^9.0.0
   flutter_riverpod: ^2.6.1
@@ -65,8 +65,9 @@ dependencies:
 dependency_overrides:
   # Force newer transitive deps that dropped v1 Flutter plugin embedding
   flutter_plugin_android_lifecycle: ^2.0.34
-  # flame_audio 2.11+ requires audioplayers 6.x whose Android impl (5.2.1)
-  # doesn't compile with Kotlin 2.1. Pin to the 2.10.1 / audioplayers 5.x chain.
+  # audioplayers_android 5.2.1 has cross-plugin classpath issues under AGP 8.11.1
+  # (UrlSource / AudioContextAndroid from platform_interface not visible at compile time).
+  # Pin the whole 5.x/audioplayers chain until upstream publishes a fix.
   flame_audio: 2.10.1
   audioplayers: 5.2.1
   audioplayers_android: 4.0.3

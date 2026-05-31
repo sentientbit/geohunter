@@ -84,7 +84,9 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
 
   ///
   Widget build(BuildContext context) {
-    final user = ref.watch(userProvider).valueOrNull ?? User.blank();
+    final userAsync = ref.watch(userProvider);
+    final isLoading = userAsync.isLoading;
+    final user = userAsync.valueOrNull ?? User.blank();
 
     ///
     var percentage = 0.0;
@@ -163,70 +165,73 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
                           SizedBox(
                             width: 10,
                           ),
-                          GestureDetector(
-                            onTap: () {
-                              playClick();
-                              context.go('/profile');
-                            },
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: <Widget>[
-                                Row(
-                                  children: <Widget>[
-                                    Text(
-                                      user.details.username,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16.0,
-                                        fontWeight: FontWeight.bold,
+                          isLoading
+                              ? _buildUserInfoSkeleton()
+                              : GestureDetector(
+                                  onTap: () {
+                                    playClick();
+                                    context.go('/profile');
+                                  },
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceEvenly,
+                                    children: <Widget>[
+                                      Row(
+                                        children: <Widget>[
+                                          Text(
+                                            user.details.username,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16.0,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          Text(
+                                            "  level $currentLevel",
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 14.0,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                    Text(
-                                      "  level $currentLevel",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 14.0,
+                                      SizedBox(
+                                        height: 40,
+                                        width: 150,
+                                        child: LinearPercentIndicator(
+                                          lineHeight: 14.0,
+                                          percent: percentage,
+                                          center: Text(
+                                            "${currentExperience.toString()} / ${nextExperienceLevel.toString()}",
+                                            style: TextStyle(
+                                                fontSize: 12.0,
+                                                fontWeight: FontWeight.bold),
+                                          ),
+                                          backgroundColor: Colors.white,
+                                          progressColor: Colors.orange,
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 40,
-                                  width: 150,
-                                  child: LinearPercentIndicator(
-                                    lineHeight: 14.0,
-                                    percent: percentage,
-                                    center: Text(
-                                      "${currentExperience.toString()} / ${nextExperienceLevel.toString()}",
-                                      style: TextStyle(
-                                          fontSize: 12.0,
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                    
-                                    backgroundColor: Colors.white,
-                                    progressColor: Colors.orange,
+                                      Row(
+                                        children: <Widget>[
+                                          Icon(
+                                            Icons.monetization_on,
+                                            color: Color(0xffe6a04e),
+                                            size: 20,
+                                          ),
+                                          Text(
+                                            " ${user.details.coins}",
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 14.0,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                Row(
-                                  children: <Widget>[
-                                    Icon(
-                                      Icons.monetization_on,
-                                      color: Color(0xffe6a04e),
-                                      size: 20,
-                                    ),
-                                    Text(
-                                      " ${user.details.coins}",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 14.0,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
                         ],
                       ),
                     ],
@@ -400,6 +405,29 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  /// Placeholder shown in place of username / level / XP / coins while
+  /// [userProvider] is still loading (AsyncLoading state, ~1-2 s).
+  Widget _buildUserInfoSkeleton() {
+    const decoration = BoxDecoration(
+      color: Colors.white24,
+      borderRadius: BorderRadius.all(Radius.circular(4)),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        // username + level row
+        Container(height: 16, width: 130, decoration: decoration),
+        SizedBox(height: 8),
+        // XP bar
+        Container(height: 14, width: 150, decoration: decoration),
+        SizedBox(height: 8),
+        // coins
+        Container(height: 16, width: 80, decoration: decoration),
       ],
     );
   }
