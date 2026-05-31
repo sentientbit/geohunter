@@ -582,12 +582,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
       ),
     );
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) context.go('/poi-map');
-      },
-      child: Scaffold(
+    return Scaffold(
         backgroundColor: const Color(0xff121212),
         appBar: appBar,
         extendBodyBehindAppBar: true,
@@ -622,7 +617,6 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
         ]),
         key: _scaffoldKey,
         drawer: DrawerPage(),
-      ),
     );
   }
 
