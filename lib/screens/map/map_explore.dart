@@ -1218,6 +1218,12 @@ class _PoiMapState extends ConsumerState<PoiMap>
         maxZoom: 18.0,
         onMapEvent: (MapEvent event) {
           if (event is MapEventMove || event is MapEventFlingAnimation) {
+            // Programmatic moves (GPS recenter, goToRemoteLocation postFrame)
+            // must not re-trigger _loadPois — they already load at the right
+            // location. Only user-initiated drags should reload POIs.
+            final isUserDrag = event is MapEventMove &&
+                event.source != MapEventSource.mapController;
+
             _debouncer.run(
               () {
                 if (!mounted) return;
@@ -1235,7 +1241,10 @@ class _PoiMapState extends ConsumerState<PoiMap>
                     _mapZoom = event.camera.zoom;
                   });
                 }
-                _loadPois(_userLocation);
+                if (isUserDrag) {
+                  _loadPois(LtLn(event.camera.center.latitude,
+                      event.camera.center.longitude));
+                }
               },
             );
           }
