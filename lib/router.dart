@@ -60,11 +60,16 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/poi-map',
-      builder: (context, state) => PoiMap(
-        goToRemoteLocation: false,
-        latitude: 51.5,
-        longitude: 0.0,
-      ),
+      builder: (context, state) {
+        final params = state.uri.queryParameters;
+        final lat = double.tryParse(params['lat'] ?? '');
+        final lng = double.tryParse(params['lng'] ?? '');
+        return PoiMap(
+          goToRemoteLocation: lat != null && lng != null,
+          latitude: lat ?? 51.5,
+          longitude: lng ?? 0.0,
+        );
+      },
     ),
     GoRoute(
       path: '/profile',

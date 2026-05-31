@@ -1,7 +1,6 @@
 ///
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 
@@ -505,7 +504,8 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                       style: TextStyle(color: Colors.white38, fontSize: 12))
                 else ...[
                   ..._nearbyLibraries!.map((mine) => InkWell(
-                        onTap: () => _openMapsUrl(mine.mapsUrl),
+                        onTap: () => context
+                            .go('/poi-map?lat=${mine.lat}&lng=${mine.lng}'),
                         borderRadius: BorderRadius.circular(6),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
@@ -543,16 +543,15 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                                   fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(width: 4),
-                            const Icon(Icons.open_in_new,
-                                color: Colors.white24, size: 12),
+                            const Icon(Icons.chevron_right,
+                                color: Colors.white24, size: 16),
                           ]),
                         ),
                       )),
                   const SizedBox(height: 4),
-                  Text(
-                    'Tap a mine to open in Google Maps.',
-                    style: const TextStyle(
-                        color: Colors.white24, fontSize: 11),
+                  const Text(
+                    'Tap to navigate to that Library mine.',
+                    style: TextStyle(color: Colors.white24, fontSize: 11),
                   ),
                 ],
               ] else
@@ -1041,12 +1040,6 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     }
   }
 
-  Future<void> _openMapsUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
-  }
 
   // ── Disassemble card ─────────────────────────────────────────────────────────
 
