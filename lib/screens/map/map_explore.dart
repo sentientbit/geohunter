@@ -1218,16 +1218,19 @@ class _PoiMapState extends ConsumerState<PoiMap>
         maxZoom: 18.0,
         onMapEvent: (MapEvent event) {
           if (event is MapEventMove || event is MapEventFlingAnimation) {
-            // Programmatic moves (GPS recenter, goToRemoteLocation postFrame)
-            // must not re-trigger _loadPois — they already load at the right
-            // location. Only user-initiated drags should reload POIs.
+            // Distinguish who moved the camera:
+            //   isUserDrag    — finger pan/fling → load POIs at new viewport centre
+            //   _recenterBtnPressed — GPS recenter → load POIs at user position
+            //   neither       — goToRemoteLocation postFrameCallback → skip reload
+            //                   (_loadPois was already called at the remote location)
             final isUserDrag = event is MapEventMove &&
                 event.source != MapEventSource.mapController;
+            final wasGpsRecenter = _recenterBtnPressed;
 
             _debouncer.run(
               () {
                 if (!mounted) return;
-                if (_recenterBtnPressed) {
+                if (wasGpsRecenter) {
                   setState(() {
                     _showRecenterBtn = false;
                     _recenterBtnPressed = false;
@@ -1241,7 +1244,7 @@ class _PoiMapState extends ConsumerState<PoiMap>
                     _mapZoom = event.camera.zoom;
                   });
                 }
-                if (isUserDrag) {
+                if (isUserDrag || wasGpsRecenter) {
                   _loadPois(LtLn(event.camera.center.latitude,
                       event.camera.center.longitude));
                 }
