@@ -47,7 +47,7 @@ class BlueprintPagesRepository {
       'blueprint_id': blueprintId,
       'qty': qty,
     });
-    return DisassembleResult.fromJson(response as Map<String, dynamic>);
+    return DisassembleResult.fromJson(response);
   }
 }
 

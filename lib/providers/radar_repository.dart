@@ -41,7 +41,7 @@ class RadarRepository {
     }
 
     final mines = <LibraryMine>[];
-    if (response is Map && response['success'] == true) {
+    if (response['success'] == true) {
       final places = response['places'] as List? ?? [];
       mines.addAll(places.map((e) => _parse(e, true)));
 

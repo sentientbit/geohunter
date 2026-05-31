@@ -396,12 +396,6 @@ int researchToCrafting(num exp) {
   return crafting;
 }
 
-/// Convert Crafting Level into Research points
-int craftingToResearch(num lvl) {
-  var exp = math.pow(2, lvl) - 1;
-  return int.parse(exp.toString());
-}
-
 /// dmg = atk * (100 / (100 + def))
 double damageHealth(double atk, double def) {
   var dmg = atk * (100 / (100 + def));

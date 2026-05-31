@@ -427,7 +427,8 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                                 value: _useManuscripts,
                                 onChanged: (v) =>
                                     setState(() => _useManuscripts = v),
-                                activeColor: _gold,
+                                activeThumbColor: _gold,
+                                activeTrackColor: _gold.withAlpha(120),
                                 materialTapTargetSize:
                                     MaterialTapTargetSize.shrinkWrap,
                               ),
