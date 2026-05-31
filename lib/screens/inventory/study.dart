@@ -76,10 +76,12 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
   @override
   void initState() {
     super.initState();
+    // Thresholds come from the Research model — backend is the single source of truth.
+    // nextLevelThreshold / currentLevelFloor fall back to the local formula only
+    // while the API transitions (see Research.fromJson).
     _currentPoints = widget.research.nrInvested;
-    final currentLvl = researchToCrafting(_currentPoints);
-    _neededPoints = craftingToResearch(currentLvl + 1);
-    _lowerPoints = craftingToResearch(currentLvl);
+    _neededPoints = widget.research.nextLevelThreshold;
+    _lowerPoints = widget.research.currentLevelFloor;
 
     for (final blp in widget.blueprints) {
       if (widget.research.blueprint.id == blp.id) {

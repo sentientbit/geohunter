@@ -31,16 +31,16 @@ class _ResearchState extends ConsumerState<ResearchPage> {
 
   Widget _makeListTile(
       BuildContext context, Research tech, List<Blueprint> blueprints) {
+    // All threshold values come from the Research model (server is source of truth).
     final currentPoints = tech.nrInvested;
-    final currentLvl = researchToCrafting(currentPoints);
-    final neededPoints = craftingToResearch(currentLvl + 1);
-    final lowerPoints = craftingToResearch(currentLvl);
+    final neededPoints = tech.nextLevelThreshold;
+    final lowerPoints = tech.currentLevelFloor;
     final percentage = (neededPoints > lowerPoints)
         ? ((currentPoints - lowerPoints) / (neededPoints - lowerPoints))
             .clamp(0.0, 1.0)
         : 1.0;
-    final skillLabel = Research.skill(currentPoints);
-    final isLocked = currentPoints == 0 && tech.blueprint.pagesRequired > 0;
+    final skillLabel = Research.skill(currentPoints); // label still local until backend sends it on list
+    final isLocked = tech.craftingLevel == 0 && tech.blueprint.pagesRequired > 0;
 
     return InkWell(
       onTap: () => Navigator.push(

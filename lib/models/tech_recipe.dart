@@ -20,7 +20,10 @@ class TechRecipe {
       id: int.tryParse(json['id'].toString()) ?? 0,
       name: json['name'] as String? ?? '',
       img: json['img'] as String? ?? '',
-      unlocked: json['unlocked'] == true || json['unlocked'] == 1,
+      // PHP may send bool true, int 1, or string "1"
+      unlocked: json['unlocked'] == true ||
+                json['unlocked'] == 1 ||
+                json['unlocked'] == '1',
     );
   }
 }

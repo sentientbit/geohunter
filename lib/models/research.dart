@@ -54,6 +54,20 @@ class Research {
   /// Affinity bonus percentages, zipped with [affinityMats]. Same length, always.
   List<int> affinityPcts = [];
 
+  // ── Level threshold fields ─────────────────────────────────────────────────
+  // The server is the single source of truth for the crafting formula.
+  // These two values remove all formula calls from the Flutter client.
+  //
+  // Backend keys: next_level_threshold, current_level_floor
+  // If not yet present in the API response, we fall back to the local formula
+  // so old builds keep working during the transition.
+
+  /// Absolute point total required to reach the next crafting level.
+  int nextLevelThreshold = 1;
+
+  /// Absolute point total at the start of the current crafting level (progress floor).
+  int currentLevelFloor = 0;
+
   ///
   Research({
     required this.id,
@@ -115,6 +129,20 @@ class Research {
       affinityPcts =
           rawPcts.map((e) => int.tryParse(e.toString()) ?? 0).toList();
     }
+
+    // Level thresholds — use server values when present (single source of truth).
+    // Falls back to local formula for backward compat while backend transitions.
+    final rawNext = json['next_level_threshold'];
+    nextLevelThreshold = rawNext != null
+        ? (int.tryParse(rawNext.toString()) ??
+            craftingToResearch(craftingLevel + 1))
+        : craftingToResearch(craftingLevel + 1);
+
+    final rawFloor = json['current_level_floor'];
+    currentLevelFloor = rawFloor != null
+        ? (int.tryParse(rawFloor.toString()) ??
+            craftingToResearch(craftingLevel))
+        : craftingToResearch(craftingLevel);
   }
 
   ///
