@@ -45,11 +45,12 @@ class _ResearchState extends ConsumerState<ResearchPage> {
 
     var currentPoints = tech.nrInvested;
     var currentLvl = researchToCrafting(currentPoints);
-    // Points needed to reach next level
+    // Absolute point threshold for next level
     var neededPoints = craftingToResearch(currentLvl + 1);
-    // Points needed to be at the current level (used as zero indicator)
+    // Absolute point threshold for current level (floor)
     var lowerPoints = craftingToResearch(currentLvl);
-    var percentage = (currentPoints - lowerPoints) / neededPoints;
+    // Progress within the current level band (0.0 – 1.0)
+    var percentage = (currentPoints - lowerPoints) / (neededPoints - lowerPoints);
 
     return ListTile(
       contentPadding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),

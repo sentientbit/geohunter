@@ -169,7 +169,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                 width: 180,
                 child: LinearPercentIndicator(
                   lineHeight: 14.0,
-                  percent: ((_currentPoints - _lowerPoints) / _neededPoints),
+                  percent: ((_currentPoints - _lowerPoints) / (_neededPoints - _lowerPoints)),
                   center: Text(
                     "$_currentPoints / $_neededPoints",
                     style:
@@ -468,7 +468,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
           context: context,
           builder: (context) => CustomDialog(
             title: AppLocalizations.of(context)!.translate('congrats'),
-            description: response["message"],
+            description: AppLocalizations.of(context)!.translate('research_success'),
             buttonText: "Okay",
             images: [],
             callback: () {
