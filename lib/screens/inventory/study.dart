@@ -13,6 +13,7 @@ import '../../models/research.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../models/disassemble_result.dart';
 import '../../providers/blueprint_pages_repository.dart';
 import '../../providers/blueprint_pages_provider.dart';
 import '../../providers/research_provider.dart';
@@ -59,6 +60,15 @@ class StudyDetailPage extends ConsumerStatefulWidget {
   _StudyDetailState createState() => _StudyDetailState();
 }
 
+// ── Yield table (matches server Research.php yield brackets) ──────────────────
+/// Manuscripts received when disassembling one volume of the given tier.
+int _manuscriptsPerVolume(int pagesRequired) {
+  if (pagesRequired <= 4) return 2;
+  if (pagesRequired <= 13) return 5;
+  if (pagesRequired <= 28) return 10;
+  return 17; // T4 ≤ 48 pages
+}
+
 ///
 class _StudyDetailState extends ConsumerState<StudyDetailPage> {
   double _nrInvBlueprints = 0;
@@ -68,6 +78,12 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
   int _lowerPoints = 0;
   int _nrAvailBlueprints = 0;
   int _maxNr = 0;
+
+  /// Whether to supplement missing pages with manuscripts when assembling.
+  bool _useManuscripts = false;
+
+  /// How many volumes to disassemble (1 … volumesOwned).
+  int _nrToDisassemble = 1;
 
   User _user = User.blank();
   final ApiProvider _apiProvider = ApiProvider();
@@ -128,13 +144,23 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(userProvider).valueOrNull ?? User.blank();
+    final int manuscripts = ref.watch(manuscriptsProvider);
 
     // Pages data now comes directly from the tech node — no second provider needed
     final int pagesNr = widget.research.pagesOwned;
     final int pagesRequired = widget.research.blueprint.pagesRequired;
     final int? assemblePageId = widget.research.pageId;
-    final bool canAssemble =
+
+    // Full assembly: all pages in hand.
+    final bool canAssembleFull =
         pagesRequired > 0 && pagesNr >= pagesRequired && assemblePageId != null;
+    // Hybrid: player flipped the toggle AND has manuscripts AND meets 50% page floor.
+    final bool canAssembleHybrid = _useManuscripts &&
+        pagesRequired > 0 &&
+        assemblePageId != null &&
+        manuscripts > 0 &&
+        (pagesNr * 2 >= pagesRequired); // ≥ 50% pages
+    final bool canAssemble = canAssembleFull || canAssembleHybrid;
 
     // Derived values — use server-supplied crafting bonus
     final int currentLevel = researchToCrafting(_currentPoints);
@@ -268,6 +294,10 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     // ── Volume Assembly card ───────────────────────────────────────────────
     Widget? assemblyCard;
     if (pagesRequired > 0) {
+      // Hybrid mode: available when player has manuscripts and ≥ 50% pages.
+      final bool hybridAvailable =
+          manuscripts > 0 && (pagesNr * 2 >= pagesRequired);
+
       assemblyCard = Container(
         margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         padding: const EdgeInsets.all(20),
@@ -279,11 +309,21 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Heading
+            // Heading + manuscripts count
             Row(children: [
               const Icon(Icons.auto_stories, color: _gold, size: 14),
               const SizedBox(width: 8),
-              const Text('VOLUME ASSEMBLY', style: _sectionLabel),
+              const Expanded(
+                  child: Text('VOLUME ASSEMBLY', style: _sectionLabel)),
+              if (manuscripts > 0) ...[
+                const Icon(Icons.history_edu, color: _gold, size: 14),
+                const SizedBox(width: 4),
+                Text('$manuscripts',
+                    style: const TextStyle(
+                        color: _gold,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold)),
+              ],
             ]),
             const SizedBox(height: 4),
             const Text('Collect pages to bind a new volume.',
@@ -359,6 +399,32 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                                 fontSize: 11),
                             textAlign: TextAlign.center),
                       const SizedBox(height: 14),
+                      // Use manuscripts toggle — only shown when viable
+                      if (hybridAvailable && !canAssembleFull)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.history_edu,
+                                  color: Colors.white54, size: 14),
+                              const SizedBox(width: 6),
+                              const Text('Use manuscripts',
+                                  style: TextStyle(
+                                      color: Colors.white54,
+                                      fontSize: 12)),
+                              const SizedBox(width: 6),
+                              Switch.adaptive(
+                                value: _useManuscripts,
+                                onChanged: (v) =>
+                                    setState(() => _useManuscripts = v),
+                                activeColor: _gold,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ],
+                          ),
+                        ),
                       SizedBox(
                         width: double.infinity,
                         child: OutlinedButton(
@@ -392,7 +458,9 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                                 ),
                               ),
                               Text(
-                                'Requires $pagesRequired pages',
+                                _useManuscripts
+                                    ? 'Pages + manuscripts'
+                                    : 'Requires $pagesRequired pages',
                                 style: const TextStyle(
                                     color: Colors.white38,
                                     fontSize: 10),
@@ -614,6 +682,8 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                   heroCard,
                   if (assemblyCard != null) assemblyCard,
                   investCard,
+                  _buildDisassembleCard(
+                      widget.research, manuscripts),
                   _buildDisciplineCard(widget.research),
                   const SizedBox(height: 16),
                 ],
@@ -831,12 +901,151 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     );
   }
 
+  // ── Disassemble card ─────────────────────────────────────────────────────────
+
+  Widget _buildDisassembleCard(Research tech, int manuscripts) {
+    final int volumesOwned = tech.volumesOwned;
+    final int pagesRequired = tech.blueprint.pagesRequired;
+    if (volumesOwned <= 0 || pagesRequired == 0) return const SizedBox.shrink();
+
+    final int yieldPerVolume = _manuscriptsPerVolume(pagesRequired);
+    final int previewGain = _nrToDisassemble * yieldPerVolume;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Icon(Icons.history_edu, color: _gold, size: 14),
+            const SizedBox(width: 8),
+            const Text('DISASSEMBLE VOLUMES', style: _sectionLabel),
+          ]),
+          const SizedBox(height: 4),
+          Text(
+            'Break down volumes into manuscripts. '
+            'Each volume yields $yieldPerVolume manuscripts.',
+            style: const TextStyle(color: Colors.white38, fontSize: 12),
+          ),
+          const SizedBox(height: 16),
+          // Volumes owned + yield preview
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _statCell('VOLUMES', '$volumesOwned', Colors.white),
+              _vDivider(),
+              _statCell('WILL GAIN',
+                  '$previewGain manuscripts', const Color(0xff66bb6a)),
+              _vDivider(),
+              _statCell('MANUSCRIPTS', '$manuscripts', _gold),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Quantity slider (only if >1 volume)
+          if (volumesOwned > 1) ...[
+            Row(children: [
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onPressed: _nrToDisassemble > 1
+                    ? () => setState(() => _nrToDisassemble--)
+                    : null,
+                icon: Icon(Icons.remove_circle_outline,
+                    color: _nrToDisassemble > 1
+                        ? Colors.white
+                        : Colors.white24),
+              ),
+              Expanded(
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: Colors.redAccent,
+                    inactiveTrackColor: Colors.white12,
+                    trackHeight: 4.0,
+                    thumbColor: Colors.redAccent,
+                    thumbShape:
+                        const RoundSliderThumbShape(enabledThumbRadius: 10),
+                    overlayColor: Colors.red.withAlpha(30),
+                  ),
+                  child: Slider(
+                    min: 1,
+                    max: volumesOwned.toDouble(),
+                    value: _nrToDisassemble.toDouble(),
+                    divisions: volumesOwned > 1 ? volumesOwned - 1 : 1,
+                    onChanged: (v) =>
+                        setState(() => _nrToDisassemble = v.toInt()),
+                  ),
+                ),
+              ),
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onPressed: _nrToDisassemble < volumesOwned
+                    ? () => setState(() => _nrToDisassemble++)
+                    : null,
+                icon: Icon(Icons.add_circle_outline,
+                    color: _nrToDisassemble < volumesOwned
+                        ? Colors.white
+                        : Colors.white24),
+              ),
+            ]),
+            Center(
+              child: Text(
+                'Disassemble $_nrToDisassemble volume${_nrToDisassemble == 1 ? '' : 's'}',
+                style: const TextStyle(color: Colors.white54, fontSize: 13),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                backgroundColor: const Color(0xff280000),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+                side: const BorderSide(color: Colors.redAccent, width: 0.8),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              onPressed: () => _disassemble(
+                  tech.blueprint.id, _nrToDisassemble),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.auto_delete_outlined,
+                      color: Colors.redAccent, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Disassemble  $_nrToDisassemble',
+                    style: const TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 15,
+                      fontFamily: 'Cormorant SC',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Actions ──────────────────────────────────────────────────────────────────
 
   Future<void> _assemble(int? pageId) async {
     if (pageId == null) return;
     try {
-      await ref.read(blueprintPagesRepositoryProvider).assemble(pageId);
+      await ref
+          .read(blueprintPagesRepositoryProvider)
+          .assemble(pageId, useManuscripts: _useManuscripts);
       ref.invalidate(blueprintPagesProvider);
       ref.invalidate(researchProvider);
       ref.invalidate(userProvider);
@@ -857,6 +1066,41 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     } catch (err) {
       debugPrint('_assemble unexpected error: $err');
     }
+  }
+
+  Future<void> _disassemble(int blueprintId, int qty) async {
+    DisassembleResult result;
+    try {
+      result = await ref
+          .read(blueprintPagesRepositoryProvider)
+          .disassemble(blueprintId, qty);
+    } on AppError catch (err) {
+      if (!mounted) return;
+      err.show(context);
+      return;
+    } catch (err) {
+      debugPrint('_disassemble unexpected error: $err');
+      return;
+    }
+
+    ref.invalidate(researchProvider);
+    ref.invalidate(userProvider);
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => CustomDialog(
+        title: AppLocalizations.of(context)!.translate('congrats'),
+        description:
+            '+${result.manuscriptsGained} manuscripts gained!\n'
+            'Total: ${result.manuscriptsTotal} manuscripts.',
+        buttonText: 'Okay',
+        images: [],
+        callback: () {
+          Navigator.of(ctx).pop();
+          context.go('/research');
+        },
+      ),
+    );
   }
 
   void _studyResearch(context, researchId) async {

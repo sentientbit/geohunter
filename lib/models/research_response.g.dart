@@ -13,4 +13,5 @@ _$ResearchResponseImpl _$$ResearchResponseImplFromJson(
       blueprints: json['blueprints'] == null
           ? const []
           : _parseBlueprints(json['blueprints']),
+      manuscripts: (json['manuscripts'] as num?)?.toInt() ?? 0,
     );

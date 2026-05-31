@@ -17,3 +17,10 @@ class ResearchNotifier extends AsyncNotifier<ResearchResponse> {
 final researchProvider =
     AsyncNotifierProvider<ResearchNotifier, ResearchResponse>(
         ResearchNotifier.new);
+
+/// Derived provider: player's total manuscript count.
+/// Updates automatically whenever [researchProvider] refreshes
+/// (after assemble, disassemble, or manual invalidation).
+final manuscriptsProvider = Provider<int>((ref) {
+  return ref.watch(researchProvider).valueOrNull?.manuscripts ?? 0;
+});
