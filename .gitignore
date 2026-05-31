@@ -84,6 +84,9 @@ app.*.map.json
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 
+# Secrets — never commit, copy secrets.dart.example → secrets.dart
+lib/shared/secrets.dart
+
 android/app/geocraft.jks
 android/app/google-services.json
 ios/Runner/GeneratedPluginRegistrant.h

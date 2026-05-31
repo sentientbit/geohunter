@@ -7,6 +7,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:geohunter/models/user.dart';
+import 'package:geohunter/shared/secrets.dart';
 
 ///
 class LtLn {
@@ -64,12 +65,10 @@ class GlobalConstants {
   static Color appFg = Colors.white;
 
   ///
-  static String mapboxToken =
-      'MAPBOX_TOKEN_REMOVED_FROM_HISTORY' /*c0-t3-c0-u4*/;
+  static String mapboxToken = AppSecrets.mapboxToken;
 
   ///
-  static String sentryDsn =
-      "SENTRY_DSN_REMOVED_FROM_HISTORY";
+  static String sentryDsn = AppSecrets.sentryDsn;
 
   ///
   static const double padding = 16.0;
