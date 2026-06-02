@@ -1,7 +1,6 @@
 ///
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 
 ///
@@ -15,11 +14,6 @@ import '../../shared/app_theme.dart';
 import '../../shared/constants.dart';
 import '../../providers/api_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../models/library_mine.dart';
-import '../../providers/blueprint_pages_repository.dart';
-import '../../providers/blueprint_pages_provider.dart';
-import '../../providers/location_provider.dart';
-import '../../providers/radar_repository.dart';
 import '../../providers/research_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../text_style.dart';
@@ -61,12 +55,6 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
   int _lowerPoints = 0;
   int _nrAvailBlueprints = 0;
   int _maxNr = 0;
-
-  /// Result of the "find nearest Library" search. Null = not searched yet.
-  List<LibraryMine>? _nearbyLibraries;
-
-  /// True while the Library search network call is in flight.
-  bool _searchingLibraries = false;
 
   User _user = User.blank();
   final ApiProvider _apiProvider = ApiProvider();
@@ -138,27 +126,17 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
             orElse: () => widget.research);
     final liveTech = liveResearch ?? widget.research;
 
-    final int pagesNr = liveTech.pagesOwned;
-    final int pagesRequired = liveTech.pagesRequired; // from research node, not blueprint
-    final int? assemblePageId = liveTech.pageId;
-    // Live volume count — drives the invest card immediately after assembly
+    // Live volume count — drives the invest card immediately after library visit
     final int nrAvailBlueprints = liveTech.volumesOwned;
     // Live max investable = min(volumes, remaining points to next level)
     final int liveMaxNr = nrAvailBlueprints > (_neededPoints - _currentPoints)
         ? (_neededPoints - _currentPoints)
         : nrAvailBlueprints;
 
-    // Assembly requires exactly pages_required real specific pages — no hybrid path.
-    final bool canAssemble =
-        pagesRequired > 0 && pagesNr >= pagesRequired && assemblePageId != null;
-
     // Derived values — use server-supplied crafting bonus
     final int currentLevel = liveTech.craftingLevel;
     final String skillLabel = liveTech.levelLabel;
     final String bonusLabel = widget.research.craftingBonusLabel;
-    final double pageRatio = pagesRequired > 0
-        ? (pagesNr / pagesRequired).clamp(0.0, 1.0)
-        : 0.0;
     final double levelProgress =
         (_neededPoints > _lowerPoints)
             ? ((_currentPoints - _lowerPoints) /
@@ -280,229 +258,6 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
         ],
       ),
     );
-
-    // ── Volume Assembly card ───────────────────────────────────────────────
-    Widget? assemblyCard;
-    if (pagesRequired > 0) {
-      assemblyCard = Container(
-        margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-        padding: const EdgeInsets.all(20),
-        decoration: kCardDecoration(kGold),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Heading
-            Row(children: [
-              const Icon(Icons.auto_stories, color: _gold, size: 14),
-              const SizedBox(width: 8),
-              const Expanded(
-                  child: Text('VOLUME ASSEMBLY', style: _sectionLabel)),
-            ]),
-            const SizedBox(height: 4),
-            const Text('Collect pages to bind a new volume.',
-                style: TextStyle(color: kSilverDim, fontSize: 12,
-                    fontStyle: FontStyle.italic)),
-            const SizedBox(height: 20),
-            // Ring + next reward
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Circular page progress
-                Expanded(
-                  child: Column(
-                    children: [
-                      CircularPercentIndicator(
-                        radius: 66.0,
-                        lineWidth: 7.0,
-                        animation: true,
-                        animateFromLastPercent: true,
-                        percent: pageRatio,
-                        center: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '$pagesNr',
-                              style: const TextStyle(
-                                color: kSilver,
-                                fontSize: 28,
-                                fontFamily: 'Cormorant SC',
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              '/ $pagesRequired',
-                              style: const TextStyle(
-                                  color: _gold, fontSize: 13),
-                            ),
-                          ],
-                        ),
-                        progressColor: _gold,
-                        backgroundColor: Colors.white10,
-                        circularStrokeCap: CircularStrokeCap.round,
-                      ),
-                      const SizedBox(height: 8),
-                      const Text('Pages Collected',
-                          style: TextStyle(
-                              color: kSilverDim, fontSize: 12)),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Next reward panel
-                Expanded(
-                  child: Column(
-                    children: [
-                      const Text('NEXT REWARD',
-                          style: TextStyle(
-                              color: kSilverDim,
-                              fontSize: 10,
-                              letterSpacing: 1.5)),
-                      const SizedBox(height: 10),
-                      const Icon(RPGAwesome.book, color: _gold, size: 36),
-                      const SizedBox(height: 6),
-                      const Text('+1 Volume',
-                          style: TextStyle(
-                              color: kSilver,
-                              fontSize: 14,
-                              fontFamily: 'Cormorant SC',
-                              fontWeight: FontWeight.bold)),
-                      if (_blueprintName.isNotEmpty)
-                        Text(_blueprintName,
-                            style: const TextStyle(
-                                color: kSilverDim,
-                                fontSize: 11),
-                            textAlign: TextAlign.center),
-                      const SizedBox(height: 14),
-                      kStoneButton(
-                        onTap: canAssemble ? () => _assemble(assemblePageId) : null,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        child: Column(
-                          children: [
-                            Text('Bind Volume',
-                                style: TextStyle(
-                                  color: canAssemble ? _gold : Colors.white30,
-                                  fontSize: 14,
-                                  fontFamily: 'Cormorant SC',
-                                  fontWeight: FontWeight.bold,
-                                )),
-                            Text('Requires $pagesRequired pages',
-                                style: const TextStyle(
-                                    color: Colors.white38, fontSize: 10)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            // ── Find nearest Library ───────────────────────────────────────
-            if (pagesNr < pagesRequired) ...[
-              const Divider(color: Colors.white12, height: 28),
-              Row(children: [
-                const Icon(Icons.location_searching,
-                    color: kSilverDim, size: 13),
-                const SizedBox(width: 6),
-                const Text('NEED MORE PAGES?',
-                    style: TextStyle(
-                        color: kSilverDim,
-                        fontSize: 10,
-                        letterSpacing: 1.5)),
-              ]),
-              const SizedBox(height: 10),
-              // Results
-              if (_nearbyLibraries != null) ...[
-                if (_nearbyLibraries!.isEmpty)
-                  const Text('No Library mines found nearby.',
-                      style: TextStyle(color: kSilverDim, fontSize: 12))
-                else ...[
-                  ..._nearbyLibraries!.map((mine) => InkWell(
-                        onTap: () => context
-                            .go('/poi-map?lat=${mine.lat}&lng=${mine.lng}'),
-                        borderRadius: BorderRadius.circular(6),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 6, horizontal: 2),
-                          child: Row(children: [
-                            Icon(Icons.fort,
-                                color:
-                                    mine.visited ? Colors.white38 : _gold,
-                                size: 14),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(mine.name,
-                                  style: TextStyle(
-                                      color: mine.visited
-                                          ? kSilverDim
-                                          : kSilver,
-                                      fontSize: 13),
-                                  overflow: TextOverflow.ellipsis),
-                            ),
-                            if (mine.visited)
-                              const Padding(
-                                padding: EdgeInsets.only(right: 6),
-                                child: Text('visited',
-                                    style: TextStyle(
-                                        color: Colors.white24,
-                                        fontSize: 10)),
-                              ),
-                            Text(
-                              formatLibraryDistance(mine.distanceKm),
-                              style: TextStyle(
-                                  color: mine.visited
-                                      ? Colors.white38
-                                      : _gold,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.chevron_right,
-                                color: Colors.white24, size: 16),
-                          ]),
-                        ),
-                      )),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Tap to navigate to that Library mine.',
-                    style: TextStyle(color: kSilverDim, fontSize: 11,
-                        fontStyle: FontStyle.italic),
-                  ),
-                ],
-              ] else
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                      side: const BorderSide(color: Colors.white24),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                    ),
-                    onPressed: _searchingLibraries
-                        ? null
-                        : _findNearestLibraries,
-                    icon: _searchingLibraries
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: kSilverDim))
-                        : const Icon(Icons.fort,
-                            color: kSilver, size: 16),
-                    label: Text(
-                      _searchingLibraries
-                          ? 'Searching…'
-                          : 'Find nearest Library mine',
-                      style: const TextStyle(
-                          color: kSilver, fontSize: 13),
-                    ),
-                  ),
-                ),
-            ],
-          ],
-        ),
-      );
-    }
 
     // ── Invest Knowledge card ──────────────────────────────────────────────
     final investCard = Container(
@@ -641,7 +396,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                   widget.research.isMaxLevel
                       ? 'Mastery complete. This discipline is fully unlocked.'
                       : nrAvailBlueprints == 0
-                          ? 'No volumes available.\nAssemble pages first.'
+                          ? 'No volumes available.\nVisit a Library mine.'
                           : 'Already at maximum level for current tier.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -682,10 +437,6 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                   const SizedBox(height: 12),
                   heroCard,
                   kEldritchDivider(kGold),
-                  if (assemblyCard != null) ...[
-                    assemblyCard,
-                    const SizedBox(height: 4),
-                  ],
                   investCard,
                   const SizedBox(height: 4),
                   _buildDisciplineCard(widget.research),
@@ -901,64 +652,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     );
   }
 
-  // ── Library search ───────────────────────────────────────────────────────────
-
-  Future<void> _findNearestLibraries() async {
-    final location = ref.read(locationProvider).valueOrNull;
-    if (location == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Waiting for GPS fix — try again in a moment.')));
-      return;
-    }
-    setState(() => _searchingLibraries = true);
-    try {
-      final result = await ref
-          .read(radarRepositoryProvider)
-          .findNearestLibraries(location.latitude, location.longitude);
-      if (!mounted) return;
-      setState(() {
-        _nearbyLibraries = result.mines;
-        _searchingLibraries = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _searchingLibraries = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not reach server. Try again.')));
-    }
-  }
-
-
   // ── Actions ──────────────────────────────────────────────────────────────────
-
-  Future<void> _assemble(int? pageId) async {
-    if (pageId == null) return;
-    try {
-      await ref
-          .read(blueprintPagesRepositoryProvider)
-          .assemble(pageId);
-      ref.invalidate(blueprintPagesProvider);
-      ref.invalidate(researchProvider);
-      ref.invalidate(userProvider);
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        builder: (ctx) => CustomDialog(
-          title: AppLocalizations.of(context)!.translate('congrats'),
-          description: 'Blueprint volume assembled!',
-          buttonText: 'Okay',
-          images: [],
-          callback: () {},
-        ),
-      );
-    } on AppError catch (err) {
-      if (!mounted) return;
-      err.show(context);
-    } catch (err) {
-      debugPrint('_assemble unexpected error: $err');
-    }
-  }
 
   void _studyResearch(context, researchId) async {
     _user = await ApiProvider().getStoredUser();
@@ -1002,11 +696,9 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
             (response['costs'] ?? [0.1, 0.1, 0.1]) as List);
 
         // Refresh all providers that depend on invest outcome:
-        // - researchProvider: updates nr_invested, crafting_level, pages_owned
-        // - blueprintPagesProvider: volumes consumed
+        // - researchProvider: updates nr_invested, crafting_level
         // - userProvider: coins, XP, stats
         ref.invalidate(researchProvider);
-        ref.invalidate(blueprintPagesProvider);
         ref.invalidate(userProvider);
 
         if (!mounted) return;

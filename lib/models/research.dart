@@ -43,18 +43,9 @@ class Research {
   /// Mirrors blueprint.nr; provided here for convenience.
   int volumesOwned = 0;
 
-  /// How many pages are required to assemble one volume for this research node.
-  ///
-  /// Lives on the research table, scales with tree depth via P(n) = 4 × n^1.8.
-  /// Flutter reads it from the API — never hardcode it.
+  /// Maximum volumes the player may offer in a Blueprint Swap for this discipline.
+  /// Formula: round(4 × (craftingLevel + 1) ^ 1.8) — supplied by the API.
   int pagesRequired = 5;
-
-  /// page_id to pass to POST /api/blueprint/assemble. Null if no pages exist yet.
-  int? pageId;
-
-  /// How many blueprint pages the player holds for this tech.
-  /// Comes directly from the tech node — no second endpoint needed.
-  int pagesOwned = 0;
 
   /// Up to 6 craftable recipes unlocked by this tech. Drives the 3×2 grid.
   List<TechRecipe> recipes = [];
@@ -116,20 +107,8 @@ class Research {
     volumesOwned =
         int.tryParse((json['volumes_owned'] ?? 0).toString()) ?? 0;
 
-    final rawPageId = json['page_id'];
-    pageId = rawPageId != null
-        ? int.tryParse(rawPageId.toString())
-        : null;
-
-    // pages_required now lives on the research node (power-law per depth).
-    // Fall back to blueprint.pagesRequired for old API responses that don't
-    // yet include the field at the node level.
-    pagesRequired = int.tryParse(
-            (json['pages_required'] ?? blueprint.pagesRequired).toString()) ??
-        blueprint.pagesRequired;
-
-    pagesOwned =
-        int.tryParse((json['pages_owned'] ?? 0).toString()) ?? 0;
+    pagesRequired =
+        int.tryParse((json['pages_required'] ?? 5).toString()) ?? 5;
 
     final rawRecipes = json['recipes'];
     if (rawRecipes is List) {

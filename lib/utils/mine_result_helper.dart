@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app_localizations.dart';
 import '../models/mine_detail_response.dart';
-import '../providers/blueprint_pages_provider.dart';
 import '../providers/research_provider.dart';
 import '../providers/user_provider.dart';
 import '../widgets/custom_dialog.dart';
@@ -51,10 +50,10 @@ abstract class MineResultHelper {
 
     if (delayed) {
       Timer(const Duration(seconds: 1), () {
-        if (context.mounted) _showDialog(context, mineId, comment, images, onDismiss);
+        if (context.mounted) _showDialog(context, mineId, comment, images, result, onDismiss);
       });
     } else {
-      if (context.mounted) _showDialog(context, mineId, comment, images, onDismiss);
+      if (context.mounted) _showDialog(context, mineId, comment, images, result, onDismiss);
     }
   }
 
@@ -62,21 +61,20 @@ abstract class MineResultHelper {
 
   /// Invalidates the providers that may have changed as a result of the visit.
   ///
-  /// userProvider        — coins and XP always change.
-  /// blueprintPagesProvider
-  /// researchProvider    — only when blueprint pages were dropped;
-  ///                        avoids an unnecessary API round-trip on regular mines.
+  /// userProvider     — coins and XP always change.
+  /// researchProvider — only when blueprint volumes were dropped (including
+  ///                    swap-fulfilled ones); avoids a round-trip on regular mines.
   static void _invalidateProviders(WidgetRef ref, MineDetailResponse result) {
     ref.invalidate(userProvider);
 
     if (result.blueprints.isNotEmpty) {
-      ref.invalidate(blueprintPagesProvider);
       ref.invalidate(researchProvider);
     }
   }
 
   /// Builds the ordered loot image grid: items first, then materials, then
-  /// blueprint pages (same order as the server populates the arrays).
+  /// blueprint volumes (same order as the server populates the arrays).
+  /// Swap-fulfilled blueprints are included in the same grid.
   static List<Image> _buildImages(MineDetailResponse result) {
     final images = <Image>[];
 
@@ -104,14 +102,22 @@ abstract class MineResultHelper {
     int mineId,
     String comment,
     List<Image> images,
+    MineDetailResponse result,
     VoidCallback? onDismiss,
   ) {
     final loc = AppLocalizations.of(context);
     final title       = loc?.translate('congrats')         ?? 'Congrats';
     final foundPrefix = loc?.translate('you_found_point')  ?? 'You mined successfully Point';
-    final description = comment.isNotEmpty
+
+    // Build description — append swap fulfilment notice if applicable
+    final swapBlueprints = result.blueprints.where((b) => b.source == 'swap').toList();
+    String description = comment.isNotEmpty
         ? '$foundPrefix $mineId, $comment'
         : '$foundPrefix $mineId';
+    if (swapBlueprints.isNotEmpty) {
+      final names = swapBlueprints.map((b) => '${b.name} ×${b.nr}').join(', ');
+      description += '\n\nYour swap arrived: $names';
+    }
 
     showDialog(
       context: context,
