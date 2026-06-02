@@ -287,11 +287,28 @@ class _PoiMapState extends ConsumerState<PoiMap>
       _mineUid = selectedMine.properties.uid;
     });
 
-    for (var img in _pois[idx].properties.thumbnails) {
-      _thumbnails.add(img);
-    }
+    // Fetch full mine details (including player photos) from the API.
+    // The radar response is a bulk sweep and does not include pictures.
+    _fetchMineDetails(selectedMine.id);
+  }
 
-    return;
+  /// Fetches landmark pictures for [mineId] from GET /landmark/{mineId}
+  /// and updates [_thumbnails] with any player-uploaded photos.
+  void _fetchMineDetails(int mineId) async {
+    try {
+      final response = await _apiProvider.get('/landmark/$mineId');
+      final pics = (response['pictures'] as List?) ?? [];
+      if (!mounted) return;
+      setState(() {
+        _thumbnails.clear();
+        for (final pic in pics) {
+          final thumb = pic['thumbnail'] as String?;
+          if (thumb != null && thumb.isNotEmpty) _thumbnails.add(thumb);
+        }
+      });
+    } catch (e) {
+      debugPrint('_fetchMineDetails error: $e');
+    }
   }
 
   // // Infowindow generator
@@ -897,7 +914,6 @@ class _PoiMapState extends ConsumerState<PoiMap>
   }
 
   Widget _myCustomPopup(BuildContext context) {
-    final hasImages = _images.isNotEmpty || _thumbnails.isNotEmpty;
     final isCreator = _mineUid == _user.details.id;
 
     return Positioned(
@@ -949,10 +965,39 @@ class _PoiMapState extends ConsumerState<PoiMap>
                 ),
                 const SizedBox(height: 6),
 
-                // ── header: title + close ─────────────────────────────
+                // ── header: title + photo count + close ──────────────
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(child: popupTitle()),
+                    if (_thumbnails.isNotEmpty)
+                      Container(
+                        margin: const EdgeInsets.only(top: 2, right: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: kGold.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                              color: kGold.withValues(alpha: 0.4), width: 1),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.photo_library_outlined,
+                                color: kGold, size: 13),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${_thumbnails.length}',
+                              style: TextStyle(
+                                  color: kGold,
+                                  fontSize: 12,
+                                  fontFamily: 'Open Sans',
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
                     IconButton(
                       icon: const Icon(Icons.close, color: Colors.white54),
                       onPressed: _closePopup,
@@ -1013,16 +1058,14 @@ class _PoiMapState extends ConsumerState<PoiMap>
                       style: TextStyle(
                           color: Colors.white38, fontFamily: 'Open Sans')),
 
-                // ── images strip — player uploads or poi placeholder ──
+                // ── photo gallery ─────────────────────────────────────
                 const SizedBox(height: 10),
                 SizedBox(
-                  height: 100,
-                  child: hasImages
-                      ? ListView(
-                          scrollDirection: Axis.horizontal,
-                          children: _loadedImages(),
-                        )
-                      : _poiPlaceholder(),
+                  height: 140,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: _loadedImages(),
+                  ),
                 ),
 
                 const SizedBox(height: 14),
@@ -1367,61 +1410,84 @@ class _PoiMapState extends ConsumerState<PoiMap>
   }
 
   /// Returns the asset path for the poi placeholder image matching [ico].
-  String _placeholderAsset(String ico) {
-    const base = 'assets/images/pois';
-    switch (ico) {
-      case '1': return '$base/mine01.png';      // Metal
-      case '2': return '$base/woods01.png';      // Wood
-      case '3': return '$base/leather01.png';    // Leather
-      case '6': return '$base/ruins01.png';      // Ruins
-      case '7': return '$base/library01.png';    // Library
-      case '8': return '$base/trader01.png';     // Trader
-      default:  return '$base/mine01.png';
-    }
+  /// Returns a photo tile for the POI type illustration.
+  /// Filename: assets/images/pois/{ico}_{variant}.png
+  /// Variant is seeded by mineId (stable per point, no flicker).
+  /// Falls back to _01 if the chosen variant doesn't exist yet.
+  Widget _poiAssetTile(String ico, int mineId) {
+    final variant = (math.Random(mineId).nextInt(2) + 1)
+        .toString()
+        .padLeft(2, '0');
+    final path = 'assets/images/pois/${ico}_$variant.png';
+    final fallback = 'assets/images/pois/${ico}_01.png';
+    return _photoTile(
+      Image.asset(
+        path,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) =>
+            Image.asset(fallback, fit: BoxFit.cover),
+      ),
+    );
   }
 
-  /// Full-width placeholder shown when no player photos exist.
-  Widget _poiPlaceholder() {
-    final ico = isInPoisList(_mineIdx)
-        ? (_pois[_mineIdx].properties.ico ?? '0')
-        : '0';
+/// Rounded image tile used in the POI photo strip.
+  Widget _photoTile(Widget imageChild) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: Image.asset(
-        _placeholderAsset(ico),
-        width: double.infinity,
-        fit: BoxFit.cover,
+      borderRadius: BorderRadius.circular(10),
+      child: SizedBox(
+        width: 140,
+        height: 140,
+        child: imageChild,
       ),
     );
   }
 
   List<Widget> _loadedImages() {
-    //print('_loadedImages');
-    //print(_images.length);
-    //print(_thumbnails.length);
-    //ignore: omit_local_variable_types
     List<Widget> list = [];
-    list.add(SizedBox(width: 10));
-    if (_images.length > 0) {
-      for (var file in _images) {
-        list.add(
-          Image.file(
-            File(file.path),
-            scale: 7,
-          ),
-        );
-        list.add(SizedBox(width: 10));
-      }
+    list.add(const SizedBox(width: 4));
+
+    // Locally picked / captured images (pending upload)
+    for (var file in _images) {
+      list.add(_photoTile(
+        Image.file(File(file.path), fit: BoxFit.cover),
+      ));
+      list.add(const SizedBox(width: 8));
     }
 
-    if (_thumbnails.length > 0) {
-      for (var thumb in _thumbnails) {
-        list.add(
-          Image.network("https://${GlobalConstants.apiHostUrl}$thumb"),
-          //NetworkImage("https://${GlobalConstants.apiHostUrl}$thumb"),
-        );
-        list.add(SizedBox(width: 10));
-      }
+    // Server thumbnails uploaded by any player
+    for (var thumb in _thumbnails) {
+      list.add(_photoTile(
+        Image.network(
+          "https://${GlobalConstants.apiHostUrl}$thumb",
+          fit: BoxFit.cover,
+          loadingBuilder: (_, child, progress) => progress == null
+              ? child
+              : Container(
+                  color: const Color(0xff111111),
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xffe6a04e),
+                      strokeWidth: 2,
+                    ),
+                  ),
+                ),
+          errorBuilder: (_, __, ___) => Container(
+            color: const Color(0xff111111),
+            child: const Icon(Icons.broken_image_outlined,
+                color: Colors.white24, size: 32),
+          ),
+        ),
+      ));
+      list.add(const SizedBox(width: 8));
+    }
+
+    // No player photos yet — show the POI type illustration as a placeholder tile
+    if (_images.isEmpty && _thumbnails.isEmpty && isInPoisList(_mineIdx)) {
+      list.add(_poiAssetTile(
+        _pois[_mineIdx].properties.ico,
+        _mineId,
+      ));
+      list.add(const SizedBox(width: 8));
     }
 
     return list;
