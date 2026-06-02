@@ -24,13 +24,12 @@ import '../../models/user.dart';
 import '../../models/visitevent.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/api_provider.dart';
-import '../../providers/blueprint_pages_provider.dart';
 import '../../providers/location_provider.dart';
 import '../../providers/mine_repository.dart';
 import '../../providers/radar_repository.dart';
-import '../../providers/research_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/visit_provider.dart';
+import '../../utils/mine_result_helper.dart';
 import '../battle/rock_paper_scissors.dart';
 import '../../shared/constants.dart';
 import '../../widgets/custom_app_bar.dart';
@@ -658,38 +657,12 @@ class _PoiMapState extends ConsumerState<PoiMap>
 
   ///
   Future _goMine(int idx) async {
-    final mineId = _pois[idx].id;
+    final mineId      = _pois[idx].id;
     final mineComment = _pois[idx]?.properties?.comment ?? '';
-    // Capture ico before marking depleted — needed for Library-specific logic
-    final String mineIco = _pois[idx].properties?.ico ?? '0';
-    final bool isLibrary = mineIco == GlobalConstants.pointLibrary; // '7'
     if (mineId < 1) return;
 
     try {
-      final result =
-          await ref.read(mineRepositoryProvider).getMine(mineId);
-
-      //ignore: omit_local_variable_types
-      final List<Image> imagesArr = [];
-
-      for (final item in result.items) {
-        if (item.img.isNotEmpty) {
-          imagesArr.add(Image.asset('assets/images/items/${item.img}'));
-        }
-      }
-      for (final mat in result.materials) {
-        if (mat.img.isNotEmpty) {
-          imagesArr.add(Image.asset('assets/images/materials/${mat.img}'));
-        }
-      }
-      for (final bp in result.blueprints) {
-        // Blueprint.blank() has img == 'nothing.png'; skip it
-        if (bp.img.isNotEmpty && bp.img != 'nothing.png') {
-          imagesArr.add(Image.asset('assets/images/blueprints/${bp.img}'));
-        }
-      }
-      // Note: converted manuscript pages are merged into result.blueprints
-      // server-side, so they appear in the grid above automatically.
+      final result = await ref.read(mineRepositoryProvider).getMine(mineId);
 
       // Mark this point as depleted on the local map
       _pois[idx].properties.ico = '0';
@@ -704,32 +677,15 @@ class _PoiMapState extends ConsumerState<PoiMap>
         _images.clear();
       });
 
-      // Refresh user coins/xp in drawer
-      ref.invalidate(userProvider);
-
-      // Library visit OR manuscript conversion: refresh page counts and research.
-      // isLibrary catches the common case; manuscriptsConverted > 0 is a
-      // belt-and-suspenders fallback if ico parsing ever returns unexpected data.
-      if (isLibrary || result.manuscriptsConverted > 0) {
-        ref.invalidate(blueprintPagesProvider);
-        ref.invalidate(researchProvider);
-      }
-
-      Timer(Duration(seconds: 1), () {
-        if (!mounted) return;
-        final mining =
-            AppLocalizations.of(context)!.translate('you_found_point');
-        showDialog(
-          context: context,
-          builder: (context) => CustomDialog(
-            title: AppLocalizations.of(context)!.translate('congrats'),
-            description: '$mining $mineId, $mineComment',
-            buttonText: 'Okay',
-            images: imagesArr,
-            callback: () {},
-          ),
-        );
-      });
+      // Invalidate providers and show the Congrats dialog.
+      // delayed: true — give the map animation 1 second to settle first.
+      MineResultHelper.handle(
+        context, ref,
+        mineId:  mineId,
+        result:  result,
+        comment: mineComment,
+        delayed: true,
+      );
     } on AppError catch (err) {
       Timer(Duration(seconds: 1), () {
         if (!mounted) return;
@@ -769,16 +725,14 @@ class _PoiMapState extends ConsumerState<PoiMap>
           ? '${(meters / 1000).toStringAsFixed(1)}km'
           : '${meters.toStringAsFixed(1)}m';
 
-      final lastVisited = (timeFromLastMine > 3600)
+      final cooldownStr = (timeFromLastMine > 3600)
           ? '${(timeFromLastMine / 3600).toStringAsFixed(1)}h'
           : ((timeFromLastMine > 60)
-              ? '${(timeFromLastMine / 60).toStringAsFixed(1)}m'
+              ? '${(timeFromLastMine / 60).toStringAsFixed(1)}min'
               : '${timeFromLastMine}s');
-      info = "$showDistanceIn ";
+      info = showDistanceIn;
       if (timeFromLastMine < 65535) {
-        info += " $lastVisited";
-      } else {
-        info += "";
+        info += "  ⏱ $cooldownStr";
       }
 
       //log.d(_pois[_mineIdx].properties.ico);

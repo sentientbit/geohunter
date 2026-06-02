@@ -1,7 +1,6 @@
 ///
 import 'dart:async';
 import 'dart:ui';
-import 'package:encrypt/encrypt.dart' as enq;
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_offline/flutter_offline.dart';
@@ -12,13 +11,12 @@ import 'package:loading_overlay/loading_overlay.dart';
 ///
 import '../models/app_error.dart';
 import '../models/mine.dart';
-import '../models/secret.dart';
 import '../models/user.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/api_provider.dart';
-import '../providers/blueprint_pages_provider.dart';
 import '../providers/location_provider.dart';
-import '../providers/research_provider.dart';
+import '../providers/mine_repository.dart';
+import '../utils/mine_result_helper.dart';
 import '../screens/map/map_explore.dart' show PoiMap;
 import '../shared/constants.dart';
 import '../text_style.dart';
@@ -847,120 +845,29 @@ class _PlacesState extends ConsumerState<PlacesPage> {
     });
   }
 
-  Future _remoteMine() async {
-    //ignore: omit_local_variable_types
-    List<Image> imagesArr = [];
-    _getReward(mine.id, "", 0).then((mineResponse) {
-      if (mineResponse == null || mineResponse["success"] != true) {
-        // Already showed message, just return
-        return;
-      }
-
-      // Image.network("https://${GlobalConstants.apiHostUrl}/img/items/${value['img']}"),
-      if (mineResponse["items"].isNotEmpty) {
-        for (dynamic value in mineResponse["items"]) {
-          if (value.containsKey("img") && value["img"] != "") {
-            mine.addItem(value);
-            imagesArr.add(
-              Image.asset("assets/images/items/${value['img']}"),
-            );
-          }
-        }
-      }
-
-      for (dynamic value in mineResponse["materials"]) {
-        if (value.containsKey("img") && value["img"] != "") {
-          mine.addMaterial(value);
-          imagesArr.add(
-            Image.asset("assets/images/materials/${value['img']}"),
-          );
-        }
-      }
-
-      final rawBlueprints =
-          (mineResponse["blueprints"] as List?) ?? <dynamic>[];
-      for (dynamic value in rawBlueprints) {
-        if (value.containsKey("img") && value["img"] != "") {
-          mine.addBlueprint(value);
-          imagesArr.add(
-            Image.asset("assets/images/blueprints/${value['img']}"),
-          );
-        }
-      }
-
-      if (mineResponse.containsKey("coins")) {
-        //print('Treasury is now ${mineResponse["coins"]}');
-        _user.details.coins =
-            double.tryParse(mineResponse["coins"].toString()) ?? 0.0;
-      }
-
-      // Refresh blueprint page counts when pages were dropped.
-      // Mirrors the same logic in map_explore.dart foundMine().
-      final manuscriptsConverted =
-          ((mineResponse["manuscripts_converted"] as List?) ?? []).length;
-      if (rawBlueprints.isNotEmpty || manuscriptsConverted > 0) {
-        ref.invalidate(blueprintPagesProvider);
-        ref.invalidate(researchProvider);
-      }
+  Future<void> _remoteMine() async {
+    try {
+      final result = await ref
+          .read(mineRepositoryProvider)
+          .getMineRemote(mine.id);
 
       if (!mounted) return;
-      showDialog(
-        context: context,
-        builder: (context) => CustomDialog(
-          title: "Congrats",
-          description: 'You mined succesfully Point ${mine.id}',
-          buttonText: "Okay",
-          images: imagesArr,
-          callback: () {
-            loadPlaces();
-          },
-        ),
+      setState(() => _isLoading = false);
+
+      MineResultHelper.handle(
+        context, ref,
+        mineId:    mine.id,
+        result:    result,
+        onDismiss: loadPlaces,
       );
-    });
-  }
-
-  Future _getReward(int mineId, String admobType, int admobAmount) async {
-    final plainText =
-        '{"mine_id":$mineId,"type":"$admobType","amount":$admobAmount}';
-    final secret = await SecretLoader(secretPath: "assets/secrets.json").load();
-    final key = enq.Key.fromBase64(secret.enqKey);
-
-    /// iv doesn't necessarily have to be SECRET (it's just a salt),
-    /// but it MUST be cryptographically random AND different EACH TIME
-    /// you begin a round of AES encryption
-    final rnd = enq.IV.fromSecureRandom(32);
-
-    final rndstr = rnd.base64;
-    final ivstr = rndstr
-        .replaceAll('+', 'p')
-        .replaceAll('=', 'e')
-        .replaceAll('/', 's')
-        .substring(0, 16);
-    final iv = enq.IV.fromUtf8(ivstr);
-
-    final encrypter = enq.Encrypter(enq.AES(key, mode: enq.AESMode.cbc));
-    final encryptedpay = encrypter.encrypt(plainText, iv: iv);
-    final enc = encryptedpay.base64;
-    //log.d(plainText);
-    //print(ivstr);
-    //print(enc);
-
-    dynamic response;
-    try {
-      response = await _apiProvider
-          .get("/mine?mine_id=$mineId&enc=${Uri.encodeComponent(ivstr + enc)}");
     } on AppError catch (err) {
-      if (mounted) err.show(context);
-      if (mounted) setState(() => _isLoading = false);
-      return response;
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      err.show(context);
     } catch (err) {
-      debugPrint('_getReward unexpected error: $err');
+      debugPrint('_remoteMine unexpected error: $err');
       if (mounted) setState(() => _isLoading = false);
-      return response;
     }
-
-    if (mounted) setState(() => _isLoading = false);
-    return response;
   }
 
   dynamic remoteClaimTextWidget(Mine mine) {
