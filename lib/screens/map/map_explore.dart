@@ -1013,17 +1013,17 @@ class _PoiMapState extends ConsumerState<PoiMap>
                       style: TextStyle(
                           color: Colors.white38, fontFamily: 'Open Sans')),
 
-                // ── images strip (only when images exist) ─────────────
-                if (hasImages) ...[
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 100,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: _loadedImages(),
-                    ),
-                  ),
-                ],
+                // ── images strip — player uploads or poi placeholder ──
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 100,
+                  child: hasImages
+                      ? ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: _loadedImages(),
+                        )
+                      : _poiPlaceholder(),
+                ),
 
                 const SizedBox(height: 14),
 
@@ -1364,6 +1364,35 @@ class _PoiMapState extends ConsumerState<PoiMap>
     // await _createMarkerImageFromAsset(context, 6);
     // await _createMarkerImageFromAsset(context, 7);
     // await _createMarkerImageFromAsset(context, 8);
+  }
+
+  /// Returns the asset path for the poi placeholder image matching [ico].
+  String _placeholderAsset(String ico) {
+    const base = 'assets/images/pois';
+    switch (ico) {
+      case '1': return '$base/mine01.png';      // Metal
+      case '2': return '$base/wood01.png';       // Wood
+      case '3': return '$base/leather01.png';    // Leather
+      case '6': return '$base/ruins01.png';      // Ruins
+      case '7': return '$base/library01.png';    // Library
+      case '8': return '$base/trader01.png';     // Trader
+      default:  return '$base/mine01.png';
+    }
+  }
+
+  /// Full-width placeholder shown when no player photos exist.
+  Widget _poiPlaceholder() {
+    final ico = isInPoisList(_mineIdx)
+        ? (_pois[_mineIdx].properties.ico ?? '0')
+        : '0';
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.asset(
+        _placeholderAsset(ico),
+        width: double.infinity,
+        fit: BoxFit.cover,
+      ),
+    );
   }
 
   List<Widget> _loadedImages() {
