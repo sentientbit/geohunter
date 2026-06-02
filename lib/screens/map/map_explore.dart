@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'package:flame_audio/bgm.dart';
 import 'package:flutter/material.dart';
 import 'package:geohunter/fonts/rpg_awesome_icons.dart';
 import 'package:latlong2/latlong.dart';
@@ -17,14 +18,17 @@ import 'package:go_router/go_router.dart';
 import '../../app_localizations.dart';
 import '../../models/app_error.dart';
 import '../../models/location.dart';
+import '../../shared/app_theme.dart';
 import '../../models/mine.dart';
 import '../../models/user.dart';
 import '../../models/visitevent.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/api_provider.dart';
+import '../../providers/blueprint_pages_provider.dart';
 import '../../providers/location_provider.dart';
 import '../../providers/mine_repository.dart';
 import '../../providers/radar_repository.dart';
+import '../../providers/research_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/visit_provider.dart';
 import '../battle/rock_paper_scissors.dart';
@@ -62,7 +66,7 @@ class PoiMap extends ConsumerStatefulWidget {
 }
 
 class _PoiMapState extends ConsumerState<PoiMap>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   // final Logger log = Logger(
   //     printer: PrettyPrinter(
   //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
@@ -91,8 +95,9 @@ class _PoiMapState extends ConsumerState<PoiMap>
   /// var secureStorage = await _storage.readAll();
   final List<PinLocation> _pinsToBeAdded = [];
 
-  /// map style type is 0 for day 1 for night 2 for automatic gps
-  int _mapStyleState = 2;
+  /// 0 = day (light tiles)   1 = night (dark tiles)
+  /// Initialised from system brightness in initState.
+  int _mapStyleState = 0;
 
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -122,6 +127,10 @@ class _PoiMapState extends ConsumerState<PoiMap>
   //int _screenRebuilded = 1;
   final List<File> _images = [];
   final List<String> _thumbnails = [];
+
+  /// Background music player — owned here so it survives for the entire
+  /// session (SplashScreen is disposed on navigation, so it can't own it).
+  final Bgm _musicBg = Bgm();
 
   Mine _mine = Mine.blank();
   int _mineIdx = -1;
@@ -349,6 +358,15 @@ class _PoiMapState extends ConsumerState<PoiMap>
   void initState() {
     super.initState();
 
+    _musicBg.initialize();
+
+    // Set initial theme from phone system brightness (dark mode → night tiles).
+    _mapStyleState =
+        WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+                Brightness.dark
+            ? 1
+            : 0;
+
     _goToRemoteLocation = widget.goToRemoteLocation;
     _remoteLat = widget.latitude;
     _remoteLng = widget.longitude;
@@ -362,14 +380,41 @@ class _PoiMapState extends ConsumerState<PoiMap>
 
     dayAndNight(_userLocation);
 
+    // Refresh user profile whenever the app returns to the foreground.
+    // This clears the daily-reward badge if the player claimed on the web
+    // portal while the app was backgrounded.
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(userProvider);
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     timer?.cancel();
     _pois.clear();
+    _musicBg.dispose();
     //if (mapController != null) { mapController.removeListener(_onMapChanged); }
     super.dispose();
+  }
+
+  /// Apply music on/off based on user settings.
+  /// Safe to call repeatedly — guards against double-play and double-stop.
+  void _applyMusicSetting(User user) {
+    if (user.details.settings.isMusicOn) {
+      if (!_musicBg.isPlaying) {
+        _musicBg.play('audio/music/aWayThrough.mp3');
+      }
+    } else {
+      if (_musicBg.isPlaying) {
+        _musicBg.stop();
+      }
+    }
   }
 
   // Upload all the pins from when you were offline
@@ -415,81 +460,108 @@ class _PoiMapState extends ConsumerState<PoiMap>
     var isDayTime =
         SunCalc.isDaytime(datenow, astroResult.sunrise, astroResult.sunset);
 
-    if (_mapStyleState == 0 /* day */) {
-      setState(() {
-        _customAppBarTextColor = Colors.black;
-        _customAppBarIconColor = Colors.black;
-        _systemHeaderBrightness = Brightness.light;
-        mapType = 'outdoors';
-      });
-    } else if (_mapStyleState == 1 /* night */) {
+    if (_mapStyleState == 1 /* night */) {
       setState(() {
         _customAppBarTextColor = Colors.white;
         _customAppBarIconColor = Colors.white;
         _systemHeaderBrightness = Brightness.dark;
         mapType = 'dark';
       });
-    } else if (_mapStyleState == 2 /* auto */) {
-      if (isDayTime == true) {
-        /// Day
-        setState(() {
-          _customAppBarTextColor = Colors.black;
-          _customAppBarIconColor = Colors.black;
-          _systemHeaderBrightness = Brightness.light;
-          mapType = 'outdoors';
-        });
-      } else {
-        /// Night
-        setState(() {
-          _customAppBarTextColor = Colors.white;
-          _customAppBarIconColor = Colors.white;
-          _systemHeaderBrightness = Brightness.dark;
-          mapType = 'dark';
-        });
-      }
-    } else if (_mapStyleState == 3 /* terrain */) {
-      /// Night
+    } else /* day (0) or any unknown state — default to light */ {
       setState(() {
-        _customAppBarTextColor = Colors.white;
-        _customAppBarIconColor = Colors.white;
-        _systemHeaderBrightness = Brightness.dark;
-        mapType = 'terrain';
+        _customAppBarTextColor = Colors.black;
+        _customAppBarIconColor = Colors.black;
+        _systemHeaderBrightness = Brightness.light;
+        mapType = 'outdoors';
       });
     }
   }
 
+  /// Human-readable name for a POI type icon value.
+  String _mineTypeName(String ico) {
+    switch (ico) {
+      case GlobalConstants.pointMine:    return 'Mine';
+      case GlobalConstants.pointWood:    return 'Wood';
+      case GlobalConstants.pointBattle:  return 'Battle';
+      case GlobalConstants.pointBoy:     return 'Campfire';
+      case GlobalConstants.pointGirl:    return 'Campfire';
+      case GlobalConstants.pointRuins:   return 'Ruins';
+      case GlobalConstants.pointLibrary: return 'Library';
+      case GlobalConstants.pointTrader:  return 'Trader';
+      default:                           return 'Point';
+    }
+  }
+
+  /// Format a decimal degree value to DMS string, e.g. 45°37'34.3"N
+  String _toDMS(double decimal, bool isLat) {
+    final abs = decimal.abs();
+    final deg = abs.toInt();
+    final minFull = (abs - deg) * 60;
+    final min = minFull.toInt();
+    final sec = (minFull - min) * 60;
+    final dir = isLat
+        ? (decimal >= 0 ? 'N' : 'S')
+        : (decimal >= 0 ? 'E' : 'W');
+    return "$deg°${min.toString().padLeft(2, '0')}'${sec.toStringAsFixed(1)}\"$dir";
+  }
+
   Widget popupTitle() {
-    var dots = ".";
-    dots = dots * _pinsToBeAdded.length;
-    if (_mineId > 0) {
-      return Row(
-        children: <Widget>[
+    final pending = '.' * _pinsToBeAdded.length;
+
+    if (_mineId > 0 && _mineIdx >= 0 && _mineIdx < _pois.length) {
+      final typeName = _mineTypeName(_pois[_mineIdx].properties.ico);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
           Text(
-            "Point $_mineId ",
-            style: TextStyle(
-              color: GlobalConstants.appFg,
+            typeName,
+            style: const TextStyle(
+              color: Colors.white,
               fontFamily: 'Cormorant SC',
-              fontSize: 18,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
           ),
           Text(
-            " - User $_mineUid",
+            'Point $_mineId',
             style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade800,
+              color: kSilverDim,
+              fontFamily: 'Open Sans',
+              fontSize: 12,
+              letterSpacing: 1.2,
             ),
           ),
         ],
       );
     }
-    return Text(
-      "Add New Point $dots",
-      style: TextStyle(
-        color: GlobalConstants.appFg,
-        fontFamily: 'Cormorant SC',
-        fontWeight: FontWeight.bold,
-      ),
+
+    // New point — show user's current GPS coords
+    final lat = _toDMS(_userLocation.latitude, true);
+    final lng = _toDMS(_userLocation.longitude, false);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '$lat  $lng',
+          style: const TextStyle(
+            color: Colors.white,
+            fontFamily: 'Open Sans',
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Text(
+          'New Point$pending',
+          style: TextStyle(
+            color: kSilverDim,
+            fontFamily: 'Open Sans',
+            fontSize: 12,
+            letterSpacing: 1.2,
+          ),
+        ),
+      ],
     );
   }
 
@@ -511,10 +583,7 @@ class _PoiMapState extends ConsumerState<PoiMap>
 
   _onMapTypeButtonPressed() {
     setState(() {
-      _mapStyleState++;
-      if (_mapStyleState >= 4) {
-        _mapStyleState = 0;
-      }
+      _mapStyleState = _mapStyleState == 0 ? 1 : 0; // toggle day ↔ night
       dayAndNight(_userLocation);
     });
   }
@@ -549,9 +618,14 @@ class _PoiMapState extends ConsumerState<PoiMap>
   LatLng _centerOfMap() {
     if (_goToRemoteLocation == true) {
       _showRecenterBtn = true;
+      // Sync _displayWindowCenter and _mapZoom to the remote location BEFORE
+      // calling _loadPois — the bounding-box math inside _loadPois uses
+      // _displayWindowCenter, so if it still points at the GPS position the
+      // radar request fires with the wrong viewport and returns no POIs.
+      _displayWindowCenter = LatLng(_remoteLat, _remoteLng);
+      _mapZoom = 16;
       _loadPois(LtLn(_remoteLat, _remoteLng));
       _goToRemoteLocation = false;
-      _mapZoom = 16;
       // initialCenter races against the GPS listener in flutter_map 8.x —
       // belt-and-suspenders: also move via controller after first frame.
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -569,6 +643,9 @@ class _PoiMapState extends ConsumerState<PoiMap>
   Future _goMine(int idx) async {
     final mineId = _pois[idx].id;
     final mineComment = _pois[idx]?.properties?.comment ?? '';
+    // Capture ico before marking depleted — needed for Library-specific logic
+    final String mineIco = _pois[idx].properties?.ico ?? '0';
+    final bool isLibrary = mineIco == GlobalConstants.pointLibrary; // '7'
     if (mineId < 1) return;
 
     try {
@@ -594,6 +671,8 @@ class _PoiMapState extends ConsumerState<PoiMap>
           imagesArr.add(Image.asset('assets/images/blueprints/${bp.img}'));
         }
       }
+      // Note: converted manuscript pages are merged into result.blueprints
+      // server-side, so they appear in the grid above automatically.
 
       // Mark this point as depleted on the local map
       _pois[idx].properties.ico = '0';
@@ -610,6 +689,14 @@ class _PoiMapState extends ConsumerState<PoiMap>
 
       // Refresh user coins/xp in drawer
       ref.invalidate(userProvider);
+
+      // Library visit OR manuscript conversion: refresh page counts and research.
+      // isLibrary catches the common case; manuscriptsConverted > 0 is a
+      // belt-and-suspenders fallback if ico parsing ever returns unexpected data.
+      if (isLibrary || result.manuscriptsConverted > 0) {
+        ref.invalidate(blueprintPagesProvider);
+        ref.invalidate(researchProvider);
+      }
 
       Timer(Duration(seconds: 1), () {
         if (!mounted) return;
@@ -709,367 +796,283 @@ class _PoiMapState extends ConsumerState<PoiMap>
       }
     }
 
-    if (meters <= digDistance && timeFromLastMine > _user.details.mining) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              padding: EdgeInsets.only(left: 3, right: 3, top: 10, bottom: 10),
-              backgroundColor: GlobalConstants.appBg,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              side: BorderSide(width: 1, color: Colors.white),
-            ),
-            onPressed: () {
-              if (_pois[_mineIdx].properties.ico == GlobalConstants.pointMine) {
-                _goMine(_mineIdx);
-              } else if (_pois[_mineIdx].properties.ico ==
-                  GlobalConstants.pointWood) {
-                _goMine(_mineIdx);
-              } else if (_pois[_mineIdx].properties.ico ==
-                  GlobalConstants.pointBattle) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => RockPaperScissorsPage(
-                      mineId: _pois[_mineIdx].id,
-                      rndMap: (math.Random.secure().nextInt(2) + 1),
-                    ),
-                  ),
-                );
-              } else if (_pois[_mineIdx].properties.ico ==
-                  GlobalConstants.pointBoy) {
-                _goMine(_mineIdx);
-              } else if (_pois[_mineIdx].properties.ico ==
-                  GlobalConstants.pointGirl) {
-                _goMine(_mineIdx);
-              } else if (_pois[_mineIdx].properties.ico ==
-                  GlobalConstants.pointRuins) {
-                _goMine(_mineIdx);
-              } else if (_pois[_mineIdx].properties.ico ==
-                  GlobalConstants.pointLibrary) {
-                _goMine(_mineIdx);
-              } else if (_pois[_mineIdx].properties.ico ==
-                  GlobalConstants.pointTrader) {
-                _goMine(_mineIdx);
-              }
-            },
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Icon(actionIcon, color: Color(0xffe90e25)),
-                Text(
-                  actionText,
-                  style: TextStyle(
-                    color: Color(0xffe90e25),
-                    fontSize: 16,
-                    fontFamily: 'Cormorant SC',
-                    fontWeight: FontWeight.bold,
-                  ),
+    final bool inRange =
+        meters <= digDistance && timeFromLastMine > _user.details.mining;
+
+    if (inRange) {
+      // In range — action button (Read / Mine / Fight …)
+      return OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          backgroundColor: GlobalConstants.appBg,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          side: const BorderSide(width: 1, color: Colors.white),
+        ),
+        onPressed: () {
+          if (_pois[_mineIdx].properties.ico == GlobalConstants.pointBattle) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => RockPaperScissorsPage(
+                  mineId: _pois[_mineIdx].id,
+                  rndMap: (math.Random.secure().nextInt(2) + 1),
                 ),
-              ],
+              ),
+            );
+          } else {
+            _goMine(_mineIdx);
+          }
+        },
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(actionIcon, color: const Color(0xffe90e25)),
+            const SizedBox(width: 4),
+            Text(
+              actionText,
+              style: const TextStyle(
+                color: Color(0xffe90e25),
+                fontSize: 16,
+                fontFamily: 'Cormorant SC',
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
     } else {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Text(
-            info,
-            style: TextStyle(color: GlobalConstants.appFg),
-          )
-        ],
+      // Out of range — distance indicator (no button)
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          border: Border.all(color: GlobalConstants.appFg.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.near_me_outlined,
+                color: GlobalConstants.appFg.withValues(alpha: 0.6), size: 16),
+            const SizedBox(width: 6),
+            Text(
+              info,
+              style: TextStyle(
+                color: GlobalConstants.appFg.withValues(alpha: 0.8),
+                fontSize: 14,
+                fontFamily: 'Open Sans',
+              ),
+            ),
+          ],
+        ),
       );
     }
   }
 
-  Widget _myCustomPopup(BuildContext context) {
-    return Dialog(
-      backgroundColor: GlobalConstants.appBg,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(GlobalConstants.padding),
-      ),
-      //elevation: 0.0,
-      insetPadding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 10,
+  /// Small icon pill button used in the POI sheet tool row.
+  Widget _sheetIconBtn(IconData icon, String label, VoidCallback onTap) {
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            border: Border.all(color: kGold.withValues(alpha: 0.4)),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: kGold, size: 20),
         ),
-        child: IntrinsicWidth(
-          child: IntrinsicHeight(
+      ),
+    );
+  }
+
+  void _closePopup() {
+    selectPoint(-1, 0, _userLocation, "");
+    setState(() {
+      _infoWindowVisible = false;
+      _textFieldController.text = "";
+      _images.clear();
+    });
+  }
+
+  Widget _myCustomPopup(BuildContext context) {
+    final hasImages = _images.isNotEmpty || _thumbnails.isNotEmpty;
+    final isCreator = _mineUid == _user.details.id;
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xf2050505),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          border: Border(
+            top: BorderSide(color: kGold.withValues(alpha: 0.25), width: 1),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.6),
+              blurRadius: 24,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
             child: Column(
-              children: <Widget>[
-                SizedBox(
-                  height: 10,
-                ),
-                popupTitle(),
-                Column(
-                  children: <Widget>[
-                    TextField(
-                      controller: _textFieldController,
-                      style: TextStyle(color: GlobalConstants.appFg),
-                      decoration: InputDecoration(
-                          hintText: "Comment",
-                          hintStyle: TextStyle(color: Colors.grey),
-                          errorText: _commentIsEmpty == true
-                              ? 'Comment can\'t be empty'
-                              : null),
-                    ),
-                    SizedBox(
-                      height: 10,
-                    ),
-                    _isOnline
-                        ? SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: <Widget>[
-                                OutlinedButton(
-                                  style: OutlinedButton.styleFrom(
-                                    padding: EdgeInsets.only(
-                                        left: 2, right: 2, top: 10, bottom: 10),
-                                    backgroundColor: GlobalConstants.appBg,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10.0),
-                                    ),
-                                    side: BorderSide(
-                                        width: 1, color: Colors.white),
-                                  ),
-                                  onPressed: _takePhoto,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: <Widget>[
-                                      Icon(
-                                        Icons.camera_alt,
-                                        color: Color(0xffe6a04e),
-                                      ),
-                                      Text(
-                                        " Cam",
-                                        style: TextStyle(
-                                            color: Color(0xffe6a04e),
-                                            fontSize: 16,
-                                            fontFamily: 'Cormorant SC',
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                SizedBox(
-                                  width: 10,
-                                ),
-                                OutlinedButton(
-                                  style: OutlinedButton.styleFrom(
-                                    padding: EdgeInsets.only(
-                                        left: 2, right: 2, top: 10, bottom: 10),
-                                    backgroundColor: GlobalConstants.appBg,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10.0),
-                                    ),
-                                    side: BorderSide(
-                                        width: 1, color: Colors.white),
-                                  ),
-                                  onPressed: _loadFromGallery,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: <Widget>[
-                                      Icon(
-                                        Icons.photo,
-                                        color: Color(0xffe6a04e),
-                                      ),
-                                      Text(
-                                        " Pic",
-                                        style: TextStyle(
-                                            color: Color(0xffe6a04e),
-                                            fontSize: 16,
-                                            fontFamily: 'Cormorant SC',
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                SizedBox(
-                                  width: 10,
-                                ),
-                                OutlinedButton(
-                                  style: OutlinedButton.styleFrom(
-                                    padding: EdgeInsets.only(
-                                        left: 2, right: 2, top: 10, bottom: 10),
-                                    backgroundColor: GlobalConstants.appBg,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10.0),
-                                    ),
-                                    side: BorderSide(
-                                        width: 1, color: Colors.white),
-                                  ),
-                                  onPressed: () => launchMapApp(
-                                      _pois[_mineIdx].geometry.coordinates[1],
-                                      _pois[_mineIdx].geometry.coordinates[0]),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: <Widget>[
-                                      Icon(Icons.directions_walk,
-                                          color: Color(0xffe6a04e)),
-                                      Text(
-                                        " Go",
-                                        style: TextStyle(
-                                            color: Color(0xffe6a04e),
-                                            fontSize: 16,
-                                            fontFamily: 'Cormorant SC',
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                SizedBox(
-                                  width: 10,
-                                ),
-                                OutlinedButton(
-                                  style: OutlinedButton.styleFrom(
-                                    padding: EdgeInsets.only(
-                                        left: 2, right: 2, top: 10, bottom: 10),
-                                    backgroundColor: GlobalConstants.appBg,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10.0),
-                                    ),
-                                    side: BorderSide(
-                                        width: 1, color: Colors.white),
-                                  ),
-                                  onPressed: _clearFromGallery,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: <Widget>[
-                                      Icon(
-                                        Icons.delete,
-                                        color: Color(0xffe6a04e),
-                                      ),
-                                      Text(
-                                        " Clear",
-                                        style: TextStyle(
-                                            color: Color(0xffe6a04e),
-                                            fontSize: 16,
-                                            fontFamily: 'Cormorant SC',
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        : Text(
-                            "Offline",
-                            style: TextStyle(color: GlobalConstants.appFg),
-                          ),
-                    SizedBox(
-                      height: 10,
-                    ),
-                    Container(
-                      height: 200,
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: _loadedImages(),
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ── drag handle (swipe down to dismiss) ──────────────
+                GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onVerticalDragEnd: (details) {
+                    if ((details.primaryVelocity ?? 0) > 200) _closePopup();
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white38,
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+
+                // ── header: title + close ─────────────────────────────
+                Row(
+                  children: [
+                    Expanded(child: popupTitle()),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white54),
+                      onPressed: _closePopup,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
                   ],
                 ),
-                SizedBox(
-                  height: 30,
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: <Widget>[
-                    Expanded(
-                      flex: 4,
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.only(
-                              left: 2, right: 2, top: 10, bottom: 10),
-                          backgroundColor: GlobalConstants.appBg,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10.0),
-                          ),
-                          side: BorderSide(width: 1, color: Colors.white),
-                        ),
-                        onPressed: () {
-                          selectPoint(-1, 0, _userLocation, "");
-                          setState(() {
-                            _infoWindowVisible = false;
-                            _textFieldController.text = "";
-                            _images.clear();
-                          });
-                        },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
-                            Icon(
-                              Icons.close,
-                              color: Color(0xffe6a04e),
-                            ),
-                            Text(
-                              "Cancel",
-                              style: TextStyle(
-                                  color: Color(0xffe6a04e),
-                                  fontSize: 16,
-                                  fontFamily: 'Cormorant SC',
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
+                const SizedBox(height: 8),
+
+                // ── comment / name field — creator only ───────────────
+                if (isCreator) ...[
+                  TextField(
+                    controller: _textFieldController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: "Add a note…",
+                      hintStyle: const TextStyle(color: Colors.white38),
+                      enabledBorder: UnderlineInputBorder(
+                        borderSide:
+                            BorderSide(color: kGold.withValues(alpha: 0.4)),
                       ),
+                      focusedBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: kGold),
+                      ),
+                      errorText:
+                          _commentIsEmpty ? "Note can't be empty" : null,
+                      errorStyle: const TextStyle(color: Colors.redAccent),
                     ),
-                    Expanded(
-                      flex: 4,
-                      child: _actionWidget(context),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
+                // ── tool row ──────────────────────────────────────────
+                if (_isOnline)
+                  Row(
+                    children: [
+                      _sheetIconBtn(Icons.camera_alt, "Camera", _takePhoto),
+                      const SizedBox(width: 8),
+                      _sheetIconBtn(Icons.photo, "Gallery", _loadFromGallery),
+                      const SizedBox(width: 8),
+                      _sheetIconBtn(Icons.delete_outline, "Clear images",
+                          _clearFromGallery),
+                      const Spacer(),
+                      if (_mineIdx >= 0 && _mineIdx < _pois.length)
+                        _sheetIconBtn(
+                          Icons.directions_walk,
+                          "Navigate",
+                          () => launchMapApp(
+                            _pois[_mineIdx].geometry.coordinates[1],
+                            _pois[_mineIdx].geometry.coordinates[0],
+                          ),
+                        ),
+                    ],
+                  )
+                else
+                  Text("Offline",
+                      style: TextStyle(
+                          color: Colors.white38, fontFamily: 'Open Sans')),
+
+                // ── images strip (only when images exist) ─────────────
+                if (hasImages) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 100,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: _loadedImages(),
                     ),
+                  ),
+                ],
+
+                const SizedBox(height: 14),
+
+                // ── action + save side by side ────────────────────────
+                Row(
+                  children: [
+                    // Left: action button (in range) or distance (out of range)
+                    Expanded(child: _actionWidget(context)),
+                    const SizedBox(width: 8),
+                    // Right: save / upload — always visible
                     Expanded(
-                      flex: 4,
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.only(
-                              left: 2, right: 2, top: 10, bottom: 10),
-                          backgroundColor: GlobalConstants.appBg,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          backgroundColor: const Color(0x22e6a04e),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10.0),
-                          ),
-                          side: BorderSide(width: 1, color: Colors.white),
+                              borderRadius: BorderRadius.circular(10)),
+                          side: BorderSide(color: kGold, width: 1),
                         ),
                         onPressed: () {
-                          if (_textFieldController.text == "") {
-                            setState(() {
-                              _commentIsEmpty = true;
-                            });
-                            return;
-                          } else {
-                            setState(() {
-                              _commentIsEmpty = false;
-                              _infoWindowVisible = false;
-                            });
-                            _savePin();
+                          if (isCreator && _textFieldController.text.isEmpty) {
+                            setState(() => _commentIsEmpty = true);
                             return;
                           }
+                          setState(() {
+                            _commentIsEmpty = false;
+                            _infoWindowVisible = false;
+                          });
+                          _savePin();
                         },
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
+                          children: [
                             Icon(
-                              Icons.check,
-                              color: Color(0xffe6a04e),
+                              isCreator
+                                  ? Icons.check
+                                  : Icons.cloud_upload_outlined,
+                              color: kGold,
+                              size: 18,
                             ),
+                            const SizedBox(width: 6),
                             Text(
-                              "Save",
+                              isCreator ? "Save" : "Upload Photos",
                               style: TextStyle(
-                                  color: Color(0xffe6a04e),
-                                  fontSize: 16,
-                                  fontFamily: 'Cormorant SC',
-                                  fontWeight: FontWeight.bold),
+                                color: kGold,
+                                fontSize: 16,
+                                fontFamily: 'Cormorant SC',
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
@@ -1201,6 +1204,14 @@ class _PoiMapState extends ConsumerState<PoiMap>
     // Populate _user from provider so mining cooldown + notification badge are current
     _user = ref.watch(userProvider).valueOrNull ?? User.blank();
 
+    // Apply music setting for the current user (covers initial load + rebuilds)
+    _applyMusicSetting(_user);
+
+    // React to future user changes (e.g. settings saved from another screen)
+    ref.listen<AsyncValue<User>>(userProvider, (_, next) {
+      next.whenData(_applyMusicSetting);
+    });
+
     // GPS position updates → update local position + trigger radar refresh
     ref.listen<AsyncValue<LtLn>>(locationProvider, (_, next) {
       next.whenData(_updateUserLocation);
@@ -1314,13 +1325,9 @@ class _PoiMapState extends ConsumerState<PoiMap>
                   mapButton(
                       'map-type',
                       _onMapTypeButtonPressed,
-                      (_mapStyleState == 0)
-                          ? Icons.brightness_7
-                          : ((_mapStyleState == 1)
-                              ? Icons.brightness_3
-                              : ((_mapStyleState == 2)
-                                  ? Icons.timelapse
-                                  : Icons.layers_outlined))),
+                      _mapStyleState == 1
+                          ? Icons.brightness_3   // night → tap to go day
+                          : Icons.brightness_7), // day  → tap to go night
                   SizedBox(
                     height: 16.0,
                   ),
@@ -1388,13 +1395,6 @@ class _PoiMapState extends ConsumerState<PoiMap>
       }
     }
 
-    if (_images.length == 0 && _thumbnails.length == 0) {
-      list.add(Image.asset(
-        'assets/images/magnifying_glass.png',
-        height: 200,
-      ));
-      list.add(SizedBox(width: 10));
-    }
     return list;
   }
 
