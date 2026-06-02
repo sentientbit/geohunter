@@ -170,7 +170,7 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
                               : GestureDetector(
                                   onTap: () {
                                     playClick();
-                                    context.go('/profile');
+                                    context.push('/profile');
                                   },
                                   child: Column(
                                     crossAxisAlignment:
@@ -247,7 +247,7 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
                       style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
-                    context.go('/profile');
+                    context.push('/profile');
                   },
                 ),
                 ListTile(
@@ -256,15 +256,11 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
                       AppLocalizations.of(context)!.translate('explore'),
                       style: Style.menuTextStyle),
                   onTap: () {
-                    // Update the state of the app
-                    // ...
-                    // Then close the drawer
-                    // Navigator.pop(context);
-                    // ModalRoute.of(context).settings.name == "/poi-map"
-                    //     ? log.d("Already on map")
-                    //     : Navigator.of(context).pop();
                     playClick();
-                    context.go('/poi-map');
+                    // Pop all screens back to the map (keeps existing map state)
+                    while (context.canPop()) {
+                      context.pop();
+                    }
                   },
                 ),
                 Divider(
@@ -277,7 +273,7 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
                   title: Text('Inventory', style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
-                    context.go('/inventory');
+                    context.push('/inventory');
                   },
                 ),
                 ListTile(
@@ -286,7 +282,7 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
                   title: Text('Forge', style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
-                    context.go('/forge');
+                    context.push('/forge');
                   },
                 ),
                 ListTile(
@@ -305,7 +301,7 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
                   ),
                   onTap: () {
                     playClick();
-                    context.go('/questline');
+                    context.push('/questline');
                   },
                 ),
                 ListTile(
@@ -316,7 +312,7 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
                       style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
-                    context.go('/places');
+                    context.push('/places');
                   },
                 ),
                 ListTile(
@@ -335,12 +331,7 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
                   ),
                   onTap: () {
                     playClick();
-                    // ModalRoute.of(context).settings.name == "/poi-map"
-                    //     // ? Navigator.of(context).pushNamed('/friends')
-                    //     ? Navigator.of(context).pushNamed('/friends')
-                    //     : Navigator.of(context)
-                    //         .pushReplacementNamed('/friends');
-                    context.go('/friends');
+                    context.push('/friends');
                   },
                 ),
                 ListTile(
@@ -351,7 +342,7 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
                       style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
-                    context.go('/group');
+                    context.push('/group');
                   },
                 ),
                 Divider(
@@ -365,7 +356,7 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
                   title: Text('Battle Training', style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
-                    context.go('/battle');
+                    context.push('/battle');
                   },
                 ),
                 ListTile(
@@ -375,7 +366,7 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
                       style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
-                    context.go('/help');
+                    context.push('/help');
                   },
                 ),
                 ListTile(

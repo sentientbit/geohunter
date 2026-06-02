@@ -2,7 +2,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flame_audio/bgm.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -30,9 +29,6 @@ class SplashScreen extends ConsumerStatefulWidget {
 
 /// Our initial State
 class SplashScreenState extends ConsumerState<SplashScreen> {
-  /// background music variable
-  Bgm musicBackground = Bgm();
-
   ///
   final log = Logger(
       printer: PrettyPrinter(
@@ -58,7 +54,6 @@ class SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    musicBackground.initialize();
     _permissionsGps();
     _initializePeriodicWorker();
   }
@@ -144,11 +139,6 @@ class SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // React to user data changes: music.
-    ref.listen<AsyncValue<User>>(userProvider, (_, next) {
-      next.whenData(_updateUserData);
-    });
-
     var szHeight = MediaQuery.of(context).size.height;
     var szWidth = MediaQuery.of(context).size.width;
 
@@ -466,18 +456,6 @@ class SplashScreenState extends ConsumerState<SplashScreen> {
         );
       },
     );
-  }
-
-  /// Called when userProvider emits a new User — handles music only.
-  /// Cookie persistence is handled by UserRepository.getUser().
-  void _updateUserData(User user) {
-    if (user.details.settings.isMusicOn) {
-      if (!musicBackground.isPlaying) {
-        musicBackground.play('audio/music/aWayThrough.mp3');
-      }
-    } else {
-      musicBackground.stop();
-    }
   }
 
 }

@@ -22,8 +22,13 @@ class Research {
 
   // ── New fields from GET /api/research enrichment ──────────────────────────
 
-  /// Current crafting level derived server-side (matches researchToCrafting).
+  /// Current crafting level derived server-side.
   int craftingLevel = 0;
+
+  /// Human-readable mastery label for this tech node.
+  /// Comes from BOOK_LEVEL_LABELS on the backend (e.g. "Novice", "Adept").
+  /// Falls back to Research.skill() for old API responses.
+  String levelLabel = 'Novice';
 
   /// Real crafting bonus percentage (e.g. 18). Replaces the +6/12/18/25 placeholder.
   int craftingBonusPct = 0;
@@ -37,6 +42,29 @@ class Research {
   /// How many blueprint volumes the player currently holds for this tech.
   /// Mirrors blueprint.nr; provided here for convenience.
   int volumesOwned = 0;
+
+  /// How many pages are required to assemble one volume for this research node.
+  ///
+  /// Lives on the research table, scales with tree depth via P(n) = 4 × n^1.8.
+  /// Flutter reads it from the API — never hardcode it.
+  int pagesRequired = 5;
+
+  /// How many blank manuscripts the player has marked for conversion to
+  /// specific pages for this research node.
+  ///
+  /// Marking reserves blank manuscripts with intent — they become real pages
+  /// the next time the player visits a Library mine.
+  /// Read from marked_manuscripts_users via batch load in enrichTechs().
+  int markedManuscripts = 0;
+
+  /// How many Blank Manuscripts the player receives when disassembling one
+  /// volume of this tech.
+  ///
+  /// Computed server-side (backend owns the yield formula). Flutter only
+  /// displays this number — it never recalculates it independently.
+  /// Default of 1 is a safe fallback for old API responses that don't yet
+  /// include the field.
+  int manuscriptsYield = 1;
 
   /// page_id to pass to POST /api/blueprint/assemble. Null if no pages exist yet.
   int? pageId;
@@ -87,6 +115,9 @@ class Research {
     // Enriched fields — safe defaults so old API responses still parse cleanly
     craftingLevel =
         int.tryParse((json['crafting_level'] ?? 0).toString()) ?? 0;
+    levelLabel = (json['level_label'] as String?)?.isNotEmpty == true
+        ? json['level_label'] as String
+        : skill(craftingLevel); // fallback for old API responses
     craftingBonusPct =
         int.tryParse((json['crafting_bonus_pct'] ?? 0).toString()) ?? 0;
     craftingBonusLabel =
@@ -106,6 +137,19 @@ class Research {
     pageId = rawPageId != null
         ? int.tryParse(rawPageId.toString())
         : null;
+
+    // pages_required now lives on the research node (power-law per depth).
+    // Fall back to blueprint.pagesRequired for old API responses that don't
+    // yet include the field at the node level.
+    pagesRequired = int.tryParse(
+            (json['pages_required'] ?? blueprint.pagesRequired).toString()) ??
+        blueprint.pagesRequired;
+
+    markedManuscripts =
+        int.tryParse((json['marked_manuscripts'] ?? 0).toString()) ?? 0;
+
+    manuscriptsYield =
+        int.tryParse((json['manuscripts_yield'] ?? 1).toString()) ?? 1;
 
     pagesOwned =
         int.tryParse((json['pages_owned'] ?? 0).toString()) ?? 0;

@@ -1371,7 +1371,7 @@ class _PoiMapState extends ConsumerState<PoiMap>
     const base = 'assets/images/pois';
     switch (ico) {
       case '1': return '$base/mine01.png';      // Metal
-      case '2': return '$base/wood01.png';       // Wood
+      case '2': return '$base/woods01.png';      // Wood
       case '3': return '$base/leather01.png';    // Leather
       case '6': return '$base/ruins01.png';      // Ruins
       case '7': return '$base/library01.png';    // Library

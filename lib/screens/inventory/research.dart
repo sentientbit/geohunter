@@ -39,8 +39,8 @@ class _ResearchState extends ConsumerState<ResearchPage> {
         ? ((currentPoints - lowerPoints) / (neededPoints - lowerPoints))
             .clamp(0.0, 1.0)
         : 1.0;
-    final skillLabel = Research.skill(currentPoints); // label still local until backend sends it on list
-    final isLocked = tech.craftingLevel == 0 && tech.blueprint.pagesRequired > 0;
+    final skillLabel = tech.levelLabel; // from BOOK_LEVEL_LABELS via API
+    final isLocked = tech.craftingLevel == 0 && tech.pagesRequired > 0;
 
     return InkWell(
       onTap: () => Navigator.push(
@@ -273,6 +273,12 @@ class _ResearchState extends ConsumerState<ResearchPage> {
         "Research",
         style: Style.topBar,
       ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.go('/poi-map'),
+        ),
+      ],
     );
 
     /// What happens when clicking the Bottom Navbar
@@ -281,7 +287,7 @@ class _ResearchState extends ConsumerState<ResearchPage> {
         currentTabIndex = index;
       });
       if (index == 0) {
-        context.go('/forge');
+        context.replace('/forge');
       }
       /* if index == 1 We are here: Research */
     }
@@ -310,8 +316,23 @@ class _ResearchState extends ConsumerState<ResearchPage> {
                 )
               : researchState.hasError
                   ? Center(
-                      child: Text('Failed to load research',
-                          style: TextStyle(color: Colors.white)),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Failed to load research',
+                              style: TextStyle(color: Colors.white)),
+                          const SizedBox(height: 16),
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.white),
+                              foregroundColor: Colors.white,
+                            ),
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Retry'),
+                            onPressed: () => ref.invalidate(researchProvider),
+                          ),
+                        ],
+                      ),
                     )
                   : ListView.builder(
                       scrollDirection: Axis.vertical,

@@ -622,23 +622,33 @@ class Debouncer {
   }
 }
 
-///
+/// Background image asset path for a given rarity tier.
+/// Files live in assets/images/rarity/ named 00-common.png … 04-legendary.png.
+String rarityBackground(int rarity) {
+  const _paths = [
+    'assets/images/rarity/00-common.png',     // 0 Common
+    'assets/images/rarity/01-uncommon.png',   // 1 Uncommon
+    'assets/images/rarity/02-rare.png',       // 2 Rare
+    'assets/images/rarity/03-epic.png',       // 3 Epic
+    'assets/images/rarity/04-legendary.png',  // 4 Legendary
+    'assets/images/rarity/05-mythic.png',     // 5 Mythic
+  ];
+  final idx = rarity.clamp(0, _paths.length - 1);
+  return _paths[idx];
+}
+
+/// Canonical rarity colours — kept in sync with ITEM_RARITY_COLORS on the backend.
+/// Also matches _rarityColors in study.dart.
+/// Index 0 = Common, 1 = Uncommon, 2 = Rare, 3 = Epic, 4 = Legendary.
 Color colorRarity(int rarity) {
-  if (rarity == 1) {
-    // Uncommon
-    return Color(0xff7ecb3a);
-  } else if (rarity == 2) {
-    // Rare
-    return Color(0xff0da3d8);
-  } else if (rarity == 3) {
-    // Epic
-    return Color(0xff9e00d8);
-  } else if (rarity == 4) {
-    // Legendary
-    return Color(0xfffeb53b);
+  switch (rarity) {
+    case 1: return const Color(0xff4caf50); // Uncommon  — material green
+    case 2: return const Color(0xff2196f3); // Rare      — material blue
+    case 3: return const Color(0xff9c27b0); // Epic      — material purple
+    case 4: return const Color(0xffff8c00); // Legendary — dark orange
+    case 5: return const Color(0xffcc2200); // Mythic    — blood crimson
+    default: return const Color(0xff888888); // Common   — mid gray
   }
-  // Commons
-  return Color(0xffcccccc);
 }
 
 /// 5556665 should pass

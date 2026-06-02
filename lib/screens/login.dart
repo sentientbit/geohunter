@@ -14,23 +14,26 @@ import 'package:go_router/go_router.dart';
 //import 'package:logger/logger.dart';
 
 ///
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../app_localizations.dart';
 import '../models/app_error.dart';
 //import '../models/secret.dart';
 import '../providers/api_provider.dart';
 import '../providers/custom_interceptors.dart';
+import '../providers/user_provider.dart';
 import '../shared/constants.dart';
 import '../widgets/network_status_message.dart';
 
 ///
-class LoginPage extends StatefulWidget {
+class LoginPage extends ConsumerStatefulWidget {
   ///
   static String tag = 'login-page';
   @override
   _LoginPageState createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends ConsumerState<LoginPage> {
   //final Logger log = Logger(
   //    printer: PrettyPrinter(
   //        colors: true, printEmojis: true, printTime: true, lineLength: 80));
@@ -205,6 +208,7 @@ class _LoginPageState extends State<LoginPage> {
               await _storage.write(key: 'email', value: jwtdata["usr"]);
               await _storage.write(key: 'api_key', value: response["api_key"]);
               if (!mounted) return;
+              ref.invalidate(userProvider);
               context.go('/poi-map');
               return;
             }
@@ -261,6 +265,7 @@ class _LoginPageState extends State<LoginPage> {
               if (isOk) {
                 await _storage.write(key: 'email', value: jwtdata["usr"]);
                 if (!mounted) return;
+                ref.invalidate(userProvider);
                 context.go('/poi-map');
                 return;
               } else {

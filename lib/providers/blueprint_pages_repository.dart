@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/blueprint_page.dart';
+import '../models/blueprint_pages_response.dart';
 import '../models/disassemble_result.dart';
 import 'api_provider.dart';
 
@@ -23,21 +24,33 @@ import 'api_provider.dart';
 class BlueprintPagesRepository {
   final ApiProvider _api = ApiProvider();
 
-  Future<List<BlueprintPage>> getPages() async {
+  Future<BlueprintPagesResponse> getPages() async {
     final response = await _api.get('/blueprint/pages');
     final list = (response['pages'] ?? []) as List;
-    return list.map((e) => BlueprintPage.fromJson(e)).toList();
+    final pages = list.map((e) => BlueprintPage.fromJson(e)).toList();
+    final manuscripts =
+        int.tryParse((response['manuscripts'] ?? 0).toString()) ?? 0;
+    return BlueprintPagesResponse(pages: pages, manuscripts: manuscripts);
   }
 
   /// Assembles one volume from pages.
-  /// [pageId] is [BlueprintPage.id] — the server looks up pages_required.
-  /// [useManuscripts] enables hybrid mode: supplements missing pages with
-  /// manuscripts, subject to the server-enforced 50% page floor.
-  Future<Map<String, dynamic>> assemble(int pageId,
-      {bool useManuscripts = false}) async {
-    final body = <String, dynamic>{'page_id': pageId};
-    if (useManuscripts) body['use_manuscripts'] = true;
-    return await _api.post('/blueprint/assemble', body);
+  /// Requires pages_owned >= pages_required — no hybrid path.
+  Future<Map<String, dynamic>> assemble(int pageId) async {
+    return await _api.post('/blueprint/assemble', {'page_id': pageId});
+  }
+
+  /// Sets the marked manuscript count for a blueprint.
+  ///
+  /// Marked manuscripts are reserved with intent — they become real specific
+  /// pages for [blueprintId] the next time the player visits a Library mine.
+  /// [quantity] replaces the current mark (not additive). Pass 0 to clear.
+  ///
+  /// Returns the confirmed mark count and remaining available manuscripts.
+  Future<Map<String, dynamic>> mark(int blueprintId, int quantity) async {
+    return await _api.patch('/blueprint/mark', {
+      'blueprint_id': blueprintId,
+      'quantity': quantity,
+    });
   }
 
   /// Disassembles [qty] volumes of [blueprintId] into manuscripts.

@@ -326,6 +326,7 @@ class _PlacesState extends ConsumerState<PlacesPage> {
       ),
       actions: <Widget>[
         PopupMenuButton<PopupMenuChoice>(
+          iconColor: Colors.white,
           onSelected: (onSel) {
             choiceAction(context, onSel);
           },
@@ -429,6 +430,10 @@ class _PlacesState extends ConsumerState<PlacesPage> {
             ),
           ],
           color: GlobalConstants.appBg,
+        ),
+        IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.pop(),
         ),
       ],
     );
@@ -603,7 +608,7 @@ class _PlacesState extends ConsumerState<PlacesPage> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) context.go('/poi-map');
+        if (!didPop) context.pop();
       },
       child: Scaffold(
         backgroundColor: GlobalConstants.appBg,

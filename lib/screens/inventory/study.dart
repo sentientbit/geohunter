@@ -11,6 +11,8 @@ import '../../fonts/rpg_awesome_icons.dart';
 import '../../models/player_stats.dart';
 import '../../models/research.dart';
 import '../../models/user.dart';
+import '../../shared/app_theme.dart';
+import '../../shared/constants.dart';
 import '../../providers/api_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/disassemble_result.dart';
@@ -21,31 +23,18 @@ import '../../providers/location_provider.dart';
 import '../../providers/radar_repository.dart';
 import '../../providers/research_provider.dart';
 import '../../providers/user_provider.dart';
-import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
-const _gold = Color(0xffe6a04e);
-const _cardColor = Color(0xee1c1c1c);
-const _sectionLabel = TextStyle(
-  color: _gold,
-  fontSize: 11,
-  fontFamily: 'Open Sans',
-  fontWeight: FontWeight.bold,
-  letterSpacing: 2.0,
-);
+// ── Design tokens — from app_theme.dart ───────────────────────────────────────
+const _gold         = kGold;        // warm gold accent
+// Section label: silverDim, uppercase, generous letter-spacing
+const _sectionLabel = kSectionLabel;
 
-/// Rarity colours: Common / Uncommon / Rare / Epic / Legendary
-const _rarityColors = [
-  Color(0xff888888),
-  Color(0xff4caf50),
-  Color(0xff2196f3),
-  Color(0xff9c27b0),
-  Color(0xffff8c00),
-];
-const _rarityLabels = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
+/// Rarity labels — index matches rarity int (0=Common … 4=Legendary).
+/// Colours come from [colorRarity()] in constants.dart (single source of truth).
+const _rarityLabels = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic'];
 
 ///
 class StudyDetailPage extends ConsumerStatefulWidget {
@@ -63,14 +52,6 @@ class StudyDetailPage extends ConsumerStatefulWidget {
   _StudyDetailState createState() => _StudyDetailState();
 }
 
-// ── Yield table (matches server Research.php yield brackets) ──────────────────
-/// Manuscripts received when disassembling one volume of the given tier.
-int _manuscriptsPerVolume(int pagesRequired) {
-  if (pagesRequired <= 4) return 2;
-  if (pagesRequired <= 13) return 5;
-  if (pagesRequired <= 28) return 10;
-  return 17; // T4 ≤ 48 pages
-}
 
 ///
 class _StudyDetailState extends ConsumerState<StudyDetailPage> {
@@ -82,8 +63,13 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
   int _nrAvailBlueprints = 0;
   int _maxNr = 0;
 
-  /// Whether to supplement missing pages with manuscripts when assembling.
-  bool _useManuscripts = false;
+  /// Pending manuscript mark count for this blueprint.
+  /// Initialised from [Research.markedManuscripts] when the screen opens;
+  /// updated optimistically when the player taps +/−.
+  int _pendingMarked = 0;
+
+  /// True while a mark API call is in flight.
+  bool _isMarking = false;
 
   /// How many volumes to disassemble (1 … volumesOwned).
   int _nrToDisassemble = 1;
@@ -118,6 +104,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
         : _nrAvailBlueprints;
 
     _blueprintName = widget.research.blueprint.name;
+    _pendingMarked = widget.research.markedManuscripts;
   }
 
   @override
@@ -132,7 +119,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
       children: [
         Text(label,
             style: const TextStyle(
-                color: Colors.white54, fontSize: 10, letterSpacing: 1.2)),
+                color: kSilverDim, fontSize: 10, letterSpacing: 1.2)),
         const SizedBox(height: 4),
         Text(value,
             style: TextStyle(
@@ -146,7 +133,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
   }
 
   Widget _vDivider() =>
-      Container(height: 36, width: 1, color: Colors.white12);
+      Container(height: 36, width: 1, color: kGold.withValues(alpha: 0.18));
 
   // ── Build ────────────────────────────────────────────────────────────────────
 
@@ -155,25 +142,33 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     final user = ref.watch(userProvider).valueOrNull ?? User.blank();
     final int manuscripts = ref.watch(manuscriptsProvider);
 
-    // Pages data now comes directly from the tech node — no second provider needed
-    final int pagesNr = widget.research.pagesOwned;
-    final int pagesRequired = widget.research.blueprint.pagesRequired;
-    final int? assemblePageId = widget.research.pageId;
+    // Live tech data: watch researchProvider so counts update immediately after
+    // assemble / invest actions without requiring the user to navigate away.
+    final liveResearch = ref
+        .watch(researchProvider)
+        .valueOrNull
+        ?.techs
+        .firstWhere((t) => t.id == widget.research.id,
+            orElse: () => widget.research);
+    final liveTech = liveResearch ?? widget.research;
 
-    // Full assembly: all pages in hand.
-    final bool canAssembleFull =
+    final int pagesNr = liveTech.pagesOwned;
+    final int pagesRequired = liveTech.pagesRequired; // from research node, not blueprint
+    final int? assemblePageId = liveTech.pageId;
+    // Live volume count — drives the invest card immediately after assembly
+    final int nrAvailBlueprints = liveTech.volumesOwned;
+    // Live max investable = min(volumes, remaining points to next level)
+    final int liveMaxNr = nrAvailBlueprints > (_neededPoints - _currentPoints)
+        ? (_neededPoints - _currentPoints)
+        : nrAvailBlueprints;
+
+    // Assembly requires exactly pages_required real specific pages — no hybrid path.
+    final bool canAssemble =
         pagesRequired > 0 && pagesNr >= pagesRequired && assemblePageId != null;
-    // Hybrid: player flipped the toggle AND has manuscripts AND meets 50% page floor.
-    final bool canAssembleHybrid = _useManuscripts &&
-        pagesRequired > 0 &&
-        assemblePageId != null &&
-        manuscripts > 0 &&
-        (pagesNr * 2 >= pagesRequired); // ≥ 50% pages
-    final bool canAssemble = canAssembleFull || canAssembleHybrid;
 
     // Derived values — use server-supplied crafting bonus
-    final int currentLevel = researchToCrafting(_currentPoints);
-    final String skillLabel = Research.skill(_currentPoints);
+    final int currentLevel = liveTech.craftingLevel;
+    final String skillLabel = liveTech.levelLabel;
     final String bonusLabel = widget.research.craftingBonusLabel;
     final double pageRatio = pagesRequired > 0
         ? (pagesNr / pagesRequired).clamp(0.0, 1.0)
@@ -190,16 +185,16 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     // ── AppBar ─────────────────────────────────────────────────────────────
     final appBar = AppBar(
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () => Navigator.pop(context),
+        icon: const Icon(Icons.menu, color: Colors.white),
+        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       elevation: 0,
       backgroundColor: Colors.transparent,
-      title: Text(widget.research.name, style: Style.topBar),
+      title: Text('Details', style: Style.topBar),
       actions: [
         IconButton(
-          icon: const Icon(Icons.menu, color: Colors.white),
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.pop(),
         ),
       ],
     );
@@ -208,11 +203,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     final heroCard = Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white12),
-      ),
+      decoration: kCardDecoration(kGold),
       child: Column(
         children: [
           Row(
@@ -237,10 +228,13 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                     Text(
                       widget.research.name,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: kGold,
                         fontSize: 22,
                         fontFamily: 'Cormorant SC',
                         fontWeight: FontWeight.bold,
+                        shadows: [
+                          Shadow(color: Color(0x66e6a04e), blurRadius: 10),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -249,7 +243,8 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                           ? _blueprintName
                           : 'Knowledge Discipline',
                       style: const TextStyle(
-                          color: Colors.white54, fontSize: 13),
+                          color: kSilverDim, fontSize: 13,
+                          fontStyle: FontStyle.italic),
                     ),
                   ],
                 ),
@@ -264,7 +259,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
               _statCell('MASTERY', '$currentLevel', _gold),
               _vDivider(),
               _statCell('INVESTED',
-                  '$_currentPoints / $_neededPoints', Colors.white),
+                  '$_currentPoints / $_neededPoints', kSilver),
               _vDivider(),
               _statCell('BONUS', bonusLabel, const Color(0xff66bb6a)),
             ],
@@ -285,7 +280,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
             children: [
               Text('$_currentPoints pts',
                   style: const TextStyle(
-                      color: Colors.white38, fontSize: 10)),
+                      color: kSilverDim, fontSize: 10)),
               Text(skillLabel,
                   style: const TextStyle(
                       color: _gold,
@@ -293,7 +288,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                       fontWeight: FontWeight.bold)),
               Text('$_neededPoints pts',
                   style: const TextStyle(
-                      color: Colors.white38, fontSize: 10)),
+                      color: kSilverDim, fontSize: 10)),
             ],
           ),
         ],
@@ -303,18 +298,17 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     // ── Volume Assembly card ───────────────────────────────────────────────
     Widget? assemblyCard;
     if (pagesRequired > 0) {
-      // Hybrid mode: available when player has manuscripts and ≥ 50% pages.
-      final bool hybridAvailable =
-          manuscripts > 0 && (pagesNr * 2 >= pagesRequired);
+      // Max manuscripts the player can usefully mark for this blueprint:
+      // they only need (pagesRequired − pagesNr) more, and can't exceed total available.
+      final int maxMarkable =
+          (pagesRequired - pagesNr).clamp(0, manuscripts).toInt();
+      // Keep pending mark in sync if available manuscripts or pages changed
+      final int effectiveMark = _pendingMarked.clamp(0, maxMarkable);
 
       assemblyCard = Container(
         margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: _cardColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white12),
-        ),
+        decoration: kCardDecoration(kGold),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -336,7 +330,8 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
             ]),
             const SizedBox(height: 4),
             const Text('Collect pages to bind a new volume.',
-                style: TextStyle(color: Colors.white38, fontSize: 12)),
+                style: TextStyle(color: kSilverDim, fontSize: 12,
+                    fontStyle: FontStyle.italic)),
             const SizedBox(height: 20),
             // Ring + next reward
             Row(
@@ -358,7 +353,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                             Text(
                               '$pagesNr',
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: kSilver,
                                 fontSize: 28,
                                 fontFamily: 'Cormorant SC',
                                 fontWeight: FontWeight.bold,
@@ -378,7 +373,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                       const SizedBox(height: 8),
                       const Text('Pages Collected',
                           style: TextStyle(
-                              color: Colors.white60, fontSize: 12)),
+                              color: kSilverDim, fontSize: 12)),
                     ],
                   ),
                 ),
@@ -389,7 +384,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                     children: [
                       const Text('NEXT REWARD',
                           style: TextStyle(
-                              color: Colors.white38,
+                              color: kSilverDim,
                               fontSize: 10,
                               letterSpacing: 1.5)),
                       const SizedBox(height: 10),
@@ -397,44 +392,90 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                       const SizedBox(height: 6),
                       const Text('+1 Volume',
                           style: TextStyle(
-                              color: Colors.white,
+                              color: kSilver,
                               fontSize: 14,
                               fontFamily: 'Cormorant SC',
                               fontWeight: FontWeight.bold)),
                       if (_blueprintName.isNotEmpty)
                         Text(_blueprintName,
                             style: const TextStyle(
-                                color: Colors.white38,
+                                color: kSilverDim,
                                 fontSize: 11),
                             textAlign: TextAlign.center),
                       const SizedBox(height: 14),
-                      // Use manuscripts toggle — only shown when viable
-                      if (hybridAvailable && !canAssembleFull)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
+                      // Mark manuscripts section — visible when short on pages
+                      if (manuscripts > 0 && pagesNr < pagesRequired) ...[
+                        const Text('MARK MANUSCRIPTS',
+                            style: TextStyle(
+                                color: kSilverDim,
+                                fontSize: 9,
+                                letterSpacing: 1.2)),
+                        const SizedBox(height: 6),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.history_edu,
-                                  color: Colors.white54, size: 14),
-                              const SizedBox(width: 6),
-                              const Text('Use manuscripts',
-                                  style: TextStyle(
-                                      color: Colors.white54,
-                                      fontSize: 12)),
-                              const SizedBox(width: 6),
-                              Switch.adaptive(
-                                value: _useManuscripts,
-                                onChanged: (v) =>
-                                    setState(() => _useManuscripts = v),
-                                activeThumbColor: _gold,
-                                activeTrackColor: _gold.withAlpha(120),
-                                materialTapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap,
-                              ),
-                            ],
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              icon: const Icon(Icons.remove_circle_outline,
+                                  size: 20),
+                              color: effectiveMark > 0
+                                  ? Colors.white54
+                                  : Colors.white12,
+                              onPressed: effectiveMark > 0
+                                  ? () => _setMark(
+                                      liveTech, effectiveMark - 1)
+                                  : null,
+                            ),
+                            const SizedBox(width: 8),
+                            Column(
+                              children: [
+                                Text('$effectiveMark',
+                                    style: const TextStyle(
+                                        color: _gold,
+                                        fontSize: 18,
+                                        fontFamily: 'Cormorant SC',
+                                        fontWeight: FontWeight.bold)),
+                                Text(
+                                    '/ $manuscripts available',
+                                    style: const TextStyle(
+                                        color: kSilverDim,
+                                        fontSize: 9)),
+                              ],
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              icon: const Icon(Icons.add_circle_outline,
+                                  size: 20),
+                              color: effectiveMark < maxMarkable
+                                  ? _gold
+                                  : Colors.white12,
+                              onPressed: effectiveMark < maxMarkable
+                                  ? () => _setMark(
+                                      liveTech, effectiveMark + 1)
+                                  : null,
+                            ),
+                          ],
+                        ),  // Row
+                        ),  // FittedBox
+                        if (effectiveMark > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              'Visit a Library mine to convert.',
+                              style: const TextStyle(
+                                  color: kSilverDim,
+                                  fontSize: 10,
+                                  fontStyle: FontStyle.italic),
+                              textAlign: TextAlign.center,
+                            ),
                           ),
-                        ),
+                        const SizedBox(height: 10),
+                      ],
                       SizedBox(
                         width: double.infinity,
                         child: OutlinedButton(
@@ -468,9 +509,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                                 ),
                               ),
                               Text(
-                                _useManuscripts
-                                    ? 'Pages + manuscripts'
-                                    : 'Requires $pagesRequired pages',
+                                'Requires $pagesRequired pages',
                                 style: const TextStyle(
                                     color: Colors.white38,
                                     fontSize: 10),
@@ -489,11 +528,11 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
               const Divider(color: Colors.white12, height: 28),
               Row(children: [
                 const Icon(Icons.location_searching,
-                    color: Colors.white38, size: 13),
+                    color: kSilverDim, size: 13),
                 const SizedBox(width: 6),
                 const Text('NEED MORE PAGES?',
                     style: TextStyle(
-                        color: Colors.white38,
+                        color: kSilverDim,
                         fontSize: 10,
                         letterSpacing: 1.5)),
               ]),
@@ -502,7 +541,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
               if (_nearbyLibraries != null) ...[
                 if (_nearbyLibraries!.isEmpty)
                   const Text('No Library mines found nearby.',
-                      style: TextStyle(color: Colors.white38, fontSize: 12))
+                      style: TextStyle(color: kSilverDim, fontSize: 12))
                 else ...[
                   ..._nearbyLibraries!.map((mine) => InkWell(
                         onTap: () => context
@@ -521,8 +560,8 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                               child: Text(mine.name,
                                   style: TextStyle(
                                       color: mine.visited
-                                          ? Colors.white38
-                                          : Colors.white70,
+                                          ? kSilverDim
+                                          : kSilver,
                                       fontSize: 13),
                                   overflow: TextOverflow.ellipsis),
                             ),
@@ -552,7 +591,8 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                   const SizedBox(height: 4),
                   const Text(
                     'Tap to navigate to that Library mine.',
-                    style: TextStyle(color: Colors.white24, fontSize: 11),
+                    style: TextStyle(color: kSilverDim, fontSize: 11,
+                        fontStyle: FontStyle.italic),
                   ),
                 ],
               ] else
@@ -573,15 +613,15 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                             width: 14,
                             height: 14,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white38))
+                                strokeWidth: 2, color: kSilverDim))
                         : const Icon(Icons.fort,
-                            color: Colors.white54, size: 16),
+                            color: kSilver, size: 16),
                     label: Text(
                       _searchingLibraries
                           ? 'Searching…'
                           : 'Find nearest Library mine',
                       style: const TextStyle(
-                          color: Colors.white54, fontSize: 13),
+                          color: kSilver, fontSize: 13),
                     ),
                   ),
                 ),
@@ -595,11 +635,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     final investCard = Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white12),
-      ),
+      decoration: kCardDecoration(kGold),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -610,19 +646,20 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
           ]),
           const SizedBox(height: 4),
           const Text('Invest volumes to advance your mastery.',
-              style: TextStyle(color: Colors.white38, fontSize: 12)),
+              style: TextStyle(color: kSilverDim, fontSize: 12,
+                  fontStyle: FontStyle.italic)),
           const SizedBox(height: 16),
           // Volumes available
           Row(children: [
             const Icon(RPGAwesome.book, color: _gold, size: 16),
             const SizedBox(width: 8),
             Text(
-              '$_nrAvailBlueprints volume${_nrAvailBlueprints == 1 ? '' : 's'} available',
-              style: const TextStyle(color: Colors.white, fontSize: 15),
+              '$nrAvailBlueprints volume${nrAvailBlueprints == 1 ? '' : 's'} available',
+              style: const TextStyle(color: kSilver, fontSize: 15),
             ),
           ]),
           const SizedBox(height: 12),
-          if (_maxNr > 0) ...[
+          if (liveMaxNr > 0) ...[
             // Slider row with −/+ buttons
             Row(
               children: [
@@ -633,7 +670,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                       ? () => setState(() {
                             _nrInvBlueprints =
                                 (_nrInvBlueprints - 1)
-                                    .clamp(0, _maxNr.toDouble());
+                                    .clamp(0, liveMaxNr.toDouble());
                           })
                       : null,
                   icon: Icon(Icons.remove_circle_outline,
@@ -656,9 +693,9 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                     ),
                     child: Slider(
                       min: 0,
-                      max: _maxNr.toDouble(),
-                      value: _nrInvBlueprints,
-                      divisions: _maxNr,
+                      max: liveMaxNr.toDouble(),
+                      value: _nrInvBlueprints.clamp(0, liveMaxNr.toDouble()),
+                      divisions: liveMaxNr,
                       onChanged: (v) =>
                           setState(() => _nrInvBlueprints = v),
                     ),
@@ -686,7 +723,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
               child: Text(
                 'New investment: ${_currentPoints + _nrInvBlueprints.toInt()} / $_neededPoints',
                 style: const TextStyle(
-                    color: Colors.white54, fontSize: 13),
+                    color: kSilverDim, fontSize: 13),
               ),
             ),
             const SizedBox(height: 10),
@@ -697,7 +734,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
               const SizedBox(width: 6),
               Text('$coinCost coins',
                   style: const TextStyle(
-                      color: Colors.white60, fontSize: 13)),
+                      color: kSilver, fontSize: 13)),
             ]),
             const SizedBox(height: 14),
             // Invest button
@@ -750,7 +787,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                 child: Text(
                   widget.research.isMaxLevel
                       ? 'Mastery complete. This discipline is fully unlocked.'
-                      : _nrAvailBlueprints == 0
+                      : nrAvailBlueprints == 0
                           ? 'No volumes available.\nAssemble pages first.'
                           : 'Already at maximum level for current tier.',
                   textAlign: TextAlign.center,
@@ -769,33 +806,37 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     );
 
     return Scaffold(
-        backgroundColor: const Color(0xff121212),
+        backgroundColor: Colors.black,
         appBar: appBar,
         extendBodyBehindAppBar: true,
         body: Stack(children: [
-          // Background with darkening overlay
+          // Background with heavy darkening — matches item detail atmosphere
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               image: DecorationImage(
-                image:
-                    const AssetImage('assets/images/research_study.jpg'),
+                image: AssetImage('assets/images/research_study.jpg'),
                 fit: BoxFit.cover,
                 colorFilter: ColorFilter.mode(
-                    Colors.black.withValues(alpha: 0.65), BlendMode.darken),
+                    Color(0xcc000000), BlendMode.darken),
               ),
             ),
           ),
           SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 32),
+              padding: const EdgeInsets.only(bottom: 40),
               child: Column(
                 children: [
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   heroCard,
-                  if (assemblyCard != null) assemblyCard,
+                  kEldritchDivider(kGold),
+                  if (assemblyCard != null) ...[
+                    assemblyCard,
+                    const SizedBox(height: 4),
+                  ],
                   investCard,
-                  _buildDisassembleCard(
-                      widget.research, manuscripts),
+                  const SizedBox(height: 4),
+                  _buildDisassembleCard(widget.research, manuscripts),
+                  const SizedBox(height: 4),
                   _buildDisciplineCard(widget.research),
                   const SizedBox(height: 16),
                 ],
@@ -822,11 +863,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white12),
-      ),
+      decoration: kCardDecoration(kGold),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -842,7 +879,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
           if (hasRarity) ...[
             const Text('RARITY INFLUENCE',
                 style: TextStyle(
-                    color: Colors.white38,
+                    color: kSilverDim,
                     fontSize: 10,
                     letterSpacing: 1.5)),
             const SizedBox(height: 10),
@@ -857,7 +894,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                         child: Text(
                           _rarityLabels[i],
                           style: TextStyle(
-                              color: _rarityColors[i], fontSize: 12),
+                              color: colorRarity(i), fontSize: 12),
                         ),
                       ),
                       Expanded(
@@ -867,7 +904,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                             value: tech.rarityPcts[i] / 100.0,
                             backgroundColor: Colors.white10,
                             valueColor: AlwaysStoppedAnimation(
-                                _rarityColors[i]),
+                                colorRarity(i)),
                             minHeight: 5,
                           ),
                         ),
@@ -893,7 +930,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
           if (hasRecipes) ...[
             const Text('UNLOCKED RECIPES',
                 style: TextStyle(
-                    color: Colors.white38,
+                    color: kSilverDim,
                     fontSize: 10,
                     letterSpacing: 1.5)),
             const SizedBox(height: 10),
@@ -968,7 +1005,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
           if (hasAffinity) ...[
             const Text('MATERIAL AFFINITIES',
                 style: TextStyle(
-                    color: Colors.white38,
+                    color: kSilverDim,
                     fontSize: 10,
                     letterSpacing: 1.5)),
             const SizedBox(height: 10),
@@ -992,7 +1029,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                       child: Text(
                         tech.affinityMats[i].name,
                         style: const TextStyle(
-                            color: Colors.white70, fontSize: 13),
+                            color: kSilver, fontSize: 13),
                       ),
                     ),
                     Text(
@@ -1046,20 +1083,17 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
 
   Widget _buildDisassembleCard(Research tech, int manuscripts) {
     final int volumesOwned = tech.volumesOwned;
-    final int pagesRequired = tech.blueprint.pagesRequired;
+    final int pagesRequired = tech.pagesRequired; // from research node, not blueprint
     if (volumesOwned <= 0 || pagesRequired == 0) return const SizedBox.shrink();
 
-    final int yieldPerVolume = _manuscriptsPerVolume(pagesRequired);
+    // Yield comes from the API — backend owns the formula, Flutter just displays it
+    final int yieldPerVolume = tech.manuscriptsYield;
     final int previewGain = _nrToDisassemble * yieldPerVolume;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white12),
-      ),
+      decoration: kCardDecoration(kGold),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1072,14 +1106,15 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
           Text(
             'Break down volumes into manuscripts. '
             'Each volume yields $yieldPerVolume manuscripts.',
-            style: const TextStyle(color: Colors.white38, fontSize: 12),
+            style: const TextStyle(color: kSilverDim, fontSize: 12,
+                fontStyle: FontStyle.italic),
           ),
           const SizedBox(height: 16),
           // Volumes owned + yield preview
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _statCell('VOLUMES', '$volumesOwned', Colors.white),
+              _statCell('VOLUMES', '$volumesOwned', kSilver),
               _vDivider(),
               _statCell('WILL GAIN',
                   '$previewGain manuscripts', const Color(0xff66bb6a)),
@@ -1138,7 +1173,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
             Center(
               child: Text(
                 'Disassemble $_nrToDisassemble volume${_nrToDisassemble == 1 ? '' : 's'}',
-                style: const TextStyle(color: Colors.white54, fontSize: 13),
+                style: const TextStyle(color: kSilverDim, fontSize: 13),
               ),
             ),
             const SizedBox(height: 12),
@@ -1181,12 +1216,38 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
 
   // ── Actions ──────────────────────────────────────────────────────────────────
 
+  /// Updates the manuscript mark count for [tech]'s blueprint.
+  /// Optimistic: updates [_pendingMarked] immediately, reverts on error.
+  Future<void> _setMark(Research tech, int quantity) async {
+    if (_isMarking) return;
+    final prev = _pendingMarked;
+    setState(() {
+      _pendingMarked = quantity;
+      _isMarking = true;
+    });
+    try {
+      await ref
+          .read(blueprintPagesRepositoryProvider)
+          .mark(tech.blueprint.id, quantity);
+      // Refresh so markedManuscripts on the research node stays in sync
+      ref.invalidate(researchProvider);
+    } on AppError catch (err) {
+      setState(() => _pendingMarked = prev); // revert on error
+      if (mounted) err.show(context);
+    } catch (err) {
+      setState(() => _pendingMarked = prev);
+      debugPrint('_setMark unexpected error: $err');
+    } finally {
+      if (mounted) setState(() => _isMarking = false);
+    }
+  }
+
   Future<void> _assemble(int? pageId) async {
     if (pageId == null) return;
     try {
       await ref
           .read(blueprintPagesRepositoryProvider)
-          .assemble(pageId, useManuscripts: _useManuscripts);
+          .assemble(pageId);
       ref.invalidate(blueprintPagesProvider);
       ref.invalidate(researchProvider);
       ref.invalidate(userProvider);
@@ -1224,6 +1285,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
       return;
     }
 
+    ref.invalidate(blueprintPagesProvider); // refreshes manuscript count
     ref.invalidate(researchProvider);
     ref.invalidate(userProvider);
     if (!mounted) return;
@@ -1238,7 +1300,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
         images: [],
         callback: () {
           Navigator.of(ctx).pop();
-          context.go('/research');
+          context.pop();
         },
       ),
     );
@@ -1285,6 +1347,12 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
         _user.details.costs = ActionCosts.fromList(
             (response['costs'] ?? [0.1, 0.1, 0.1]) as List);
 
+        // Refresh all providers that depend on invest outcome:
+        // - researchProvider: updates nr_invested, crafting_level, pages_owned
+        // - blueprintPagesProvider: volumes consumed, manuscripts count unchanged
+        // - userProvider: coins, XP, stats
+        ref.invalidate(researchProvider);
+        ref.invalidate(blueprintPagesProvider);
         ref.invalidate(userProvider);
 
         if (!mounted) return;
@@ -1299,7 +1367,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
             images: [],
             callback: () {
               Navigator.of(context).pop();
-              context.go('/research');
+              context.pop();
             },
           ),
         );

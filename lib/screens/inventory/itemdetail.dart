@@ -1,336 +1,494 @@
-/// based on https://medium.com/@afegbua/this-is-the-second-part-of-the-beautiful-list-ui-and-detail-page-article-ecb43e203915
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geohunter/fonts/rpg_awesome_icons.dart';
-//import 'package:logger/logger.dart';
 
-///
 import '../../app_localizations.dart';
 import '../../models/app_error.dart';
 import '../../models/item.dart';
 import '../../providers/api_provider.dart';
+import '../../providers/inventory_provider.dart';
+import '../../providers/inventory_repository.dart';
+import '../../providers/user_provider.dart';
+import '../../shared/app_theme.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
 
-///
-class ItemDetailPage extends StatefulWidget {
-  ///
-  final Item item;
+// ── Design tokens — from app_theme.dart ───────────────────────────────────────
+// Local aliases so existing code below compiles unchanged.
+const _cardBg    = kCardBg;
+const _silver    = kSilver;
+const _silverDim = kSilverDim;
+const _sectionLbl = kSectionLabel;
 
-  ///
-  ItemDetailPage({
-    Key? key,
-    required this.item,
-  }) : super(key: key);
+class ItemDetailPage extends ConsumerStatefulWidget {
+  final Item item;
+  const ItemDetailPage({Key? key, required this.item}) : super(key: key);
 
   @override
   _ItemDetailState createState() => _ItemDetailState();
 }
 
-///
-class _ItemDetailState extends State<ItemDetailPage> {
+class _ItemDetailState extends ConsumerState<ItemDetailPage> {
   double _nrDisItems = 0;
-  String _btnDisText = "0";
-  bool _isDeleting = false;
-  String _description = "";
-  String _blueprintImg = "";
-  String _blueprintName = "";
+  bool   _isDeleting      = false;
+  bool   _isTogglingLock  = false;
+  late bool _locked;
+
+  String _description  = '';
+  String _blueprintImg = '';
+  String _blueprintName = '';
   final _misc = <String>[];
 
-  // final Logger log = Logger(
-  //     printer: PrettyPrinter(
-  //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
-
-  ///
-  final ApiProvider _apiProvider = ApiProvider();
-
-  ///
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final _inventoryRepo = InventoryRepository();
+  final _apiProvider   = ApiProvider();
+  final _scaffoldKey   = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
+    _locked = widget.item.locked;
     _getItemDetails(widget.item.id);
   }
 
-  @override
-  void dispose() {
-    super.dispose();
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  Color get _accent => colorRarity(widget.item.rarity);
+
+  /// Thin ornamental divider: ─── ✦ ───
+  Widget _eldritchDivider() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Row(children: [
+        Expanded(child: Divider(color: _accent.withValues(alpha: 0.35), thickness: 0.6)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Text('✦',
+              style: TextStyle(color: _accent.withValues(alpha: 0.7), fontSize: 11)),
+        ),
+        Expanded(child: Divider(color: _accent.withValues(alpha: 0.35), thickness: 0.6)),
+      ]),
+    );
   }
 
-  Widget build(BuildContext context) {
-    //print(widget.item.img);
-
-    //ignore: omit_local_variable_types
-    double halfScreenSize =
-        (MediaQuery.of(context).size.height * 0.5) - 40 /* appbar is 80px */;
-
-    /// Application top Bar
-    final topBar = AppBar(
-      leading: IconButton(
-        color: GlobalConstants.appFg,
-        icon: Icon(
-          Icons.menu,
-          // size: 32,
-        ),
-        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-      ),
-      elevation: 0.1,
-      backgroundColor: Colors.transparent,
-      title: Text("Inventory", style: Style.topBar),
-      actions: <Widget>[
-        IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        )
-      ],
-    );
-
-    final coursePrice = Container(
-      padding: const EdgeInsets.all(7.0),
+  /// Dark card with rarity-tinted border
+  Widget _card({required Widget child, EdgeInsets? padding}) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: padding ?? const EdgeInsets.all(20),
       decoration: BoxDecoration(
-          border: Border.all(color: Colors.white),
-          borderRadius: BorderRadius.circular(5.0)),
-      child: Text(
-        "${widget.item.nr.toString()} pcs",
-        style: TextStyle(color: GlobalConstants.appFg, fontSize: 18.0),
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: _accent.withValues(alpha: 0.22), width: 0.8),
+        boxShadow: [
+          BoxShadow(
+            color: _accent.withValues(alpha: 0.08),
+            blurRadius: 18,
+            spreadRadius: 2,
+          ),
+        ],
       ),
+      child: child,
     );
+  }
 
-    final topContentText = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Image(
-          image: AssetImage('assets/images/items/${widget.item.img}'),
-          height: 180.0,
-          width: 180.0,
-        ),
+  Widget _sectionLabel(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Text(text.toUpperCase(), style: _sectionLbl),
+  );
+
+  // ── Hero section ─────────────────────────────────────────────────────────────
+
+  Widget _buildHero() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Column(children: [
+        // Rarity glow behind item — fx image clipped to a soft circle
+        Stack(alignment: Alignment.center, children: [
+          // Rarity fx image as localized glow
+          ClipOval(
+            child: Image.asset(
+              rarityBackground(widget.item.rarity),
+              width: 260,
+              height: 260,
+              fit: BoxFit.cover,
+            ),
+          ),
+          // Soft vignette so glow fades at edges
+          Container(
+            width: 260,
+            height: 260,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withValues(alpha: 0.55),
+                ],
+                stops: const [0.55, 1.0],
+              ),
+            ),
+          ),
+          // Item image on top
+          Image.asset(
+            'assets/images/items/${widget.item.img}',
+            height: 180,
+            width:  180,
+            fit: BoxFit.contain,
+          ),
+        ]),
+        const SizedBox(height: 16),
+
+        // Item name
         Text(
           widget.item.name,
+          textAlign: TextAlign.center,
           style: TextStyle(
-            color: Item.color(widget.item.rarity),
-            fontSize: 24.0,
-            fontFamily: "Cormorant SC",
+            color: _accent,
+            fontSize: 30,
+            fontFamily: 'Cormorant SC',
             fontWeight: FontWeight.bold,
-            shadows: <Shadow>[
+            shadows: [
               Shadow(
-                  offset: Offset(1.0, 1.0),
-                  blurRadius: 3.0,
-                  color: Color.fromARGB(255, 0, 0, 0))
+                color: _accent.withValues(alpha: 0.6),
+                blurRadius: 14,
+              ),
             ],
           ),
         ),
-        SizedBox(height: 5.0),
+        const SizedBox(height: 10),
+
+        // Stars + level + quantity row
         Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: <Widget>[
-            Expanded(
-              flex: 6,
-              child: Container(
-                child: Row(
-                  children: <Widget>[
-                    for (var i = 0; i < widget.item.rarity; i++)
-                      Icon(Icons.star_border, color: Colors.white),
-                    Padding(
-                      padding: EdgeInsets.only(left: 10.0),
-                      child: Text(
-                        " Level ${widget.item.level}",
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ],
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Filled stars in rarity colour
+            for (var i = 0; i < widget.item.rarity; i++)
+              Icon(Icons.star, color: _accent, size: 22),
+
+            const SizedBox(width: 14),
+
+            // Level chip
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.06),
+                border: Border.all(color: Colors.white24),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'Lvl ${widget.item.level}',
+                style: const TextStyle(color: _silver, fontSize: 15),
+              ),
+            ),
+
+            const SizedBox(width: 10),
+
+            // Quantity chip
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(
+                color: _accent.withValues(alpha: 0.10),
+                border: Border.all(color: _accent.withValues(alpha: 0.5)),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${widget.item.nr} pcs',
+                style: TextStyle(
+                  color: _accent,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-            Expanded(flex: 2, child: coursePrice)
           ],
         ),
-      ],
+        const SizedBox(height: 20),
+      ]),
     );
+  }
 
-    final topContent = Stack(
-      children: <Widget>[
+  // ── Lore section ─────────────────────────────────────────────────────────────
+
+  Widget _buildLore() {
+    if (_description.isEmpty && _misc.isEmpty) return const SizedBox.shrink();
+    return _card(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _sectionLabel('Lore'),
+        if (_description.isNotEmpty)
+          Text(
+            _description,
+            style: const TextStyle(
+              color: _silver,
+              fontSize: 16,
+              fontStyle: FontStyle.italic,
+              height: 1.6,
+            ),
+          ),
+        if (_misc.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          ...(_misc.map((m) => Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(children: [
+              Text('✦ ', style: TextStyle(color: _accent, fontSize: 11)),
+              Expanded(
+                child: Text(m,
+                    style: const TextStyle(color: _silver, fontSize: 15)),
+              ),
+            ]),
+          ))),
+        ],
+      ]),
+    );
+  }
+
+  // ── Origin section ───────────────────────────────────────────────────────────
+
+  Widget _buildOrigin() {
+    if (_blueprintImg.isEmpty) return const SizedBox.shrink();
+    return _card(
+      child: Row(children: [
+        // Blueprint image
         Container(
-          height: halfScreenSize,
-          padding: EdgeInsets.only(top: 0.0, left: 40.0, right: 40.0),
-          width: MediaQuery.of(context).size.width,
-          decoration: BoxDecoration(color: Color(0xcc222222)),
-          child: Center(
-            child: topContentText,
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(
+            color: Colors.black38,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: _accent.withValues(alpha: 0.3)),
+          ),
+          padding: const EdgeInsets.all(6),
+          child: Image.asset(
+            'assets/images/blueprints/$_blueprintImg',
+            fit: BoxFit.contain,
           ),
         ),
-      ],
-    );
+        const SizedBox(width: 16),
 
-    final disassembleButton = Padding(
-      padding: EdgeInsets.all(0),
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          padding:
-              EdgeInsets.only(top: 8.0, left: 0.0, bottom: 8.0, right: 0.0),
-          backgroundColor: GlobalConstants.appBg,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          side: BorderSide(width: 1, color: Colors.white),
-        ),
-        onPressed: () => _deleteItem(context, widget.item.id),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(RPGAwesome.recycle, color: Color(0xffe6a04e)),
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionLabel('Origin'),
             Text(
-              " $_btnDisText",
+              _blueprintName,
               style: TextStyle(
-                  color: Color(0xffe6a04e),
-                  fontSize: 24,
-                  fontFamily: 'Cormorant SC',
-                  fontWeight: FontWeight.bold),
+                color: _accent,
+                fontSize: 19,
+                fontFamily: 'Cormorant SC',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Knowledge bound into form',
+              style: TextStyle(color: _silverDim, fontSize: 14,
+                  fontStyle: FontStyle.italic),
             ),
           ],
-        ),
-      ),
+        )),
+      ]),
     );
+  }
 
-    final bottomContent = Stack(
-      children: <Widget>[
-        Container(
-          padding: EdgeInsets.all(40.0),
-          //width: MediaQuery.of(context).size.width,
-          decoration: BoxDecoration(color: Color(0xcc000000)),
-          child: Center(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                SizedBox(height: 18),
+  // ── Disassemble section ──────────────────────────────────────────────────────────
+
+  Widget _buildDisassemble(BuildContext context) {
+    const _red = Color(0xff8b1a1a);
+    final canAct = !_locked && widget.item.nr > 0;
+
+    return _card(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          _sectionLabel('Disassemble'),
+          const Spacer(),
+          if (_locked)
+            Row(children: [
+              Icon(Icons.lock, color: _accent, size: 12),
+              const SizedBox(width: 4),
+              Text('Sealed', style: TextStyle(color: _accent, fontSize: 11)),
+            ]),
+        ]),
+
+        const Text(
+          'Break down this item to reclaim the materials from which it was forged.',
+          style: TextStyle(
+            color: _silverDim,
+            fontSize: 14,
+            fontStyle: FontStyle.italic,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Quantity slider
+        if (widget.item.nr > 1) ...[
+          Row(children: [
+            Text(
+              '${_nrDisItems.toInt()}',
+              style: TextStyle(
+                color: canAct ? Colors.redAccent : Colors.white24,
+                fontSize: 22,
+                fontFamily: 'Cormorant SC',
+                fontWeight: FontWeight.bold,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+            Text(' / ${widget.item.nr}',
+                style: const TextStyle(color: Colors.white24, fontSize: 14)),
+          ]),
+          const SizedBox(height: 6),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: canAct ? Colors.redAccent : Colors.white12,
+              inactiveTrackColor: Colors.white12,
+              trackHeight: 3.0,
+              thumbColor: canAct ? Colors.redAccent : Colors.white24,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+              overlayColor: Colors.red.withAlpha(24),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 22),
+            ),
+            child: Slider(
+              min: 0,
+              max: widget.item.nr.toDouble(),
+              value: _nrDisItems,
+              divisions: widget.item.nr,
+              onChanged: _locked
+                  ? null
+                  : (v) => setState(() => _nrDisItems = v),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ] else ...[
+          // Single item — auto-set to 1
+          const SizedBox(height: 8),
+        ],
+
+        // Disassemble button
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              backgroundColor: canAct
+                  ? _red.withValues(alpha: 0.25)
+                  : Colors.transparent,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6)),
+              side: BorderSide(
+                color: canAct
+                    ? Colors.redAccent.withValues(alpha: 0.7)
+                    : Colors.white12,
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+            onPressed: canAct && (_nrDisItems > 0 || widget.item.nr == 1)
+                ? () {
+                    if (widget.item.nr == 1) {
+                      setState(() => _nrDisItems = 1);
+                    }
+                    _deleteItem(context, widget.item.id);
+                  }
+                : null,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(RPGAwesome.recycle,
+                    color: canAct ? Colors.redAccent : Colors.white24,
+                    size: 18),
+                const SizedBox(width: 10),
                 Text(
-                  _description,
-                  style:
-                      TextStyle(color: GlobalConstants.appFg, fontSize: 18.0),
-                ),
-                for (var misc in _misc)
-                  Text(
-                    misc,
-                    style:
-                        TextStyle(color: GlobalConstants.appFg, fontSize: 18.0),
-                  ),
-                SizedBox(height: 18),
-                Text(
-                  'Crafting',
-                  textAlign: TextAlign.left,
+                  _isDeleting ? 'Disassembling…' : 'Disassemble',
                   style: TextStyle(
-                      color: Color(0xffe6a04e),
-                      fontSize: 24,
-                      fontFamily: 'Cormorant SC',
-                      fontWeight: FontWeight.bold),
-                ),
-                if (_blueprintImg != "")
-                  Image.asset(
-                    "assets/images/blueprints/$_blueprintImg",
-                    height: 180.0,
-                    width: 180.0,
-                  ),
-                Text(
-                  _blueprintName,
-                  style:
-                      TextStyle(color: GlobalConstants.appFg, fontSize: 18.0),
-                ),
-                SizedBox(height: 18),
-                Text(
-                  'Disassemble',
-                  textAlign: TextAlign.left,
-                  style: TextStyle(
-                      color: Color(0xffe6a04e),
-                      fontSize: 24,
-                      fontFamily: 'Cormorant SC',
-                      fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 18),
-                Text(
-                  "Disassemble this item to get materials and blueprints."
-                  "After that, with enough skill you can forge a better one.",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
+                    color: canAct ? Colors.redAccent : Colors.white24,
+                    fontSize: 20,
+                    fontFamily: 'Cormorant SC',
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
                   ),
                 ),
-                SizedBox(height: 18),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: <Widget>[
-                    Container(
-                      width: 180,
-                      child: SliderTheme(
-                        data: SliderTheme.of(context).copyWith(
-                          activeTrackColor: Color(0xffe6a04e),
-                          inactiveTrackColor: Colors.white,
-                          trackShape: RectangularSliderTrackShape(),
-                          trackHeight: 4.0,
-                          thumbColor: Color(0xffe6a04e),
-                          thumbShape:
-                              RoundSliderThumbShape(enabledThumbRadius: 12.0),
-                          overlayColor: Colors.red.withAlpha(32),
-                          overlayShape:
-                              RoundSliderOverlayShape(overlayRadius: 28.0),
-                        ),
-                        child: Slider(
-                          min: 0,
-                          max: widget.item.nr * 1.0,
-                          value: _nrDisItems,
-                          divisions: widget.item.nr.round(),
-                          onChanged: (value) {
-                            setState(() {
-                              _nrDisItems = value;
-                              _btnDisText = _nrDisItems.toInt().toString();
-                            });
-                          },
-                        ),
-                      ),
-                    ),
-                    disassembleButton,
-                  ],
-                ),
-                SizedBox(height: 18),
               ],
             ),
           ),
+        ),
+      ]),
+    );
+  }
+
+  // ── Main build ───────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    final appBar = AppBar(
+      leading: IconButton(
+        icon: const Icon(Icons.menu, color: Colors.white),
+        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+      ),
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      title: Text('Details', style: Style.topBar),
+      actions: [
+        _isTogglingLock
+            ? const Padding(
+                padding: EdgeInsets.all(14),
+                child: SizedBox(
+                  width: 20, height: 20,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white),
+                ),
+              )
+            : IconButton(
+                tooltip: _locked ? 'Unlock item' : 'Lock item',
+                icon: Icon(
+                  _locked ? Icons.lock : Icons.lock_open,
+                  color: _locked ? const Color(0xffe6a04e) : _silver,
+                ),
+                onPressed: _toggleLock,
+              ),
+        IconButton(
+          icon: const Icon(Icons.arrow_back, color: _silver),
+          onPressed: () => context.pop(),
         ),
       ],
     );
 
     return Scaffold(
-      backgroundColor: GlobalConstants.appBg,
-      appBar: topBar,
+      backgroundColor: Colors.black,
+      appBar: appBar,
       extendBodyBehindAppBar: true,
-      body: Stack(children: <Widget>[
+      body: Stack(children: [
+        // Static dark backdrop
         Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             image: DecorationImage(
               image: AssetImage('assets/images/friend_campfire.jpg'),
-              fit: BoxFit.fill,
+              fit: BoxFit.cover,
+              colorFilter: ColorFilter.mode(
+                Color(0xcc000000),
+                BlendMode.darken,
+              ),
             ),
           ),
         ),
-        Container(
-          alignment: Alignment.topRight,
-          padding: const EdgeInsets.only(top: 90.0),
-          child: Column(
-            children: <Widget>[
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Container(
-                    child: Column(
-                      children: <Widget>[topContent, bottomContent],
-                    ),
-                  ),
-                ),
-              ),
-            ],
+
+        // Scrollable content
+        SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 40),
+            child: Column(children: [
+              const SizedBox(height: 12),
+              _buildHero(),
+              _eldritchDivider(),
+              _buildLore(),
+              if (_blueprintImg.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                _buildOrigin(),
+              ],
+              const SizedBox(height: 4),
+              _buildDisassemble(context),
+            ]),
           ),
         ),
       ]),
@@ -339,19 +497,34 @@ class _ItemDetailState extends State<ItemDetailPage> {
     );
   }
 
-  void _deleteItem(context, itemId) async {
-    if (_isDeleting) return;
-    var nrItems = _nrDisItems.toInt();
+  // ── Actions ───────────────────────────────────────────────────────────────────
 
-    if (nrItems <= 0) {
-      return;
+  Future<void> _toggleLock() async {
+    if (_isTogglingLock) return;
+    setState(() => _isTogglingLock = true);
+    try {
+      final newLocked =
+          await _inventoryRepo.setLocked(widget.item.id, locked: !_locked);
+      if (mounted) setState(() => _locked = newLocked);
+    } on AppError catch (err) {
+      if (mounted) err.show(context);
+    } catch (err) {
+      debugPrint('_toggleLock unexpected error: $err');
+    } finally {
+      if (mounted) setState(() => _isTogglingLock = false);
     }
+  }
+
+  void _deleteItem(BuildContext context, int itemId) async {
+    if (_isDeleting) return;
+    final nrItems = widget.item.nr == 1 ? 1 : _nrDisItems.toInt();
+    if (nrItems <= 0) return;
 
     setState(() => _isDeleting = true);
 
     dynamic response;
     try {
-      response = await _apiProvider.delete("/inventory/$itemId/$nrItems", {});
+      response = await _apiProvider.delete('/inventory/$itemId/$nrItems', {});
     } on AppError catch (err) {
       if (!mounted) return;
       setState(() => _isDeleting = false);
@@ -366,37 +539,35 @@ class _ItemDetailState extends State<ItemDetailPage> {
     if (!mounted) return;
     setState(() => _isDeleting = false);
 
-    //ignore: omit_local_variable_types
-    List<Image> imagesArr = [];
-
-    if (response["materials"].isNotEmpty) {
-      for (dynamic value in response["materials"]) {
-        if (value.containsKey("img") && value["img"] != "") {
-          imagesArr.add(Image.asset("assets/images/materials/${value['img']}"));
+    final List<Image> imagesArr = [];
+    if (response['materials']?.isNotEmpty == true) {
+      for (final v in response['materials']) {
+        if (v['img'] != null && v['img'] != '') {
+          imagesArr.add(Image.asset('assets/images/materials/${v['img']}'));
+        }
+      }
+    }
+    if (response['blueprints']?.isNotEmpty == true) {
+      for (final v in response['blueprints']) {
+        if (v['img'] != null && v['img'] != '' && (v['id'] ?? 0) > 0) {
+          imagesArr.add(Image.asset('assets/images/blueprints/${v['img']}'));
         }
       }
     }
 
-    if (response["blueprints"].isNotEmpty) {
-      for (dynamic value in response["blueprints"]) {
-        if (value.containsKey("img") && value["img"] != "" && value["id"] > 0) {
-          imagesArr
-              .add(Image.asset("assets/images/blueprints/${value['img']}"));
-        }
-      }
-    }
-
-    if (response["success"] == true) {
+    if (response['success'] == true) {
+      ref.invalidate(inventoryProvider);
+      ref.invalidate(userProvider);
       FlameAudio.play('sfx/break_1.mp3');
       showDialog(
         context: context,
-        builder: (context) => CustomDialog(
+        builder: (ctx) => CustomDialog(
           title: AppLocalizations.of(context)!.translate('congrats'),
-          description: response["message"],
-          buttonText: "Okay",
+          description: response['message'],
+          buttonText: 'Okay',
           images: imagesArr,
           callback: () {
-            Navigator.of(context).pop();
+            Navigator.of(ctx).pop();
             context.go('/inventory');
           },
         ),
@@ -405,20 +576,17 @@ class _ItemDetailState extends State<ItemDetailPage> {
   }
 
   void _getItemDetails(int itemId) async {
-    if (itemId <= 0) {
-      return;
-    }
+    if (itemId <= 0) return;
     try {
-    final response = await _apiProvider.get('/itemdetails/$itemId');
-
-    final miscMap = response["misc"] as Map<String, dynamic>;
-    setState(() {
-      _misc.clear();
-      _misc.addAll(miscMap.values.map((v) => v.toString()));
-      _description = response["description"]["en"];
-      _blueprintName = response["blueprint"]["name"];
-      _blueprintImg = response["blueprint"]["img"];
-    });
+      final response = await _apiProvider.get('/itemdetails/$itemId');
+      final miscMap = response['misc'] as Map<String, dynamic>;
+      setState(() {
+        _misc.clear();
+        _misc.addAll(miscMap.values.map((v) => v.toString()));
+        _description  = response['description']['en'] ?? '';
+        _blueprintName = response['blueprint']['name'] ?? '';
+        _blueprintImg  = response['blueprint']['img'] ?? '';
+      });
     } on AppError catch (err) {
       debugPrint(err.toString());
     } catch (err) {

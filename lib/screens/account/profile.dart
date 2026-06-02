@@ -394,6 +394,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         AppLocalizations.of(context)!.translate('profile'),
         style: Style.topBar,
       ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.pop(),
+        ),
+      ],
     );
 
     // Build dropdown items directly — no setState needed since we're already in build()
@@ -471,7 +477,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) context.go('/poi-map');
+        if (!didPop) context.pop();
       },
       child: Scaffold(
         resizeToAvoidBottomInset: false,

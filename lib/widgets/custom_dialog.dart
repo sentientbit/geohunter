@@ -114,13 +114,14 @@ class CustomDialog extends StatelessWidget {
                       fontWeight: FontWeight.normal,
                     ),
                   ),
-                  SizedBox(height: 24.0),
-                  SizedBox(
-                    width: 200.0,
-                    height: 200.0,
-                    child: ItemsGrid(images: images),
-                  ),
-                  //if (images != null) ...images.map((image) => image).toList(),
+                  if (images.isNotEmpty) ...[
+                    SizedBox(height: 24.0),
+                    SizedBox(
+                      width: 200.0,
+                      height: 200.0,
+                      child: ItemsGrid(images: images),
+                    ),
+                  ],
                   SizedBox(height: 24.0),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,

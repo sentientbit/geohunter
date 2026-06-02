@@ -291,12 +291,18 @@ class _NoGroupState extends ConsumerState<NoGroup> {
       elevation: 0.1,
       backgroundColor: Colors.transparent,
       title: Text("Guilds", style: Style.topBar),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.pop(),
+        ),
+      ],
     );
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) context.go('/poi-map');
+        if (!didPop) context.pop();
       },
       child: Scaffold(
         backgroundColor: GlobalConstants.appBg,

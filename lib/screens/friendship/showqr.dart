@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-// import 'package:logger/logger.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
-///
 import '../../models/app_error.dart';
-import '../../providers/api_provider.dart';
+import '../../providers/friends_repository.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
@@ -13,18 +11,7 @@ import '../../widgets/drawer.dart';
 
 ///
 class ShowQRPage extends StatefulWidget {
-  ///
-  final double latitude;
-
-  ///
-  final double longitude;
-
-  ///
-  ShowQRPage({
-    Key? key,
-    required this.latitude,
-    required this.longitude,
-  }) : super(key: key);
+  const ShowQRPage({Key? key}) : super(key: key);
 
   @override
   _ShowQRState createState() => _ShowQRState();
@@ -36,13 +23,10 @@ class _ShowQRState extends State<ShowQRPage> {
   //     printer: PrettyPrinter(
   //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
-  ///
-  final ApiProvider _apiProvider = ApiProvider();
+  final _repo = FriendsRepository();
 
-  ///
   String _qrEndpoint = '';
 
-  ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -59,12 +43,10 @@ class _ShowQRState extends State<ShowQRPage> {
   Future<void> generateNewQr() async {
     if (!mounted) return;
     try {
-    final response = await _apiProvider.post('/friends', {});
-    if (response.containsKey("friendship_qr")) {
-      setState(() {
-        _qrEndpoint = response["friendship_qr"];
-      });
-    }
+      final qr = await _repo.generateFriendshipQr();
+      if (qr.isNotEmpty && mounted) {
+        setState(() => _qrEndpoint = qr);
+      }
     } on AppError catch (err) {
       debugPrint(err.toString());
     } catch (err) {

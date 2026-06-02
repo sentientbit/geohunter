@@ -33,6 +33,10 @@ class Item {
   /// Nr Items
   int nr = 0;
 
+  /// Whether the player has locked this item against accidental disassembly.
+  /// Comes from items_users.locked (tinyint 0/1). Equip still works when locked.
+  bool locked = false;
+
   ///
   Item({
     required this.id,
@@ -44,6 +48,7 @@ class Item {
     required this.rarity,
     required this.nr,
     this.itemTypeId = 0,
+    this.locked = false,
   });
 
   ///
@@ -57,6 +62,7 @@ class Item {
       level: 0,
       rarity: 0,
       nr: 0,
+      locked: false,
     );
   }
 
@@ -74,6 +80,7 @@ class Item {
     level = int.tryParse(json["level"].toString()) ?? 0;
     rarity = int.tryParse(json["rarity"].toString()) ?? 0;
     nr = int.tryParse(json["nr"].toString()) ?? 0;
+    locked = json["locked"] == true || json["locked"] == 1 || json["locked"] == '1';
   }
 
   ///

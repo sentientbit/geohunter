@@ -18,9 +18,6 @@ final researchProvider =
     AsyncNotifierProvider<ResearchNotifier, ResearchResponse>(
         ResearchNotifier.new);
 
-/// Derived provider: player's total manuscript count.
-/// Updates automatically whenever [researchProvider] refreshes
-/// (after assemble, disassemble, or manual invalidation).
-final manuscriptsProvider = Provider<int>((ref) {
-  return ref.watch(researchProvider).valueOrNull?.manuscripts ?? 0;
-});
+// manuscriptsProvider lives in blueprint_pages_provider.dart —
+// it is derived from blueprintPagesProvider (GET /api/blueprint/pages)
+// which is the authoritative source for the manuscript count.

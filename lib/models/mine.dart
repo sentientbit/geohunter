@@ -173,7 +173,7 @@ class MineProperties {
     title = input["title"];
     comment = input["comment"];
     status = input["status"];
-    ico = input["ico"].toString();
+    ico = (input["ico"] ?? "0").toString();
     List<dynamic> pics = input["pictures"] ?? [];
     thumbnails.clear();
     if (pics.length > 0) {

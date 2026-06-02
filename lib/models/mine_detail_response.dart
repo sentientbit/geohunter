@@ -14,6 +14,11 @@ import 'materialmodel.dart';
 /// Blueprints only drop at Library points (ico == 7).
 /// Show blueprint celebration UI only when [blueprints] is non-empty.
 ///
+/// [pages] — blueprint pages written from marked manuscripts. Only present
+/// for Library mines (ico == 7). The server converts all marked_manuscripts
+/// for this player into real specific pages on each Library visit and returns
+/// them here. Empty list = no manuscripts were marked before the visit.
+///
 /// Optional enc token: GET /api/mine/:id?enc=<token> bypasses proximity
 /// and deducts 0.01 coins (purchase-flow path).
 class MineDetailResponse {
@@ -21,10 +26,19 @@ class MineDetailResponse {
   final List<Materialmodel> materials;
   final List<Blueprint> blueprints;
 
+  /// How many blank manuscripts were converted into specific pages on this visit.
+  ///
+  /// The converted pages themselves appear in [blueprints] — they are merged
+  /// server-side so the loot dialog renders everything in one grid.
+  /// This count is kept separately so Flutter can detect that a conversion
+  /// happened and refresh [blueprintPagesProvider] / [researchProvider].
+  final int manuscriptsConverted;
+
   const MineDetailResponse({
     required this.items,
     required this.materials,
     required this.blueprints,
+    this.manuscriptsConverted = 0,
   });
 
   factory MineDetailResponse.fromJson(Map<String, dynamic> json) {
@@ -38,6 +52,8 @@ class MineDetailResponse {
       blueprints: ((json['blueprints'] ?? []) as List)
           .map((e) => Blueprint.fromJson(e))
           .toList(),
+      manuscriptsConverted:
+          int.tryParse((json['manuscripts_converted'] ?? 0).toString()) ?? 0,
     );
   }
 }

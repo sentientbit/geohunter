@@ -10,8 +10,8 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../app_localizations.dart';
 import '../../models/app_error.dart';
 import '../../models/user.dart';
-import '../../providers/api_provider.dart';
 import '../../providers/friends_provider.dart';
+import '../../providers/friends_repository.dart';
 import '../../providers/user_provider.dart';
 import '../../screens/friendship/showqr.dart';
 import '../../shared/constants.dart';
@@ -41,8 +41,6 @@ class FriendsPage extends ConsumerStatefulWidget {
 class _FriendsPageState extends ConsumerState<FriendsPage> {
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  final _apiProvider = ApiProvider();
 
   String? _scanBarcode;
   bool qrFound = false;
@@ -93,7 +91,9 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
 
   /// When pressing Start Scan
   void showScan(BuildContext context) async {
-    MobileScannerController controllerQr = MobileScannerController();
+    // Dispose any previous controller before creating a fresh one.
+    controllerQr?.dispose();
+    controllerQr = MobileScannerController();
     setState(() {
       _scanBarcode = null;
       qrFound = false;
@@ -181,7 +181,11 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
           ],
         ),
       ),
-    );
+    ).then((_) {
+      // Release camera resources when the scanner dialog is dismissed.
+      controllerQr?.dispose();
+      controllerQr = null;
+    });
   }
 
   Widget leadingIcon(BuildContext context, UserData userDetails) {
@@ -257,6 +261,7 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
       title: Text("Friends", style: Style.topBar),
       actions: <Widget>[
         PopupMenuButton<PopupMenuChoice>(
+          iconColor: Colors.white,
           onSelected: (choice) {
             if (choice == PopupMenuChoice.scan) {
               showScan(context);
@@ -264,8 +269,7 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      ShowQRPage(latitude: 51.5, longitude: 0.0),
+                  builder: (context) => const ShowQRPage(),
                 ),
               );
             }
@@ -312,13 +316,17 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
           ],
           color: GlobalConstants.appBg,
         ),
+        IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.pop(),
+        ),
       ],
     );
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) context.go('/poi-map');
+        if (!didPop) context.pop();
       },
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -416,7 +424,7 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
   Future afterScan() async {
     if (_scanBarcode == null) return;
     try {
-      await _apiProvider.put('/friends/${_scanBarcode?.split('/')[5]}', {});
+      await ref.read(friendsRepositoryProvider).addFriend(_scanBarcode!);
       // Refresh friends list and user state (unread count may change)
       ref.invalidate(friendsProvider);
       ref.invalidate(userProvider);

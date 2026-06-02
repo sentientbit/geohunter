@@ -126,6 +126,24 @@ class ApiProvider {
     }
   }
 
+  Future<Map<String, dynamic>> patch(String endpoint, dynamic body) async {
+    try {
+      final response = await api.patch(
+        endpoint,
+        data: body,
+        options: Options(validateStatus: hookStatus),
+      );
+      return _unwrap(response.data);
+    } on DioException catch (e) {
+      throw AppError.fromDio(e);
+    } on AppError {
+      rethrow;
+    } on Exception catch (error, stacktrace) {
+      debugPrint('ApiProvider.patch unexpected error: $error\n$stacktrace');
+      rethrow;
+    }
+  }
+
   ///
   Future<Map<String, dynamic>> save(
       int isId, String endpoint, dynamic body) async {

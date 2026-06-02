@@ -212,7 +212,7 @@ class _BlueprintListState extends State<BlueprintListPage> {
     await _storage.write(key: 'forgeBlueprintName', value: blp.name);
     if (!mounted) return;
     Navigator.of(context).pop(); // close bottom sheet
-    context.go('/forge');
+    context.replace('/forge');
   }
 
   Widget build(BuildContext context) {
@@ -225,11 +225,11 @@ class _BlueprintListState extends State<BlueprintListPage> {
         currentTabIndex = index;
       });
       if (index == 0) {
-        context.go('/inventory');
+        context.replace('/inventory');
       }
       /* else index == 1 We are here: Blueprints */
       else if (index == 2) {
-        context.go('/materials');
+        context.replace('/materials');
       }
     }
 
@@ -248,6 +248,7 @@ class _BlueprintListState extends State<BlueprintListPage> {
       title: Text("Blueprints", style: Style.topBar),
       actions: <Widget>[
         PopupMenuButton<PopupMenuChoice>(
+          iconColor: Colors.white,
           onSelected: choiceAction,
           itemBuilder: (context) => <PopupMenuEntry<PopupMenuChoice>>[
             PopupMenuItem<PopupMenuChoice>(
@@ -329,12 +330,16 @@ class _BlueprintListState extends State<BlueprintListPage> {
           ],
           color: GlobalConstants.appBg,
         ),
+        IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.pop(),
+        ),
       ],
     );
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) context.go('/poi-map');
+        if (!didPop) context.pop();
       },
       child: Scaffold(
         backgroundColor: GlobalConstants.appBg,

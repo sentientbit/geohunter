@@ -76,10 +76,8 @@ class _SettingsState extends ConsumerState<SettingsPage> {
     final topBar = AppBar(
       leading: IconButton(
         color: GlobalConstants.appFg,
-        icon: Icon(Icons.arrow_back),
-        onPressed: () {
-          context.pop();
-        },
+        icon: const Icon(Icons.menu),
+        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
@@ -87,6 +85,12 @@ class _SettingsState extends ConsumerState<SettingsPage> {
         "Settings",
         style: Style.topBar,
       ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.pop(),
+        ),
+      ],
     );
 
     final saveButton = OutlinedButton(

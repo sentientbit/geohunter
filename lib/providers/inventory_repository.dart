@@ -14,6 +14,21 @@ class InventoryRepository {
     final response = await _api.post('/inventory', {'types': [0]});
     return InventoryResponse.fromJson(response);
   }
+
+  /// Toggles the lock flag on an item.
+  ///
+  /// Calls PATCH /api/inventory with {"item_id": itemId, "locked": 1|0}.
+  /// Returns the new lock state as confirmed by the server.
+  /// Throws [AppError] on server-side rejection.
+  Future<bool> setLocked(int itemId, {required bool locked}) async {
+    final response = await _api.patch('/inventory', {
+      'item_id': itemId,
+      'locked': locked ? 1 : 0,
+    });
+    // Server returns {"locked": true|false}
+    final val = response['locked'];
+    return val == true || val == 1 || val == '1';
+  }
 }
 
 final inventoryRepositoryProvider =

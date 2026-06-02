@@ -168,9 +168,9 @@ class _MaterialListState extends State<MaterialListPage> {
         currentTabIndex = index;
       });
       if (index == 0) {
-        context.go('/inventory');
+        context.replace('/inventory');
       } else if (index == 1) {
-        context.go('/blueprints');
+        context.replace('/blueprints');
       }
       /* else index == 2 We are here: Materials */
     }
@@ -190,6 +190,7 @@ class _MaterialListState extends State<MaterialListPage> {
       title: Text("Materials", style: Style.topBar),
       actions: <Widget>[
         PopupMenuButton<PopupMenuChoice>(
+          iconColor: Colors.white,
           onSelected: choiceAction,
           itemBuilder: (context) => <PopupMenuEntry<PopupMenuChoice>>[
             PopupMenuItem<PopupMenuChoice>(
@@ -271,12 +272,16 @@ class _MaterialListState extends State<MaterialListPage> {
           ],
           color: GlobalConstants.appBg,
         ),
+        IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.pop(),
+        ),
       ],
     );
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) context.go('/poi-map');
+        if (!didPop) context.pop();
       },
       child: Scaffold(
         backgroundColor: GlobalConstants.appBg,

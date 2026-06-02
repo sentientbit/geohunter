@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:geohunter/models/visitevent.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 
@@ -322,7 +323,7 @@ class _RockPaperScissorsState extends ConsumerState<RockPaperScissorsPage> {
                     ref.read(visitEventProvider.notifier).update(
                       VisitEvent(-1, "3", widget.mineId),
                     );
-                    Navigator.pop(context);
+                    context.pop();
                   },
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -375,7 +376,7 @@ class _RockPaperScissorsState extends ConsumerState<RockPaperScissorsPage> {
                     ref.read(visitEventProvider.notifier).update(
                       VisitEvent(1, "3", widget.mineId),
                     );
-                    Navigator.pop(context);
+                    context.pop();
                   },
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -531,17 +532,21 @@ class _RockPaperScissorsState extends ConsumerState<RockPaperScissorsPage> {
     final topBar = AppBar(
       leading: IconButton(
         color: GlobalConstants.appFg,
-        icon: Icon(Icons.arrow_back),
-        onPressed: () {
-          Navigator.pop(context);
-        },
+        icon: const Icon(Icons.menu),
+        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
       title: Text(
-        "Fight",
+        "Battle Training",
         style: Style.topBar,
       ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.pop(),
+        ),
+      ],
     );
 
     return Scaffold(
@@ -693,7 +698,7 @@ class _RockPaperScissorsState extends ConsumerState<RockPaperScissorsPage> {
                           ],
                         ),
                         actionMenu(),
-                        SizedBox(height: 20),
+                        SizedBox(height: 20 + MediaQuery.of(context).padding.bottom),
                       ],
                     ),
                   ),

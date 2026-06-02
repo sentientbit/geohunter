@@ -122,9 +122,20 @@ class MainApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       routerConfig: appRouter,
       theme: ThemeData(
-        appBarTheme: AppBarTheme(
-          systemOverlayStyle:
-              SystemUiOverlayStyle(statusBarBrightness: Brightness.dark),
+        // canvasColor is what BottomNavigationBar actually reads in M3.
+        // bottomNavigationBarTheme + elevation:0 also needed to suppress tint.
+        canvasColor: Colors.black,
+        scaffoldBackgroundColor: Colors.black,
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: Colors.black,
+          elevation: 0,
+        ),
+        appBarTheme: const AppBarTheme(
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarBrightness: Brightness.dark,
+            systemNavigationBarColor: Colors.black,
+            systemNavigationBarIconBrightness: Brightness.light,
+          ),
         ),
       ),
       supportedLocales: [

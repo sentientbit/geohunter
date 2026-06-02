@@ -57,6 +57,13 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
   @override
   void initState() {
     super.initState();
+    // Refresh daily rewards and user profile every time this screen opens.
+    // This ensures the badge and countdown reflect server state even when
+    // the player claimed their reward on the web portal between app sessions.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(dailyRewardsProvider);
+      ref.invalidate(userProvider);
+    });
   }
 
   @override
@@ -602,7 +609,7 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) context.go('/poi-map');
+        if (!didPop) context.pop();
       },
       child: Scaffold(
         backgroundColor: GlobalConstants.appBg,
@@ -614,6 +621,12 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
             "Quests",
             style: Style.topBar,
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => context.pop(),
+            ),
+          ],
         ),
         body: OfflineBuilder(
           connectivityBuilder: (

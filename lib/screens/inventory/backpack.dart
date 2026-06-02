@@ -89,6 +89,14 @@ class _InventoryState extends ConsumerState<InventoryPage> {
                 bottom: 0.0,
                 child: Text(item.nr.toString(),
                     style: TextStyle(color: Colors.white))),
+            // Gold lock badge — top-right corner, visible when item is locked
+            if (item.locked)
+              const Positioned(
+                right: 0.0,
+                top: 0.0,
+                child: Icon(Icons.lock,
+                    size: 16, color: Color(0xffe6a04e)),
+              ),
           ])),
       title: Text(
         item.name,
@@ -227,11 +235,9 @@ class _InventoryState extends ConsumerState<InventoryPage> {
       });
       /* if index == 0 We are here: Items */
       if (index == 1) {
-        context.go('/blueprints');
+        context.replace('/blueprints');
       } else if (index == 2) {
-        context.go('/materials');
-      } else if (index == 3) {
-        context.go('/pages');
+        context.replace('/materials');
       }
     }
 
@@ -257,7 +263,7 @@ class _InventoryState extends ConsumerState<InventoryPage> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) context.go('/poi-map');
+        if (!didPop) context.pop();
       },
       child: Scaffold(
         backgroundColor: GlobalConstants.appBg,
@@ -271,6 +277,7 @@ class _InventoryState extends ConsumerState<InventoryPage> {
           ),
           actions: <Widget>[
             PopupMenuButton<PopupMenuChoice>(
+              iconColor: Colors.white,
               onSelected: choiceAction,
               itemBuilder: (context) => <PopupMenuEntry<PopupMenuChoice>>[
                 PopupMenuItem<PopupMenuChoice>(
@@ -333,6 +340,10 @@ class _InventoryState extends ConsumerState<InventoryPage> {
               ],
               color: GlobalConstants.appBg,
             ),
+            IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => context.pop(),
+            ),
           ],
         ),
         extendBodyBehindAppBar: true,
@@ -369,10 +380,6 @@ class _InventoryState extends ConsumerState<InventoryPage> {
             BottomNavigationBarItem(
               icon: Icon(Icons.widgets, color: Colors.white),
               label: 'Materials',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.article_outlined, color: Colors.white),
-              label: 'Pages',
             ),
           ],
         ),

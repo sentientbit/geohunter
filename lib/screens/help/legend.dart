@@ -163,11 +163,17 @@ class LegendPage extends StatelessWidget {
         "Help",
         style: Style.topBar,
       ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.pop(),
+        ),
+      ],
     );
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      //appBar: topBar,
+      appBar: topBar,
       resizeToAvoidBottomInset: false,
       body: Stack(
         alignment: AlignmentDirectional.center,
@@ -182,12 +188,6 @@ class LegendPage extends StatelessWidget {
           ),
           Column(
             children: <Widget>[
-              ConstrainedBox(
-                // height: 0,
-                constraints: BoxConstraints(maxHeight: 80),
-                child:
-                    topBar, //CustomAppBar(Colors.white, Colors.white, _scaffoldKey),
-              ),
               SizedBox(
                 height: 12,
               ),
@@ -240,44 +240,43 @@ class LegendPage extends StatelessWidget {
                       .toList(),
                 ),
               ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  TextButton(
-                    child: Text(
-                      AppLocalizations.of(context)!
-                          .translate('terms_drawer_label'),
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontFamily: 'Open Sans',
-                        fontWeight: FontWeight.bold,
-                        shadows: <Shadow>[
-                          Shadow(
-                            offset: Offset(1.0, 1.0),
-                            blurRadius: 3.0,
-                            color: Color.fromARGB(255, 0, 0, 0),
-                          ),
-                        ],
-                      ),
-                    ),
-                    onPressed: () {
-                      context.push('/terms');
-                    },
-                  )
-                ],
-              ),
-              Text(
-                "version: ${GlobalConstants.appVersion}",
-                style: TextStyle(fontSize: 14.0, color: Colors.white),
-              ),
             ],
           )
         ],
       ),
       key: _scaffoldKey,
       drawer: DrawerPage(),
+      bottomNavigationBar: Container(
+        color: const Color(0xdd050505),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  onPressed: () => context.push('/terms'),
+                  child: Text(
+                    AppLocalizations.of(context)!
+                        .translate('terms_drawer_label'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontFamily: 'Open Sans',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Text(
+                  "v${GlobalConstants.appVersion}",
+                  style: const TextStyle(fontSize: 13.0, color: Colors.white54),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

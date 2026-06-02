@@ -266,6 +266,7 @@ class _ForgeState extends ConsumerState<ForgePage> {
       ),
       actions: <Widget>[
         PopupMenuButton<PopupMenuChoice>(
+          iconColor: Colors.white,
           onSelected: (onSel) {
             choiceAction(context, onSel);
           },
@@ -311,6 +312,10 @@ class _ForgeState extends ConsumerState<ForgePage> {
           ],
           color: GlobalConstants.appBg,
         ),
+        IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => context.pop(),
+        ),
       ],
     );
 
@@ -322,7 +327,7 @@ class _ForgeState extends ConsumerState<ForgePage> {
       /* if index == 0 We are here: Forge */
       if (index == 1) {
         //Navigator.of(context).pop();
-        context.go('/research');
+        context.replace('/research');
       }
     }
 
@@ -539,7 +544,7 @@ class _ForgeState extends ConsumerState<ForgePage> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) context.go('/poi-map');
+        if (!didPop) context.pop();
       },
       child: Scaffold(
         backgroundColor: GlobalConstants.appBg,
