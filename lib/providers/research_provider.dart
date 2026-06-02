@@ -18,6 +18,3 @@ final researchProvider =
     AsyncNotifierProvider<ResearchNotifier, ResearchResponse>(
         ResearchNotifier.new);
 
-// manuscriptsProvider lives in blueprint_pages_provider.dart —
-// it is derived from blueprintPagesProvider (GET /api/blueprint/pages)
-// which is the authoritative source for the manuscript count.

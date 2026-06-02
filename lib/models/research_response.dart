@@ -28,9 +28,6 @@ class ResearchResponse with _$ResearchResponse {
     @JsonKey(name: 'blueprints', fromJson: _parseBlueprints)
     @Default([])
     List<Blueprint> blueprints,
-    /// Total manuscripts the player currently holds.
-    /// Sent at the root of GET /api/research.
-    @Default(0) int manuscripts,
   }) = _ResearchResponse;
 
   factory ResearchResponse.fromJson(Map<String, dynamic> json) =>

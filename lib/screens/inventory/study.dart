@@ -15,7 +15,6 @@ import '../../shared/app_theme.dart';
 import '../../shared/constants.dart';
 import '../../providers/api_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../models/disassemble_result.dart';
 import '../../models/library_mine.dart';
 import '../../providers/blueprint_pages_repository.dart';
 import '../../providers/blueprint_pages_provider.dart';
@@ -63,17 +62,6 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
   int _nrAvailBlueprints = 0;
   int _maxNr = 0;
 
-  /// Pending manuscript mark count for this blueprint.
-  /// Initialised from [Research.markedManuscripts] when the screen opens;
-  /// updated optimistically when the player taps +/−.
-  int _pendingMarked = 0;
-
-  /// True while a mark API call is in flight.
-  bool _isMarking = false;
-
-  /// How many volumes to disassemble (1 … volumesOwned).
-  int _nrToDisassemble = 1;
-
   /// Result of the "find nearest Library" search. Null = not searched yet.
   List<LibraryMine>? _nearbyLibraries;
 
@@ -104,7 +92,6 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
         : _nrAvailBlueprints;
 
     _blueprintName = widget.research.blueprint.name;
-    _pendingMarked = widget.research.markedManuscripts;
   }
 
   @override
@@ -140,7 +127,6 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(userProvider).valueOrNull ?? User.blank();
-    final int manuscripts = ref.watch(manuscriptsProvider);
 
     // Live tech data: watch researchProvider so counts update immediately after
     // assemble / invest actions without requiring the user to navigate away.
@@ -298,13 +284,6 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     // ── Volume Assembly card ───────────────────────────────────────────────
     Widget? assemblyCard;
     if (pagesRequired > 0) {
-      // Max manuscripts the player can usefully mark for this blueprint:
-      // they only need (pagesRequired − pagesNr) more, and can't exceed total available.
-      final int maxMarkable =
-          (pagesRequired - pagesNr).clamp(0, manuscripts).toInt();
-      // Keep pending mark in sync if available manuscripts or pages changed
-      final int effectiveMark = _pendingMarked.clamp(0, maxMarkable);
-
       assemblyCard = Container(
         margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         padding: const EdgeInsets.all(20),
@@ -312,21 +291,12 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Heading + manuscripts count
+            // Heading
             Row(children: [
               const Icon(Icons.auto_stories, color: _gold, size: 14),
               const SizedBox(width: 8),
               const Expanded(
                   child: Text('VOLUME ASSEMBLY', style: _sectionLabel)),
-              if (manuscripts > 0) ...[
-                const Icon(Icons.history_edu, color: _gold, size: 14),
-                const SizedBox(width: 4),
-                Text('$manuscripts',
-                    style: const TextStyle(
-                        color: _gold,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold)),
-              ],
             ]),
             const SizedBox(height: 4),
             const Text('Collect pages to bind a new volume.',
@@ -403,119 +373,22 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                                 fontSize: 11),
                             textAlign: TextAlign.center),
                       const SizedBox(height: 14),
-                      // Mark manuscripts section — visible when short on pages
-                      if (manuscripts > 0 && pagesNr < pagesRequired) ...[
-                        const Text('MARK MANUSCRIPTS',
-                            style: TextStyle(
-                                color: kSilverDim,
-                                fontSize: 9,
-                                letterSpacing: 1.2)),
-                        const SizedBox(height: 6),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                      kStoneButton(
+                        onTap: canAssemble ? () => _assemble(assemblePageId) : null,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Column(
                           children: [
-                            IconButton(
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              icon: const Icon(Icons.remove_circle_outline,
-                                  size: 20),
-                              color: effectiveMark > 0
-                                  ? Colors.white54
-                                  : Colors.white12,
-                              onPressed: effectiveMark > 0
-                                  ? () => _setMark(
-                                      liveTech, effectiveMark - 1)
-                                  : null,
-                            ),
-                            const SizedBox(width: 8),
-                            Column(
-                              children: [
-                                Text('$effectiveMark',
-                                    style: const TextStyle(
-                                        color: _gold,
-                                        fontSize: 18,
-                                        fontFamily: 'Cormorant SC',
-                                        fontWeight: FontWeight.bold)),
-                                Text(
-                                    '/ $manuscripts available',
-                                    style: const TextStyle(
-                                        color: kSilverDim,
-                                        fontSize: 9)),
-                              ],
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              icon: const Icon(Icons.add_circle_outline,
-                                  size: 20),
-                              color: effectiveMark < maxMarkable
-                                  ? _gold
-                                  : Colors.white12,
-                              onPressed: effectiveMark < maxMarkable
-                                  ? () => _setMark(
-                                      liveTech, effectiveMark + 1)
-                                  : null,
-                            ),
-                          ],
-                        ),  // Row
-                        ),  // FittedBox
-                        if (effectiveMark > 0)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              'Visit a Library mine to convert.',
-                              style: const TextStyle(
-                                  color: kSilverDim,
-                                  fontSize: 10,
-                                  fontStyle: FontStyle.italic),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        const SizedBox(height: 10),
-                      ],
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: canAssemble
-                                ? const Color(0xff3a2800)
-                                : Colors.transparent,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                            side: BorderSide(
-                                color: canAssemble
-                                    ? _gold
-                                    : Colors.white24),
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 10),
-                          ),
-                          onPressed: canAssemble
-                              ? () => _assemble(assemblePageId)
-                              : null,
-                          child: Column(
-                            children: [
-                              Text(
-                                'Bind Volume',
+                            Text('Bind Volume',
                                 style: TextStyle(
-                                  color: canAssemble
-                                      ? _gold
-                                      : Colors.white30,
+                                  color: canAssemble ? _gold : Colors.white30,
                                   fontSize: 14,
                                   fontFamily: 'Cormorant SC',
                                   fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                'Requires $pagesRequired pages',
+                                )),
+                            Text('Requires $pagesRequired pages',
                                 style: const TextStyle(
-                                    color: Colors.white38,
-                                    fontSize: 10),
-                              ),
-                            ],
-                          ),
+                                    color: Colors.white38, fontSize: 10)),
+                          ],
                         ),
                       ),
                     ],
@@ -738,46 +611,26 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
             ]),
             const SizedBox(height: 14),
             // Invest button
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: _nrInvBlueprints > 0
-                      ? const Color(0xff3a2800)
-                      : Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                  side: BorderSide(
-                      color: _nrInvBlueprints > 0
-                          ? _gold
-                          : Colors.white24),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                onPressed: _nrInvBlueprints > 0
-                    ? () =>
-                        _studyResearch(context, widget.research.id)
-                    : null,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.upload,
-                        color: _nrInvBlueprints > 0
-                            ? _gold
-                            : Colors.white30),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Invest Volume  ${_nrInvBlueprints.toInt()}',
-                      style: TextStyle(
-                        color: _nrInvBlueprints > 0
-                            ? _gold
-                            : Colors.white30,
-                        fontSize: 16,
-                        fontFamily: 'Cormorant SC',
-                        fontWeight: FontWeight.bold,
-                      ),
+            kStoneButton(
+              onTap: _nrInvBlueprints > 0
+                  ? () => _studyResearch(context, widget.research.id)
+                  : null,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.upload,
+                      color: _nrInvBlueprints > 0 ? _gold : Colors.white30),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Invest Volume  ${_nrInvBlueprints.toInt()}',
+                    style: TextStyle(
+                      color: _nrInvBlueprints > 0 ? _gold : Colors.white30,
+                      fontSize: 16,
+                      fontFamily: 'Cormorant SC',
+                      fontWeight: FontWeight.bold,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ] else ...[
@@ -834,8 +687,6 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                     const SizedBox(height: 4),
                   ],
                   investCard,
-                  const SizedBox(height: 4),
-                  _buildDisassembleCard(widget.research, manuscripts),
                   const SizedBox(height: 4),
                   _buildDisciplineCard(widget.research),
                   const SizedBox(height: 16),
@@ -1079,168 +930,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
   }
 
 
-  // ── Disassemble card ─────────────────────────────────────────────────────────
-
-  Widget _buildDisassembleCard(Research tech, int manuscripts) {
-    final int volumesOwned = tech.volumesOwned;
-    final int pagesRequired = tech.pagesRequired; // from research node, not blueprint
-    if (volumesOwned <= 0 || pagesRequired == 0) return const SizedBox.shrink();
-
-    // Yield comes from the API — backend owns the formula, Flutter just displays it
-    final int yieldPerVolume = tech.manuscriptsYield;
-    final int previewGain = _nrToDisassemble * yieldPerVolume;
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      padding: const EdgeInsets.all(20),
-      decoration: kCardDecoration(kGold),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            const Icon(Icons.history_edu, color: _gold, size: 14),
-            const SizedBox(width: 8),
-            const Text('DISASSEMBLE VOLUMES', style: _sectionLabel),
-          ]),
-          const SizedBox(height: 4),
-          Text(
-            'Break down volumes into manuscripts. '
-            'Each volume yields $yieldPerVolume manuscripts.',
-            style: const TextStyle(color: kSilverDim, fontSize: 12,
-                fontStyle: FontStyle.italic),
-          ),
-          const SizedBox(height: 16),
-          // Volumes owned + yield preview
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _statCell('VOLUMES', '$volumesOwned', kSilver),
-              _vDivider(),
-              _statCell('WILL GAIN',
-                  '$previewGain manuscripts', const Color(0xff66bb6a)),
-              _vDivider(),
-              _statCell('MANUSCRIPTS', '$manuscripts', _gold),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Quantity slider (only if >1 volume)
-          if (volumesOwned > 1) ...[
-            Row(children: [
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                onPressed: _nrToDisassemble > 1
-                    ? () => setState(() => _nrToDisassemble--)
-                    : null,
-                icon: Icon(Icons.remove_circle_outline,
-                    color: _nrToDisassemble > 1
-                        ? Colors.white
-                        : Colors.white24),
-              ),
-              Expanded(
-                child: SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    activeTrackColor: Colors.redAccent,
-                    inactiveTrackColor: Colors.white12,
-                    trackHeight: 4.0,
-                    thumbColor: Colors.redAccent,
-                    thumbShape:
-                        const RoundSliderThumbShape(enabledThumbRadius: 10),
-                    overlayColor: Colors.red.withAlpha(30),
-                  ),
-                  child: Slider(
-                    min: 1,
-                    max: volumesOwned.toDouble(),
-                    value: _nrToDisassemble.toDouble(),
-                    divisions: volumesOwned > 1 ? volumesOwned - 1 : 1,
-                    onChanged: (v) =>
-                        setState(() => _nrToDisassemble = v.toInt()),
-                  ),
-                ),
-              ),
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                onPressed: _nrToDisassemble < volumesOwned
-                    ? () => setState(() => _nrToDisassemble++)
-                    : null,
-                icon: Icon(Icons.add_circle_outline,
-                    color: _nrToDisassemble < volumesOwned
-                        ? Colors.white
-                        : Colors.white24),
-              ),
-            ]),
-            Center(
-              child: Text(
-                'Disassemble $_nrToDisassemble volume${_nrToDisassemble == 1 ? '' : 's'}',
-                style: const TextStyle(color: kSilverDim, fontSize: 13),
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                backgroundColor: const Color(0xff280000),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-                side: const BorderSide(color: Colors.redAccent, width: 0.8),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              onPressed: () => _disassemble(
-                  tech.blueprint.id, _nrToDisassemble),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.auto_delete_outlined,
-                      color: Colors.redAccent, size: 18),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Disassemble  $_nrToDisassemble',
-                    style: const TextStyle(
-                      color: Colors.redAccent,
-                      fontSize: 15,
-                      fontFamily: 'Cormorant SC',
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ── Actions ──────────────────────────────────────────────────────────────────
-
-  /// Updates the manuscript mark count for [tech]'s blueprint.
-  /// Optimistic: updates [_pendingMarked] immediately, reverts on error.
-  Future<void> _setMark(Research tech, int quantity) async {
-    if (_isMarking) return;
-    final prev = _pendingMarked;
-    setState(() {
-      _pendingMarked = quantity;
-      _isMarking = true;
-    });
-    try {
-      await ref
-          .read(blueprintPagesRepositoryProvider)
-          .mark(tech.blueprint.id, quantity);
-      // Refresh so markedManuscripts on the research node stays in sync
-      ref.invalidate(researchProvider);
-    } on AppError catch (err) {
-      setState(() => _pendingMarked = prev); // revert on error
-      if (mounted) err.show(context);
-    } catch (err) {
-      setState(() => _pendingMarked = prev);
-      debugPrint('_setMark unexpected error: $err');
-    } finally {
-      if (mounted) setState(() => _isMarking = false);
-    }
-  }
 
   Future<void> _assemble(int? pageId) async {
     if (pageId == null) return;
@@ -1268,42 +958,6 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     } catch (err) {
       debugPrint('_assemble unexpected error: $err');
     }
-  }
-
-  Future<void> _disassemble(int blueprintId, int qty) async {
-    DisassembleResult result;
-    try {
-      result = await ref
-          .read(blueprintPagesRepositoryProvider)
-          .disassemble(blueprintId, qty);
-    } on AppError catch (err) {
-      if (!mounted) return;
-      err.show(context);
-      return;
-    } catch (err) {
-      debugPrint('_disassemble unexpected error: $err');
-      return;
-    }
-
-    ref.invalidate(blueprintPagesProvider); // refreshes manuscript count
-    ref.invalidate(researchProvider);
-    ref.invalidate(userProvider);
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (ctx) => CustomDialog(
-        title: AppLocalizations.of(context)!.translate('congrats'),
-        description:
-            '+${result.manuscriptsGained} manuscripts gained!\n'
-            'Total: ${result.manuscriptsTotal} manuscripts.',
-        buttonText: 'Okay',
-        images: [],
-        callback: () {
-          Navigator.of(ctx).pop();
-          context.pop();
-        },
-      ),
-    );
   }
 
   void _studyResearch(context, researchId) async {
@@ -1349,7 +1003,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
 
         // Refresh all providers that depend on invest outcome:
         // - researchProvider: updates nr_invested, crafting_level, pages_owned
-        // - blueprintPagesProvider: volumes consumed, manuscripts count unchanged
+        // - blueprintPagesProvider: volumes consumed
         // - userProvider: coins, XP, stats
         ref.invalidate(researchProvider);
         ref.invalidate(blueprintPagesProvider);

@@ -25,10 +25,6 @@ mixin _$ResearchResponse {
   @JsonKey(name: 'blueprints', fromJson: _parseBlueprints)
   List<Blueprint> get blueprints => throw _privateConstructorUsedError;
 
-  /// Total manuscripts the player currently holds.
-  /// Sent at the root of GET /api/research.
-  int get manuscripts => throw _privateConstructorUsedError;
-
   /// Create a copy of ResearchResponse
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -45,8 +41,7 @@ abstract class $ResearchResponseCopyWith<$Res> {
   $Res call(
       {@JsonKey(name: 'techs', fromJson: _parseTechs) List<Research> techs,
       @JsonKey(name: 'blueprints', fromJson: _parseBlueprints)
-      List<Blueprint> blueprints,
-      int manuscripts});
+      List<Blueprint> blueprints});
 }
 
 /// @nodoc
@@ -66,7 +61,6 @@ class _$ResearchResponseCopyWithImpl<$Res, $Val extends ResearchResponse>
   $Res call({
     Object? techs = null,
     Object? blueprints = null,
-    Object? manuscripts = null,
   }) {
     return _then(_value.copyWith(
       techs: null == techs
@@ -77,10 +71,6 @@ class _$ResearchResponseCopyWithImpl<$Res, $Val extends ResearchResponse>
           ? _value.blueprints
           : blueprints // ignore: cast_nullable_to_non_nullable
               as List<Blueprint>,
-      manuscripts: null == manuscripts
-          ? _value.manuscripts
-          : manuscripts // ignore: cast_nullable_to_non_nullable
-              as int,
     ) as $Val);
   }
 }
@@ -96,8 +86,7 @@ abstract class _$$ResearchResponseImplCopyWith<$Res>
   $Res call(
       {@JsonKey(name: 'techs', fromJson: _parseTechs) List<Research> techs,
       @JsonKey(name: 'blueprints', fromJson: _parseBlueprints)
-      List<Blueprint> blueprints,
-      int manuscripts});
+      List<Blueprint> blueprints});
 }
 
 /// @nodoc
@@ -115,7 +104,6 @@ class __$$ResearchResponseImplCopyWithImpl<$Res>
   $Res call({
     Object? techs = null,
     Object? blueprints = null,
-    Object? manuscripts = null,
   }) {
     return _then(_$ResearchResponseImpl(
       techs: null == techs
@@ -126,10 +114,6 @@ class __$$ResearchResponseImplCopyWithImpl<$Res>
           ? _value._blueprints
           : blueprints // ignore: cast_nullable_to_non_nullable
               as List<Blueprint>,
-      manuscripts: null == manuscripts
-          ? _value.manuscripts
-          : manuscripts // ignore: cast_nullable_to_non_nullable
-              as int,
     ));
   }
 }
@@ -141,8 +125,7 @@ class _$ResearchResponseImpl extends _ResearchResponse {
       {@JsonKey(name: 'techs', fromJson: _parseTechs)
       final List<Research> techs = const [],
       @JsonKey(name: 'blueprints', fromJson: _parseBlueprints)
-      final List<Blueprint> blueprints = const [],
-      this.manuscripts = 0})
+      final List<Blueprint> blueprints = const []})
       : _techs = techs,
         _blueprints = blueprints,
         super._();
@@ -168,15 +151,9 @@ class _$ResearchResponseImpl extends _ResearchResponse {
     return EqualUnmodifiableListView(_blueprints);
   }
 
-  /// Total manuscripts the player currently holds.
-  /// Sent at the root of GET /api/research.
-  @override
-  @JsonKey()
-  final int manuscripts;
-
   @override
   String toString() {
-    return 'ResearchResponse(techs: $techs, blueprints: $blueprints, manuscripts: $manuscripts)';
+    return 'ResearchResponse(techs: $techs, blueprints: $blueprints)';
   }
 
   @override
@@ -186,9 +163,7 @@ class _$ResearchResponseImpl extends _ResearchResponse {
             other is _$ResearchResponseImpl &&
             const DeepCollectionEquality().equals(other._techs, _techs) &&
             const DeepCollectionEquality()
-                .equals(other._blueprints, _blueprints) &&
-            (identical(other.manuscripts, manuscripts) ||
-                other.manuscripts == manuscripts));
+                .equals(other._blueprints, _blueprints));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -196,8 +171,7 @@ class _$ResearchResponseImpl extends _ResearchResponse {
   int get hashCode => Object.hash(
       runtimeType,
       const DeepCollectionEquality().hash(_techs),
-      const DeepCollectionEquality().hash(_blueprints),
-      manuscripts);
+      const DeepCollectionEquality().hash(_blueprints));
 
   /// Create a copy of ResearchResponse
   /// with the given fields replaced by the non-null parameter values.
@@ -214,8 +188,7 @@ abstract class _ResearchResponse extends ResearchResponse {
       {@JsonKey(name: 'techs', fromJson: _parseTechs)
       final List<Research> techs,
       @JsonKey(name: 'blueprints', fromJson: _parseBlueprints)
-      final List<Blueprint> blueprints,
-      final int manuscripts}) = _$ResearchResponseImpl;
+      final List<Blueprint> blueprints}) = _$ResearchResponseImpl;
   const _ResearchResponse._() : super._();
 
   factory _ResearchResponse.fromJson(Map<String, dynamic> json) =
@@ -227,11 +200,6 @@ abstract class _ResearchResponse extends ResearchResponse {
   @override
   @JsonKey(name: 'blueprints', fromJson: _parseBlueprints)
   List<Blueprint> get blueprints;
-
-  /// Total manuscripts the player currently holds.
-  /// Sent at the root of GET /api/research.
-  @override
-  int get manuscripts;
 
   /// Create a copy of ResearchResponse
   /// with the given fields replaced by the non-null parameter values.

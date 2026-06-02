@@ -49,23 +49,6 @@ class Research {
   /// Flutter reads it from the API — never hardcode it.
   int pagesRequired = 5;
 
-  /// How many blank manuscripts the player has marked for conversion to
-  /// specific pages for this research node.
-  ///
-  /// Marking reserves blank manuscripts with intent — they become real pages
-  /// the next time the player visits a Library mine.
-  /// Read from marked_manuscripts_users via batch load in enrichTechs().
-  int markedManuscripts = 0;
-
-  /// How many Blank Manuscripts the player receives when disassembling one
-  /// volume of this tech.
-  ///
-  /// Computed server-side (backend owns the yield formula). Flutter only
-  /// displays this number — it never recalculates it independently.
-  /// Default of 1 is a safe fallback for old API responses that don't yet
-  /// include the field.
-  int manuscriptsYield = 1;
-
   /// page_id to pass to POST /api/blueprint/assemble. Null if no pages exist yet.
   int? pageId;
 
@@ -144,12 +127,6 @@ class Research {
     pagesRequired = int.tryParse(
             (json['pages_required'] ?? blueprint.pagesRequired).toString()) ??
         blueprint.pagesRequired;
-
-    markedManuscripts =
-        int.tryParse((json['marked_manuscripts'] ?? 0).toString()) ?? 0;
-
-    manuscriptsYield =
-        int.tryParse((json['manuscripts_yield'] ?? 1).toString()) ?? 1;
 
     pagesOwned =
         int.tryParse((json['pages_owned'] ?? 0).toString()) ?? 0;

@@ -64,12 +64,12 @@ abstract class MineResultHelper {
   ///
   /// userProvider        — coins and XP always change.
   /// blueprintPagesProvider
-  /// researchProvider    — only when pages were dropped or manuscripts converted;
+  /// researchProvider    — only when blueprint pages were dropped;
   ///                        avoids an unnecessary API round-trip on regular mines.
   static void _invalidateProviders(WidgetRef ref, MineDetailResponse result) {
     ref.invalidate(userProvider);
 
-    if (result.blueprints.isNotEmpty || result.manuscriptsConverted > 0) {
+    if (result.blueprints.isNotEmpty) {
       ref.invalidate(blueprintPagesProvider);
       ref.invalidate(researchProvider);
     }
