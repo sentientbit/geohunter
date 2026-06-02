@@ -16,7 +16,9 @@ import '../models/secret.dart';
 import '../models/user.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/api_provider.dart';
+import '../providers/blueprint_pages_provider.dart';
 import '../providers/location_provider.dart';
+import '../providers/research_provider.dart';
 import '../screens/map/map_explore.dart' show PoiMap;
 import '../shared/constants.dart';
 import '../text_style.dart';
@@ -875,7 +877,9 @@ class _PlacesState extends ConsumerState<PlacesPage> {
         }
       }
 
-      for (dynamic value in mineResponse["blueprints"]) {
+      final rawBlueprints =
+          (mineResponse["blueprints"] as List?) ?? <dynamic>[];
+      for (dynamic value in rawBlueprints) {
         if (value.containsKey("img") && value["img"] != "") {
           mine.addBlueprint(value);
           imagesArr.add(
@@ -888,6 +892,15 @@ class _PlacesState extends ConsumerState<PlacesPage> {
         //print('Treasury is now ${mineResponse["coins"]}');
         _user.details.coins =
             double.tryParse(mineResponse["coins"].toString()) ?? 0.0;
+      }
+
+      // Refresh blueprint page counts when pages were dropped.
+      // Mirrors the same logic in map_explore.dart foundMine().
+      final manuscriptsConverted =
+          ((mineResponse["manuscripts_converted"] as List?) ?? []).length;
+      if (rawBlueprints.isNotEmpty || manuscriptsConverted > 0) {
+        ref.invalidate(blueprintPagesProvider);
+        ref.invalidate(researchProvider);
       }
 
       if (!mounted) return;
