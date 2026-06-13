@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app_localizations.dart';
 import '../models/mine_detail_response.dart';
 import '../providers/research_provider.dart';
+import '../providers/swap_provider.dart';
 import '../providers/user_provider.dart';
 import '../widgets/custom_dialog.dart';
 
@@ -69,6 +70,11 @@ abstract class MineResultHelper {
 
     if (result.blueprints.isNotEmpty) {
       ref.invalidate(researchProvider);
+      // If any blueprint was swap-fulfilled, invalidate all swapProvider instances
+      // so the Study Detail card returns to empty state on next open.
+      if (result.blueprints.any((b) => b.source == 'swap')) {
+        ref.invalidate(swapProvider);
+      }
     }
   }
 

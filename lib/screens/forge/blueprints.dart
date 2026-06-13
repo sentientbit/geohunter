@@ -1,63 +1,34 @@
-///
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-///
-import '../../models/app_error.dart';
+
 import '../../models/blueprint.dart';
-import '../../providers/api_provider.dart';
+import '../../providers/blueprint_list_provider.dart';
+import '../../shared/app_theme.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
 
-//import '../app_localizations.dart';
-
-///
-class BlueprintSelectPage extends StatefulWidget {
-  ///
+class BlueprintSelectPage extends ConsumerStatefulWidget {
   BlueprintSelectPage({Key? key}) : super(key: key);
 
   @override
   _BlueprintSelectState createState() => _BlueprintSelectState();
 }
 
-///
-class _BlueprintSelectState extends State<BlueprintSelectPage> {
-  /// Secure Storage for User Data
+class _BlueprintSelectState extends ConsumerState<BlueprintSelectPage> {
   final _storage = FlutterSecureStorage();
-
-  ///
-  final ApiProvider _apiProvider = ApiProvider();
-
-  ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  ///
-  final _blueprints = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _getBlueprints();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  Widget _makeCard(BuildContext context, int index) {
+  Widget _makeCard(BuildContext context, int index, List<Blueprint> blueprints) {
     return Card(
-      color: Color.fromRGBO(19, 21, 20, 0.8),
+      color: const Color.fromRGBO(19, 21, 20, 0.8),
       elevation: 8.0,
-      margin: EdgeInsets.symmetric(
-        horizontal: 10.0,
-        vertical: 6.0,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
       child: Container(
         decoration: BoxDecoration(
-          //color: Color.fromRGBO(19, 21, 20, 0.7),
           borderRadius: BorderRadius.circular(8.0),
-          boxShadow: <BoxShadow>[
+          boxShadow: const <BoxShadow>[
             BoxShadow(
               color: Colors.black12,
               blurRadius: 33.0,
@@ -65,82 +36,68 @@ class _BlueprintSelectState extends State<BlueprintSelectPage> {
             ),
           ],
         ),
-        child: _makeListTile(context, index),
+        child: _makeListTile(context, index, blueprints),
       ),
     );
   }
 
-  Widget _makeListTile(BuildContext context, int index) {
-    var netImg = Image(
-      image: AssetImage('assets/images/blueprints/${_blueprints[index].img}'),
-      height: 76.0,
-      width: 76.0,
-    );
-
+  Widget _makeListTile(BuildContext context, int index, List<Blueprint> blueprints) {
+    final blp = blueprints[index];
     return ListTile(
-      contentPadding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
       leading: Container(
-          padding: EdgeInsets.only(right: 12.0),
-          decoration: BoxDecoration(
-            border: Border(
-              right: BorderSide(
-                width: 1.0,
-                color: Color(0xff333333),
-              ),
-            ),
+        padding: const EdgeInsets.only(right: 12.0),
+        decoration: const BoxDecoration(
+          border: Border(
+            right: BorderSide(width: 1.0, color: Color(0xff333333)),
           ),
-          child: Stack(children: <Widget>[
-            netImg,
-            Positioned(
-                right: 0.0,
-                bottom: 0.0,
-                child: Text(_blueprints[index].nr.toString(),
-                    style: TextStyle(color: Colors.white))),
-          ])),
+        ),
+        child: Stack(children: <Widget>[
+          Image(
+            image: AssetImage('assets/images/blueprints/${blp.img}'),
+            height: 76.0,
+            width: 76.0,
+          ),
+          Positioned(
+            right: 0.0,
+            bottom: 0.0,
+            child: Text(blp.nr.toString(),
+                style: const TextStyle(color: Colors.white)),
+          ),
+        ]),
+      ),
       title: Text(
-        _blueprints[index].name,
+        blp.name,
         style: TextStyle(
           color: GlobalConstants.appFg,
-          fontFamily: "Cormorant SC",
+          fontFamily: 'Cormorant SC',
           fontWeight: FontWeight.bold,
         ),
       ),
-      subtitle: Row(
-        children: <Widget>[
-          Text(
-            " Blp",
-            style: TextStyle(color: Colors.white),
-          )
-        ],
-      ),
-      trailing:
-          Icon(Icons.keyboard_arrow_right, color: Colors.white, size: 30.0),
-      onTap: () {
-        _chooseBlueprint(context, _blueprints[index].id, _blueprints[index].img,
-            _blueprints[index].name);
-      },
+      subtitle: const Text(' Blp', style: TextStyle(color: Colors.white)),
+      trailing: const Icon(Icons.keyboard_arrow_right, color: Colors.white, size: 30.0),
+      onTap: () => _chooseBlueprint(context, blp.id, blp.img, blp.name),
     );
   }
 
+  @override
   Widget build(BuildContext context) {
-    /// Application top Bar
+    final blueprintsAsync = ref.watch(blueprintListProvider);
+
     final topBar = AppBar(
       leading: IconButton(
         color: GlobalConstants.appFg,
-        icon: Icon(
-          Icons.menu,
-          // size: 32,
-        ),
+        icon: const Icon(Icons.menu),
         onPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       elevation: 0.1,
       backgroundColor: Colors.transparent,
-      title: Text("Select Blueprint", style: Style.topBar),
+      title: Text('Select Blueprint', style: Style.topBar),
       actions: <Widget>[
         IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context, false),
-        )
+        ),
       ],
     );
 
@@ -151,19 +108,24 @@ class _BlueprintSelectState extends State<BlueprintSelectPage> {
       body: Stack(
         children: <Widget>[
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               image: DecorationImage(
                 image: AssetImage('assets/images/research_study.jpg'),
                 fit: BoxFit.fill,
               ),
             ),
           ),
-          Container(
-            child: ListView.builder(
+          blueprintsAsync.when(
+            data: (blueprints) => ListView.builder(
               scrollDirection: Axis.vertical,
               shrinkWrap: true,
-              itemCount: _blueprints.length,
-              itemBuilder: _makeCard,
+              itemCount: blueprints.length,
+              itemBuilder: (ctx, i) => _makeCard(ctx, i, blueprints),
+            ),
+            loading: () => Center(child: kCompassLoader()),
+            error: (e, _) => Center(
+              child: Text('Error loading blueprints',
+                  style: const TextStyle(color: Colors.white54)),
             ),
           ),
         ],
@@ -173,31 +135,6 @@ class _BlueprintSelectState extends State<BlueprintSelectPage> {
     );
   }
 
-  void _getBlueprints() async {
-    // 17 is intermediate items
-    // (save a bit of bandwidth as we only need the blueprints)
-    try {
-      final response = await _apiProvider.post('/inventory', {"types": [17]});
-
-      var tmp = [];
-      if (response.containsKey("blueprints")) {
-        for (dynamic elem in response["blueprints"]) {
-          final itm = Blueprint.fromJson(elem);
-          tmp.add(itm);
-        }
-      }
-      setState(() {
-        _blueprints.clear();
-        _blueprints.addAll(tmp.toList());
-      });
-    } on AppError catch (err) {
-      debugPrint(err.toString());
-    } catch (err) {
-      debugPrint('_getBlueprints unexpected error: $err');
-    }
-  }
-
-  /// Wear the item and get back
   void _chooseBlueprint(
       BuildContext context, int blpId, String blpImg, String blpName) async {
     await _storage.write(key: 'forgeBlueprintId', value: blpId.toString());

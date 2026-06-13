@@ -1,11 +1,12 @@
 ///
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 ///
-import '../../models/app_error.dart';
 import '../../models/blueprint.dart';
-import '../../providers/api_provider.dart';
+import '../../providers/blueprint_list_provider.dart';
+import '../../shared/app_theme.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
@@ -28,7 +29,7 @@ enum PopupMenuChoice {
 }
 
 ///
-class BlueprintListPage extends StatefulWidget {
+class BlueprintListPage extends ConsumerStatefulWidget {
   ///
   BlueprintListPage({
     Key? key,
@@ -39,43 +40,19 @@ class BlueprintListPage extends StatefulWidget {
 }
 
 ///
-class _BlueprintListState extends State<BlueprintListPage> {
-  ///
-  final ApiProvider _apiProvider = ApiProvider();
-
-  ///
+class _BlueprintListState extends ConsumerState<BlueprintListPage> {
   final _storage = FlutterSecureStorage();
-
-  ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  ///
-  final _blueprints = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _getBlueprints();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  Widget _makeCard(BuildContext context, int index) {
+  Widget _makeCard(BuildContext context, int index, List<Blueprint> blueprints) {
     return Card(
-      color: Color.fromRGBO(19, 21, 20, 0.8),
+      color: const Color.fromRGBO(19, 21, 20, 0.8),
       elevation: 8.0,
-      margin: EdgeInsets.symmetric(
-        horizontal: 10.0,
-        vertical: 6.0,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
       child: Container(
         decoration: BoxDecoration(
-          //color: Color.fromRGBO(19, 21, 20, 0.7),
           borderRadius: BorderRadius.circular(8.0),
-          boxShadow: <BoxShadow>[
+          boxShadow: const <BoxShadow>[
             BoxShadow(
               color: Colors.black12,
               blurRadius: 33.0,
@@ -83,57 +60,50 @@ class _BlueprintListState extends State<BlueprintListPage> {
             ),
           ],
         ),
-        child: _makeListTile(context, index),
+        child: _makeListTile(context, blueprints[index]),
       ),
     );
   }
 
-  Widget _makeListTile(BuildContext context, int index) {
-    var netImg = Image(
-      image: AssetImage('assets/images/blueprints/${_blueprints[index].img}'),
-      height: 76.0,
-      width: 76.0,
-    );
-
+  Widget _makeListTile(BuildContext context, Blueprint blp) {
     return ListTile(
-      contentPadding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
       leading: Container(
-          padding: EdgeInsets.only(right: 12.0),
-          decoration: BoxDecoration(
-            border: Border(
-              right: BorderSide(
-                width: 1.0,
-                color: Color(0xff333333),
-              ),
-            ),
+        padding: const EdgeInsets.only(right: 12.0),
+        decoration: const BoxDecoration(
+          border: Border(
+            right: BorderSide(width: 1.0, color: Color(0xff333333)),
           ),
-          child: Stack(children: <Widget>[
-            netImg,
-            Positioned(
-                right: 0.0,
-                bottom: 0.0,
-                child: Text(_blueprints[index].nr.toString(),
-                    style: TextStyle(color: Colors.white))),
-          ])),
+        ),
+        child: Stack(children: <Widget>[
+          Image(
+            image: AssetImage('assets/images/blueprints/${blp.img}'),
+            height: 76.0,
+            width: 76.0,
+          ),
+          Positioned(
+            right: 0.0,
+            bottom: 0.0,
+            child: Text(blp.nr.toString(),
+                style: const TextStyle(color: Colors.white)),
+          ),
+        ]),
+      ),
       title: Text(
-        _blueprints[index].name,
+        blp.name,
         style: TextStyle(
           color: GlobalConstants.appFg,
-          fontFamily: "Cormorant SC",
+          fontFamily: 'Cormorant SC',
           fontWeight: FontWeight.bold,
         ),
       ),
-      subtitle: Row(
+      subtitle: const Row(
         children: <Widget>[
-          Text(
-            " Blp",
-            style: TextStyle(color: Colors.white),
-          )
+          Text(' Blp', style: TextStyle(color: Colors.white)),
         ],
       ),
-      trailing:
-          Icon(Icons.keyboard_arrow_right, color: Colors.white, size: 30.0),
-      onTap: () => _openBlueprint(context, _blueprints[index]),
+      trailing: const Icon(Icons.keyboard_arrow_right, color: Colors.white, size: 30.0),
+      onTap: () => _openBlueprint(context, blp),
     );
   }
 
@@ -215,8 +185,9 @@ class _BlueprintListState extends State<BlueprintListPage> {
     context.replace('/forge');
   }
 
+  @override
   Widget build(BuildContext context) {
-    //ignore: omit_local_variable_types
+    final blueprintsAsync = ref.watch(blueprintListProvider);
     int currentTabIndex = 1;
 
     /// What happens when clicking the Bottom Navbar
@@ -355,12 +326,17 @@ class _BlueprintListState extends State<BlueprintListPage> {
               ),
             ),
           ),
-          Container(
-            child: ListView.builder(
+          blueprintsAsync.when(
+            data: (blueprints) => ListView.builder(
               scrollDirection: Axis.vertical,
               shrinkWrap: true,
-              itemCount: _blueprints.length,
-              itemBuilder: _makeCard,
+              itemCount: blueprints.length,
+              itemBuilder: (ctx, i) => _makeCard(ctx, i, blueprints),
+            ),
+            loading: () => Center(child: kCompassLoader()),
+            error: (e, _) => const Center(
+              child: Text('Error loading blueprints',
+                  style: TextStyle(color: Colors.white54)),
             ),
           ),
         ],
@@ -394,27 +370,4 @@ class _BlueprintListState extends State<BlueprintListPage> {
     );
   }
 
-  void _getBlueprints() async {
-    // 17 is intermediate items
-    // (save a bit of bandwidth as we only need the blueprints)
-    try {
-      final response = await _apiProvider.post('/inventory', {"types": [17]});
-
-      var tmp = [];
-      if (response.containsKey("blueprints")) {
-        for (dynamic elem in response["blueprints"]) {
-          final itm = Blueprint.fromJson(elem);
-          tmp.add(itm);
-        }
-      }
-      setState(() {
-        _blueprints.clear();
-        _blueprints.addAll(tmp.toList());
-      });
-    } on AppError catch (err) {
-      debugPrint(err.toString());
-    } catch (err) {
-      debugPrint('_getBlueprints unexpected error: $err');
-    }
-  }
 }

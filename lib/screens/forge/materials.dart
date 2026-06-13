@@ -152,7 +152,7 @@ class _MaterialSelectState extends State<MaterialSelectPage> {
       title: Text("Select Materials", style: Style.topBar),
       actions: <Widget>[
         IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context, false),
         )
       ],

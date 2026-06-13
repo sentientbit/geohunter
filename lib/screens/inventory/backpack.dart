@@ -9,6 +9,7 @@ import '../../models/user.dart';
 import '../../providers/inventory_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../screens/inventory/itemdetail.dart';
+import '../../shared/app_theme.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
@@ -243,7 +244,7 @@ class _InventoryState extends ConsumerState<InventoryPage> {
 
     Widget body;
     if (inventoryState.isLoading) {
-      body = const Center(child: CircularProgressIndicator());
+      body = Center(child: kCompassLoader());
     } else if (inventoryState.hasError) {
       body = Center(
         child: Text(

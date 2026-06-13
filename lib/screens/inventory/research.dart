@@ -15,6 +15,21 @@ import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
 
+// ── Research TTL cache ────────────────────────────────────────────────────────
+// Tracks when /research was last successfully fetched.
+// The research list auto-refreshes when data is older than [_ttl].
+// Pull-to-refresh always forces an immediate reload regardless of age.
+class _ResearchTtl {
+  static DateTime? _lastLoaded;
+  static const _ttl = Duration(minutes: 3);
+
+  static bool isStale() =>
+      _lastLoaded == null ||
+      DateTime.now().difference(_lastLoaded!) > _ttl;
+
+  static void markFresh() => _lastLoaded = DateTime.now();
+}
+
 ///
 class ResearchPage extends ConsumerStatefulWidget {
   /// Widget name
@@ -29,6 +44,18 @@ class _ResearchState extends ConsumerState<ResearchPage> {
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  @override
+  void initState() {
+    super.initState();
+    // Auto-refresh if data is older than the TTL.
+    // Scheduled post-frame so the provider graph is ready.
+    if (_ResearchTtl.isStale()) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ref.invalidate(researchProvider);
+      });
+    }
+  }
+
   Widget _makeListTile(
       BuildContext context, Research tech, List<Blueprint> blueprints) {
     // All threshold values come from the Research model (server is source of truth).
@@ -40,7 +67,7 @@ class _ResearchState extends ConsumerState<ResearchPage> {
             .clamp(0.0, 1.0)
         : 1.0;
     final skillLabel = tech.levelLabel; // from BOOK_LEVEL_LABELS via API
-    final isLocked = tech.craftingLevel == 0 && tech.pagesRequired > 0;
+    final isLocked = tech.craftingLevel == 0 && tech.nrInvested == 0;
 
     return InkWell(
       onTap: () => Navigator.push(
@@ -262,6 +289,11 @@ class _ResearchState extends ConsumerState<ResearchPage> {
     final techs = researchState.valueOrNull?.techs ?? [];
     final blueprints = researchState.valueOrNull?.blueprints ?? <Blueprint>[];
 
+    // Mark the cache fresh whenever a successful response is in hand.
+    if (researchState.hasValue && !researchState.isLoading) {
+      _ResearchTtl.markFresh();
+    }
+
     int currentTabIndex = 1;
 
     /// Application top Bar
@@ -334,12 +366,22 @@ class _ResearchState extends ConsumerState<ResearchPage> {
                         ],
                       ),
                     )
-                  : ListView.builder(
-                      scrollDirection: Axis.vertical,
-                      shrinkWrap: true,
-                      itemCount: techs.length,
-                      itemBuilder: (context, index) =>
-                          _makeCard(context, techs[index], blueprints),
+                  : RefreshIndicator(
+                      color: const Color(0xffe6a04e),
+                      backgroundColor: const Color(0xff1a1408),
+                      onRefresh: () async {
+                        ref.invalidate(researchProvider);
+                        await ref.read(researchProvider.future);
+                        _ResearchTtl.markFresh();
+                      },
+                      child: ListView.builder(
+                        scrollDirection: Axis.vertical,
+                        shrinkWrap: true,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: techs.length,
+                        itemBuilder: (context, index) =>
+                            _makeCard(context, techs[index], blueprints),
+                      ),
                     ),
         ]),
         key: _scaffoldKey,

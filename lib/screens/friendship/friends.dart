@@ -389,12 +389,12 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
                           SizedBox(height: 12),
                           Expanded(
                             child: CustomScrollView(
+                              physics: const ClampingScrollPhysics(),
                               scrollDirection: Axis.vertical,
                               shrinkWrap: false,
                               slivers: <Widget>[
                                 SliverPadding(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 1.0),
+                                  padding: const EdgeInsets.symmetric(vertical: 4),
                                   sliver: SliverList(
                                     delegate: SliverChildBuilderDelegate(
                                       (context, index) => FriendsSummary(

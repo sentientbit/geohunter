@@ -1,4 +1,6 @@
 ///
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
@@ -9,12 +11,17 @@ import '../../models/app_error.dart';
 import '../../fonts/rpg_awesome_icons.dart';
 import '../../models/player_stats.dart';
 import '../../models/research.dart';
+import '../../models/swap_record.dart';
+import '../../models/swap_response.dart';
+import '../../models/swap_volume.dart';
 import '../../models/user.dart';
 import '../../shared/app_theme.dart';
 import '../../shared/constants.dart';
 import '../../providers/api_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/blueprint_swap_repository.dart';
 import '../../providers/research_provider.dart';
+import '../../providers/swap_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
@@ -50,11 +57,10 @@ class StudyDetailPage extends ConsumerStatefulWidget {
 class _StudyDetailState extends ConsumerState<StudyDetailPage> {
   double _nrInvBlueprints = 0;
   String _blueprintName = '';
-  int _currentPoints = 0;
-  int _neededPoints = 1;
-  int _lowerPoints = 0;
-  int _nrAvailBlueprints = 0;
-  int _maxNr = 0;
+
+  // ── Blueprint Swap card state ────────────────────────────────────────────────
+  int _swapCount = 0;
+  SwapVolume? _selectedVolume;
 
   User _user = User.blank();
   final ApiProvider _apiProvider = ApiProvider();
@@ -66,19 +72,6 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     // Thresholds come from the Research model — backend is the single source of truth.
     // nextLevelThreshold / currentLevelFloor fall back to the local formula only
     // while the API transitions (see Research.fromJson).
-    _currentPoints = widget.research.nrInvested;
-    _neededPoints = widget.research.nextLevelThreshold;
-    _lowerPoints = widget.research.currentLevelFloor;
-
-    for (final blp in widget.blueprints) {
-      if (widget.research.blueprint.id == blp.id) {
-        _nrAvailBlueprints = blp.nr;
-      }
-    }
-    _maxNr = _nrAvailBlueprints > (_neededPoints - _currentPoints)
-        ? (_neededPoints - _currentPoints)
-        : _nrAvailBlueprints;
-
     _blueprintName = widget.research.blueprint.name;
   }
 
@@ -126,23 +119,24 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
             orElse: () => widget.research);
     final liveTech = liveResearch ?? widget.research;
 
-    // Live volume count — drives the invest card immediately after library visit
+    // Live blueprint count — drives the invest card immediately after library visit
     final int nrAvailBlueprints = liveTech.volumesOwned;
-    // Live max investable = min(volumes, remaining points to next level)
-    final int liveMaxNr = nrAvailBlueprints > (_neededPoints - _currentPoints)
-        ? (_neededPoints - _currentPoints)
-        : nrAvailBlueprints;
+
+    // pagesRequired is the span for this mastery level (same formula used by swap).
+    // All three elements — mastery bar, invest slider, swap circle — share it as the max.
+    final int levelSpan       = liveTech.pagesRequired;          // e.g. 29
+    final int investedInLevel = liveTech.nrInvested - liveTech.currentLevelFloor; // e.g. 5
+    final int remaining       = (levelSpan - investedInLevel).clamp(0, levelSpan); // e.g. 24
+    // Invest slider max = owned blueprints, capped by remaining to fill the level
+    final int liveMaxNr = nrAvailBlueprints < remaining ? nrAvailBlueprints : remaining;
 
     // Derived values — use server-supplied crafting bonus
     final int currentLevel = liveTech.craftingLevel;
     final String skillLabel = liveTech.levelLabel;
     final String bonusLabel = widget.research.craftingBonusLabel;
-    final double levelProgress =
-        (_neededPoints > _lowerPoints)
-            ? ((_currentPoints - _lowerPoints) /
-                    (_neededPoints - _lowerPoints))
-                .clamp(0.0, 1.0)
-            : 1.0;
+    final double levelProgress = levelSpan > 0
+        ? (investedInLevel / levelSpan).clamp(0.0, 1.0)
+        : 1.0;
     final String coinCost =
         (_nrInvBlueprints * user.details.costs.research).toStringAsFixed(2);
 
@@ -223,7 +217,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
               _statCell('MASTERY', '$currentLevel', _gold),
               _vDivider(),
               _statCell('INVESTED',
-                  '$_currentPoints / $_neededPoints', kSilver),
+                  '$investedInLevel / $levelSpan', kSilver),
               _vDivider(),
               _statCell('BONUS', bonusLabel, const Color(0xff66bb6a)),
             ],
@@ -242,7 +236,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('$_currentPoints pts',
+              Text('$investedInLevel pts',
                   style: const TextStyle(
                       color: kSilverDim, fontSize: 10)),
               Text(skillLabel,
@@ -250,7 +244,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                       color: _gold,
                       fontSize: 12,
                       fontWeight: FontWeight.bold)),
-              Text('$_neededPoints pts',
+              Text('$levelSpan pts',
                   style: const TextStyle(
                       color: kSilverDim, fontSize: 10)),
             ],
@@ -273,7 +267,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
             const Text('INVEST KNOWLEDGE', style: _sectionLabel),
           ]),
           const SizedBox(height: 4),
-          const Text('Invest volumes to advance your mastery.',
+          const Text('Invest blueprints to advance your mastery.',
               style: TextStyle(color: kSilverDim, fontSize: 12,
                   fontStyle: FontStyle.italic)),
           const SizedBox(height: 16),
@@ -282,7 +276,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
             const Icon(RPGAwesome.book, color: _gold, size: 16),
             const SizedBox(width: 8),
             Text(
-              '$nrAvailBlueprints volume${nrAvailBlueprints == 1 ? '' : 's'} available',
+              '$nrAvailBlueprints blueprint${nrAvailBlueprints == 1 ? '' : 's'} available',
               style: const TextStyle(color: kSilver, fontSize: 15),
             ),
           ]),
@@ -332,15 +326,15 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                 IconButton(
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  onPressed: _nrInvBlueprints < _maxNr
+                  onPressed: _nrInvBlueprints < liveMaxNr
                       ? () => setState(() {
                             _nrInvBlueprints =
                                 (_nrInvBlueprints + 1)
-                                    .clamp(0, _maxNr.toDouble());
+                                    .clamp(0, liveMaxNr.toDouble());
                           })
                       : null,
                   icon: Icon(Icons.add_circle_outline,
-                      color: _nrInvBlueprints < _maxNr
+                      color: _nrInvBlueprints < liveMaxNr
                           ? Colors.white
                           : Colors.white24),
                 ),
@@ -349,7 +343,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
             // Investment preview
             Center(
               child: Text(
-                'New investment: ${_currentPoints + _nrInvBlueprints.toInt()} / $_neededPoints',
+                'New investment: ${investedInLevel + _nrInvBlueprints.toInt()} / $levelSpan',
                 style: const TextStyle(
                     color: kSilverDim, fontSize: 13),
               ),
@@ -377,7 +371,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                       color: _nrInvBlueprints > 0 ? _gold : Colors.white30),
                   const SizedBox(width: 8),
                   Text(
-                    'Invest Volume  ${_nrInvBlueprints.toInt()}',
+                    'Invest  ${_nrInvBlueprints.toInt()}  Blueprint${_nrInvBlueprints.toInt() == 1 ? '' : 's'}',
                     style: TextStyle(
                       color: _nrInvBlueprints > 0 ? _gold : Colors.white30,
                       fontSize: 16,
@@ -396,7 +390,7 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                   widget.research.isMaxLevel
                       ? 'Mastery complete. This discipline is fully unlocked.'
                       : nrAvailBlueprints == 0
-                          ? 'No volumes available.\nVisit a Library mine.'
+                          ? 'No blueprints available.\nVisit a Library mine.'
                           : 'Already at maximum level for current tier.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -438,6 +432,9 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                   heroCard,
                   kEldritchDivider(kGold),
                   investCard,
+                  const SizedBox(height: 4),
+                  if (widget.research.blueprint.id > 0)
+                    _buildSwapCard(liveTech, nrAvailBlueprints),
                   const SizedBox(height: 4),
                   _buildDisciplineCard(widget.research),
                   const SizedBox(height: 16),
@@ -652,6 +649,450 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
     );
   }
 
+  // ── Blueprint Swap card ───────────────────────────────────────────────────────
+
+  Widget _buildSwapCard(Research liveTech, int nrOwned) {
+    final wantedId = widget.research.blueprint.id;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      padding: const EdgeInsets.all(20),
+      decoration: kCardDecoration(kGold),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Icon(Icons.swap_horiz, color: _gold, size: 14),
+            const SizedBox(width: 8),
+            const Text('BLUEPRINT SWAP', style: _sectionLabel),
+          ]),
+          const SizedBox(height: 4),
+          const Text(
+            'Trade surplus blueprints at a Library.',
+            style: TextStyle(
+                color: kSilverDim, fontSize: 12, fontStyle: FontStyle.italic),
+          ),
+          const SizedBox(height: 16),
+          ref.watch(swapProvider(wantedId)).when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: CircularProgressIndicator(
+                    color: kGold, strokeWidth: 2),
+              ),
+            ),
+            error: (err, _) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                err is AppError ? err.message : 'Could not load swap data.',
+                style: const TextStyle(
+                    color: Colors.redAccent, fontSize: 13),
+              ),
+            ),
+            data: (swapData) => _buildSwapBody(swapData, wantedId, liveTech, nrOwned),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSwapBody(SwapResponse swapData, int wantedId,
+      Research liveTech, int nrOwned) {
+    final active = swapData.activeSwap;
+
+    // State 3 — active swap for a different discipline
+    if (active != null && active.wantedBlueprintId != wantedId) {
+      return _buildOtherActiveSwap(active);
+    }
+
+    // State 2 — active swap for this discipline
+    if (active != null) {
+      return _buildThisActiveSwap(active, wantedId);
+    }
+
+    // State 1 — no active swap
+    return _buildEmptySwap(swapData, wantedId, liveTech, nrOwned);
+  }
+
+  // State 1 — empty swap form
+  Widget _buildEmptySwap(SwapResponse swapData, int wantedId,
+      Research liveTech, int nrOwned) {
+    final int investedInLevel =
+        liveTech.nrInvested - liveTech.currentLevelFloor;
+    // Blueprints swap can cover = what player still needs AFTER investing everything they own
+    final int maxSwap =
+        (swapData.maxCount - investedInLevel - nrOwned).clamp(0, swapData.maxCount);
+
+    // Clamp swap count if it exceeds the effective max (e.g. player just invested)
+    if (_swapCount > maxSwap) {
+      WidgetsBinding.instance.addPostFrameCallback(
+          (_) => setState(() => _swapCount = maxSwap));
+    }
+
+    // Sacrifice dropdown: filter to blueprints the player owns enough of
+    final eligibleVolumes = swapData.volumes
+        .where((v) => v.qty >= _swapCount && v.blueprintId != wantedId)
+        .toList();
+
+    if (_selectedVolume != null &&
+        !eligibleVolumes.any((v) => v.blueprintId == _selectedVolume!.blueprintId)) {
+      WidgetsBinding.instance.addPostFrameCallback(
+          (_) => setState(() => _selectedVolume = null));
+    }
+
+    final bool canAgree = _swapCount >= 1 && _selectedVolume != null;
+
+    // ── Tri-arc circle ──────────────────────────────────────────────────────
+    // Grey  = already invested this level
+    // White = owned (can invest directly)
+    // Gold  = swap count (what the player is asking the swap to provide)
+    final arcWidget = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 110,
+          height: 110,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CustomPaint(
+                size: const Size(110, 110),
+                painter: _TriArcPainter(
+                  invested: investedInLevel,
+                  owned: nrOwned,
+                  swapCount: _swapCount,
+                  total: swapData.maxCount,
+                ),
+              ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$_swapCount',
+                    style: const TextStyle(
+                      color: kGold,
+                      fontSize: 24,
+                      fontFamily: 'Cormorant SC',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    '/ $maxSwap',
+                    style: const TextStyle(
+                        color: kSilverDim, fontSize: 12),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        // +/− buttons below the circle
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _stepperButton(
+              icon: Icons.remove_circle_outline,
+              enabled: _swapCount > 0,
+              onTap: () {
+                final next = _swapCount - 1;
+                setState(() {
+                  _swapCount = next;
+                  if (_selectedVolume != null &&
+                      _selectedVolume!.qty < next) {
+                    _selectedVolume = null;
+                  }
+                });
+              },
+            ),
+            const SizedBox(width: 16),
+            _stepperButton(
+              icon: Icons.add_circle_outline,
+              enabled: _swapCount < maxSwap,
+              onTap: () => setState(() => _swapCount++),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'via swap',
+          style: TextStyle(
+              color: kSilverDim, fontSize: 10, letterSpacing: 1.2),
+        ),
+      ],
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            arcWidget,
+            const SizedBox(width: 20),
+            // Controls column — "I want" + sacrifice dropdown
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('I WANT',
+                      style: TextStyle(
+                          color: kSilverDim,
+                          fontSize: 10,
+                          letterSpacing: 1.5)),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: Colors.white10,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      widget.research.blueprint.name.isNotEmpty
+                          ? widget.research.blueprint.name
+                          : 'Blueprint',
+                      style: const TextStyle(
+                          color: kSilver, fontSize: 13),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('SACRIFICE',
+                      style: TextStyle(
+                          color: kSilverDim,
+                          fontSize: 10,
+                          letterSpacing: 1.5)),
+                  const SizedBox(height: 4),
+                  eligibleVolumes.isEmpty
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: Colors.white10,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'No eligible blueprints',
+                            style: TextStyle(
+                                color: Colors.white38, fontSize: 13),
+                          ),
+                        )
+                      : _buildSacrificeDropdown(eligibleVolumes, wantedId),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        kStoneButton(
+          onTap: canAgree
+              ? () => _agreeSwap(context, wantedId)
+              : null,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.handshake_outlined,
+                  color: canAgree ? _gold : Colors.white30, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'Agree Swap',
+                style: TextStyle(
+                  color: canAgree ? _gold : Colors.white30,
+                  fontSize: 16,
+                  fontFamily: 'Cormorant SC',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSacrificeDropdown(
+      List<SwapVolume> eligible, int wantedId) {
+    final current = eligible.any(
+            (v) => v.blueprintId == _selectedVolume?.blueprintId)
+        ? _selectedVolume
+        : null;
+
+    return DropdownButton<SwapVolume>(
+      value: current,
+      hint: const Text('Choose ▾',
+          style: TextStyle(color: kSilverDim, fontSize: 13)),
+      dropdownColor: const Color(0xff1a1a1a),
+      underline: Container(height: 1, color: kGold.withValues(alpha: 0.3)),
+      isExpanded: true,
+      icon: const Icon(Icons.arrow_drop_down, color: kGold),
+      items: eligible
+          .map((v) => DropdownMenuItem<SwapVolume>(
+                value: v,
+                child: Text(
+                  '${v.name}  ×${v.qty}',
+                  style: const TextStyle(color: kSilver, fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ))
+          .toList(),
+      onChanged: (v) => setState(() => _selectedVolume = v),
+    );
+  }
+
+  // State 2 — active swap, this discipline
+  Widget _buildThisActiveSwap(SwapRecord active, int wantedId) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _swapInfoRow('Seeking',
+            '${active.wantedName}  ×${active.count}', kGold),
+        const SizedBox(height: 8),
+        _swapInfoRow('Offered',
+            '${active.blueprintName}  ×${active.count}', kSilver),
+        const SizedBox(height: 12),
+        const Text(
+          'Visit any Library mine to collect.',
+          style: TextStyle(
+              color: kSilverDim, fontSize: 12, fontStyle: FontStyle.italic),
+        ),
+        const SizedBox(height: 16),
+        kStoneButton(
+          onTap: () => _cancelSwap(context, wantedId),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.cancel_outlined,
+                  color: Color(0xffef5350), size: 18),
+              SizedBox(width: 8),
+              Text(
+                'Cancel Swap',
+                style: TextStyle(
+                  color: Color(0xffef5350),
+                  fontSize: 16,
+                  fontFamily: 'Cormorant SC',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // State 3 — active swap, different discipline
+  Widget _buildOtherActiveSwap(SwapRecord active) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'You have an active swap for\n'
+          '${active.wantedName} ×${active.count}.\n'
+          'Visit a Library or cancel it first.',
+          style: const TextStyle(color: kSilverDim, fontSize: 13),
+        ),
+        const SizedBox(height: 16),
+        kStoneButton(
+          onTap: null,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.handshake_outlined,
+                  color: Colors.white30, size: 18),
+              SizedBox(width: 8),
+              Text(
+                'Agree Swap',
+                style: TextStyle(
+                  color: Colors.white30,
+                  fontSize: 16,
+                  fontFamily: 'Cormorant SC',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Swap card helpers ────────────────────────────────────────────────────────
+
+  /// Label + value text row used in the active-swap display.
+  Widget _swapInfoRow(String label, String value, Color valueColor) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 72,
+          child: Text(label,
+              style: const TextStyle(
+                  color: kSilverDim, fontSize: 12)),
+        ),
+        Expanded(
+          child: Text(value,
+              style: TextStyle(
+                  color: valueColor,
+                  fontSize: 15,
+                  fontFamily: 'Cormorant SC',
+                  fontWeight: FontWeight.bold),
+              overflow: TextOverflow.ellipsis),
+        ),
+      ],
+    );
+  }
+
+  /// +/− stepper icon button.
+  Widget _stepperButton({
+    required IconData icon,
+    required bool enabled,
+    required VoidCallback onTap,
+  }) {
+    return IconButton(
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(),
+      onPressed: enabled ? onTap : null,
+      icon: Icon(icon, color: enabled ? Colors.white : Colors.white24),
+    );
+  }
+
+  // ── Swap actions ─────────────────────────────────────────────────────────────
+
+  Future<void> _agreeSwap(BuildContext context, int wantedId) async {
+    final vol = _selectedVolume;
+    if (vol == null) return;
+
+    try {
+      await ref.read(blueprintSwapRepositoryProvider).agreeSwap(
+            wantedBlueprintId: wantedId,
+            blueprintId: vol.blueprintId,
+            count: _swapCount,
+          );
+      if (!mounted) return;
+      ref.invalidate(swapProvider(wantedId));
+      ref.invalidate(researchProvider); // volumes_owned updated
+      setState(() {
+        _selectedVolume = null;
+        _swapCount = 0;
+      });
+    } on AppError catch (err) {
+      if (!mounted) return;
+      err.show(context);
+    }
+  }
+
+  Future<void> _cancelSwap(BuildContext context, int wantedId) async {
+    try {
+      await ref.read(blueprintSwapRepositoryProvider).cancelSwap(wantedId);
+      if (!mounted) return;
+      ref.invalidate(swapProvider(wantedId));
+      ref.invalidate(researchProvider);
+    } on AppError catch (err) {
+      if (!mounted) return;
+      err.show(context);
+    }
+  }
+
   // ── Actions ──────────────────────────────────────────────────────────────────
 
   void _studyResearch(context, researchId) async {
@@ -704,20 +1145,93 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
         if (!mounted) return;
         showDialog(
           context: context,
-          builder: (context) => CustomDialog(
+          builder: (ctx) => CustomDialog(
             title:
-                AppLocalizations.of(context)!.translate('congrats'),
-            description: AppLocalizations.of(context)!
+                AppLocalizations.of(ctx)!.translate('congrats'),
+            description: AppLocalizations.of(ctx)!
                 .translate('research_success'),
             buttonText: 'Okay',
             images: [],
             callback: () {
-              Navigator.of(context).pop();
-              context.pop();
+              Navigator.of(ctx).pop();
+              if (mounted) context.pop();
             },
           ),
         );
       }
     }
   }
+}
+
+// ── Tri-arc painter ───────────────────────────────────────────────────────────
+//
+// Three concentric arc segments on a single ring, all sharing [total] as the
+// common denominator so every element on the Study Detail screen speaks the
+// same language:
+//
+//   Grey  — blueprints already invested this mastery level
+//   White — blueprints owned (can be invested directly without a swap)
+//   Gold  — blueprints the swap will provide (set by the +/− stepper)
+//
+// The ring fills clockwise from the top.
+class _TriArcPainter extends CustomPainter {
+  final int invested;  // already invested this level
+  final int owned;     // in player inventory
+  final int swapCount; // chosen swap offer
+  final int total;     // pagesRequired — the shared denominator
+
+  const _TriArcPainter({
+    required this.invested,
+    required this.owned,
+    required this.swapCount,
+    required this.total,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    const strokeWidth = 7.0;
+    final radius = size.width / 2 - strokeWidth / 2;
+    const startAngle = -math.pi / 2.0;
+    const fullCircle = 2 * math.pi;
+
+    // Background ring
+    canvas.drawCircle(
+      center, radius,
+      Paint()
+        ..color = Colors.white12
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth,
+    );
+
+    if (total <= 0) return;
+
+    double cursor = startAngle;
+
+    void arc(int count, Color color) {
+      if (count <= 0) return;
+      final sweep = (count / total) * fullCircle;
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        cursor, sweep, false,
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth
+          ..strokeCap = StrokeCap.butt,
+      );
+      cursor += sweep;
+    }
+
+    arc(invested,  Colors.white38);  // grey  — already done
+    arc(owned,     Colors.white70);  // white — owned, ready to invest
+    arc(swapCount, kGold);           // gold  — swap territory
+  }
+
+  @override
+  bool shouldRepaint(_TriArcPainter old) =>
+      old.invested  != invested  ||
+      old.owned     != owned     ||
+      old.swapCount != swapCount ||
+      old.total     != total;
 }

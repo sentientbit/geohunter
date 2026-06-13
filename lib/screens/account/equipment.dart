@@ -8,6 +8,7 @@ import '../../models/item.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/equipment_provider.dart';
 import '../../providers/inventory_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
@@ -286,6 +287,7 @@ class _EquipmentState extends ConsumerState<EquipmentPage> {
       await _apiProvider.post('/equipment/$itemId', {});
       ref.invalidate(equipmentProvider);
       ref.invalidate(inventoryProvider);
+      ref.invalidate(userProvider);
       if (mounted) Navigator.pop(context, true);
     } on AppError catch (err) {
       debugPrint(err.toString());
@@ -301,6 +303,7 @@ class _EquipmentState extends ConsumerState<EquipmentPage> {
       await _apiProvider.delete('/equipment/$slot', {});
       ref.invalidate(equipmentProvider);
       ref.invalidate(inventoryProvider);
+      ref.invalidate(userProvider);
       if (mounted) Navigator.pop(context, true);
     } on AppError catch (err) {
       debugPrint(err.toString());
