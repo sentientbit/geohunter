@@ -272,7 +272,6 @@ class _GateRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasPoi = gate.ico > 0;
     return Container(
       margin: const EdgeInsets.only(bottom: 9),
       padding: const EdgeInsets.all(10),
@@ -286,7 +285,8 @@ class _GateRow extends StatelessWidget {
           Icon(_gateIcon(gate.ico), size: 16, color: kGold),
           const SizedBox(width: 7),
           Expanded(
-            child: Text(_gateText(gate),
+            // Backend-provided, localized, self-describing label.
+            child: Text(gate.label,
                 style: const TextStyle(color: kSilver, fontSize: 13)),
           ),
         ]),
@@ -307,28 +307,34 @@ class _GateRow extends StatelessWidget {
           Text('${gate.have} of ${gate.need}',
               style: const TextStyle(color: kSilverDim, fontSize: 11)),
         ]),
-        const SizedBox(height: 9),
-        Align(
-          alignment: Alignment.centerRight,
-          child: GestureDetector(
-            // The deep-link: /places filters POIs by the LOC_TYPE int (= ico).
-            // ico 0 (mine anywhere) → show all nearby places.
-            onTap: () => context.push('/places?filter=${gate.ico}'),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: kGold.withValues(alpha: 0.45)),
+        if (gate.isActionable) ...[
+          const SizedBox(height: 9),
+          Align(
+            alignment: Alignment.centerRight,
+            child: GestureDetector(
+              // /places filters POIs by the LOC_TYPE int (= ico). For materials
+              // (ico 0) there's no specific pin — open the full nearby list.
+              onTap: () => context.push('/places?filter=${gate.ico}'),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: kGold.withValues(alpha: 0.45)),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.map_outlined, size: 14, color: kGold),
+                  const SizedBox(width: 5),
+                  Text(
+                      gate.ico > 0
+                          ? 'Show ${gate.poi} nearby'
+                          : 'Find somewhere to mine',
+                      style: const TextStyle(color: kGold, fontSize: 12)),
+                ]),
               ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.map_outlined, size: 14, color: kGold),
-                const SizedBox(width: 5),
-                Text(hasPoi ? 'Show ${gate.poi} nearby' : 'Open the map',
-                    style: const TextStyle(color: kGold, fontSize: 12)),
-              ]),
             ),
           ),
-        ),
+        ],
       ]),
     );
   }
@@ -504,20 +510,3 @@ IconData _gateIcon(int ico) {
   }
 }
 
-String _gateText(JournalGate gate) {
-  if (gate.type == 'materials') {
-    return gate.need > 1
-        ? 'Gather materials (${gate.need}) — mine anywhere'
-        : 'Gather materials — mine anywhere';
-  }
-  if (gate.ico > 0 && gate.poi.isNotEmpty) {
-    final article = _startsWithVowel(gate.poi) ? 'an' : 'a';
-    return gate.need > 1
-        ? 'Visit $article ${gate.poi} (${gate.need})'
-        : 'Visit $article ${gate.poi}';
-  }
-  return 'Walk the world';
-}
-
-bool _startsWithVowel(String s) =>
-    s.isNotEmpty && 'aeiou'.contains(s[0].toLowerCase());

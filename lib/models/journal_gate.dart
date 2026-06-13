@@ -16,6 +16,11 @@ class JournalGate {
   /// Convenience label: forge|woodland|tannery|ruin|library|market ('' if N/A).
   final String poi;
 
+  /// Self-describing, localized human label ("Visit a woodland"). Backend
+  /// contract: present on every gate, equal to the parallel reasons[] entry.
+  /// Use this directly for display — no index-coupling needed.
+  final String label;
+
   final int have;
   final int need;
 
@@ -26,10 +31,17 @@ class JournalGate {
     required this.type,
     required this.ico,
     required this.poi,
+    required this.label,
     required this.have,
     required this.need,
     required this.trait,
   });
+
+  /// True when this gate is a real-world action the player can act on from the
+  /// map: a place to walk to (ico>0) or "mine anywhere" (materials). Backend no
+  /// longer emits story-sequence (ico:0 mark) gates, so everything here is
+  /// actionable, but this stays defensive.
+  bool get isActionable => ico > 0 || type == 'materials';
 
   /// True once the player has satisfied this gate (defensive: backend only
   /// lists unmet gates, but we never want a full bar to read as incomplete).
@@ -45,6 +57,7 @@ class JournalGate {
       type: map['type']?.toString() ?? 'location',
       ico: int.tryParse(map['ico']?.toString() ?? '0') ?? 0,
       poi: map['poi']?.toString() ?? '',
+      label: map['label']?.toString() ?? '',
       have: int.tryParse(map['have']?.toString() ?? '0') ?? 0,
       need: int.tryParse(map['need']?.toString() ?? '1') ?? 1,
       trait: map['trait']?.toString() ?? '',
