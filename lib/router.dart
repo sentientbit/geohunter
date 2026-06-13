@@ -17,6 +17,8 @@ import 'screens/inventory/backpack.dart';
 import 'screens/inventory/blueprints.dart';
 import 'screens/inventory/materials.dart';
 import 'screens/inventory/research.dart';
+import 'screens/journal/journal.dart';
+import 'screens/journal/journal_read.dart';
 import 'screens/login.dart';
 import 'screens/map/map_explore.dart';
 import 'screens/places.dart';
@@ -100,7 +102,22 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/places',
-      builder: (context, state) => PlacesPage(mineTypeFilter: 0),
+      builder: (context, state) {
+        // Optional ?filter=<LOC_TYPE> deep-link, used by the Journal's
+        // "Show X nearby" gate buttons to pre-filter POIs by type.
+        final filter =
+            int.tryParse(state.uri.queryParameters['filter'] ?? '') ?? 0;
+        return PlacesPage(mineTypeFilter: filter);
+      },
+    ),
+    GoRoute(
+      path: '/journal',
+      builder: (context, state) => const JournalPageScreen(),
+    ),
+    GoRoute(
+      path: '/journal/:slug',
+      builder: (context, state) =>
+          JournalReadScreen(slug: state.pathParameters['slug'] ?? ''),
     ),
     GoRoute(
       path: '/questline',

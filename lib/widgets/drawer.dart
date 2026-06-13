@@ -2,7 +2,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
-import 'package:flame_audio/flame_audio.dart';
+import '../shared/sfx.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -305,6 +305,16 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
                   },
                 ),
                 ListTile(
+                  leading:
+                      Icon(Icons.auto_stories, color: GlobalConstants.appFg),
+                  title: Text("The Keeper's Journal",
+                      style: Style.menuTextStyle),
+                  onTap: () {
+                    playClick();
+                    context.push('/journal');
+                  },
+                ),
+                ListTile(
                   leading: Icon(Icons.flag, color: GlobalConstants.appFg),
                   title: Text(
                       AppLocalizations.of(context)!
@@ -424,7 +434,7 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
   }
 
   void playClick() {
-    FlameAudio.play(
+    Sfx.play(
         'sfx/click_${(math.Random.secure().nextInt(3) + 1).toString()}.mp3');
   }
 
@@ -470,12 +480,14 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
       // Refresh user data so picture URL is in sync with server state.
       ref.invalidate(userProvider);
     } on AppError catch (err) {
+      if (!mounted) return;
       err.show(context);
       setState(() {
         _loadingAvatar = false;
       });
     } catch (err) {
       debugPrint('getImage upload unexpected error: $err');
+      if (!mounted) return;
       setState(() {
         _loadingAvatar = false;
       });
