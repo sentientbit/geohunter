@@ -1,0 +1,68 @@
+# GeoHunter — release & deploy howto
+
+## 1. Bump version
+
+pubspec.yaml line 20:
+    version: 1.1.80        <- bump this, versionCode is auto-derived (1*10000 + 1*100 + 80)
+
+## 2. Build the release APK
+
+    flutter clean              (only if weird build errors)
+    flutter build apk --release
+
+Output: build\app\outputs\flutter-apk\app-release.apk  (~86 MB)
+
+Signing is automatic: android\key.properties -> android\app\geocraft.jks
+!! BACK UP geocraft.jks + key.properties somewhere safe (not git).
+!! Lose the keystore = can never update the app again, only republish under a new identity.
+
+## 3. Verify the signature (optional sanity check)
+
+    %LOCALAPPDATA%\Android\Sdk\build-tools\<latest>\apksigner.bat verify --print-certs build\app\outputs\flutter-apk\app-release.apk
+
+Expect: CN=www.geocraft.io, O=Apsoni ... if it says "Android Debug" you built the wrong thing.
+(Cert still says the old geocraft.io/Apsoni identity — that's fine, the cert is just
+a signing key, it doesn't have to match the current domain/company. Do NOT regenerate
+the keystore to "fix" it, that would break updates.)
+
+## 4. Smoke test on real phone before uploading
+
+    adb -s R3CY80S0XFT install -r build\app\outputs\flutter-apk\app-release.apk
+
+Login, walk the map, visit a mine, open research. Release builds (R8/minify) can
+break things that worked fine in debug.
+
+## 5. Upload to stores
+
+Uptodown (Spain, free, no cut):
+    https://www.uptodown.com/developers
+    Register once -> My apps -> Upload APK. They scan with VirusTotal, ~1-2 days review.
+
+itch.io (US, indie games, free):
+    https://itch.io/game/new
+    Kind of project: choose "Android". Upload the APK, mark it as Android executable.
+    Page is live instantly. Optional: butler CLI for scripted uploads later.
+
+Aptoide (Portugal, free):
+    https://pool.apk.aptoide.com/  (developer console: https://developers.aptoide.com/)
+    Upload APK, fill store listing.
+
+Samsung Galaxy Store (South Korea, free registration):
+    https://seller.samsungapps.com/
+    Register as seller (free) -> Add New App -> Android. Strictest review of the four.
+
+## 6. Required for store listings (prepare once)
+
+- Privacy policy URL — app uses GPS + camera, every store asks for it.
+  Host it on thegeohunter.com, e.g. https://thegeohunter.com/privacy
+- Publisher / company name on store listings: Sentient Bit, Brasov, RO
+- Screenshots: phone portrait, 3-5 images (map, forge, research, mine dialog)
+- Short description (80 chars) + long description
+- Icon 512x512 png
+
+## Notes
+
+- Same APK file goes to all stores, no per-store builds needed.
+- Sept 2026: Google developer verification kicks in for sideloaded APKs on
+  certified Android devices. Publish before, watch how stores adapt.
+- Version must increase on every store update (step 1), stores reject same/lower versionCode.
