@@ -1,6 +1,6 @@
 /// based on https://medium.com/@afegbua/this-is-the-second-part-of-the-beautiful-list-ui-and-detail-page-article-ecb43e203915
 import 'dart:async';
-import 'package:flame_audio/flame_audio.dart';
+import '../../shared/sfx.dart';
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 
@@ -103,6 +103,7 @@ class _PalDetailState extends ConsumerState<PalDetailPage> {
   void dispose() {
     // Clean up the focus node when the Form is disposed.
     myFocusNode.dispose();
+    _controller.dispose();
     poorManTimer?.cancel();
     super.dispose();
   }
@@ -218,7 +219,7 @@ class _PalDetailState extends ConsumerState<PalDetailPage> {
     var szWidth = MediaQuery.of(context).size.width;
 
     if (isNewMessage && firstTimeCraaw == true) {
-      FlameAudio.play('sfx/raven_1.mp3');
+      Sfx.play('sfx/raven_1.mp3');
       firstTimeCraaw = false;
     }
 
@@ -612,6 +613,7 @@ class _PalDetailState extends ConsumerState<PalDetailPage> {
         }
       }
     } on AppError catch (err) {
+      if (!mounted) return;
       err.show(context);
     } catch (err) {
       debugPrint('getMessages unexpected error: $err');
@@ -646,6 +648,7 @@ class _PalDetailState extends ConsumerState<PalDetailPage> {
         getMessages(friendId);
       });
     } on AppError catch (err) {
+      if (!mounted) return;
       err.show(context);
     } catch (err) {
       debugPrint('sendMessage unexpected error: $err');

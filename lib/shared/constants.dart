@@ -106,6 +106,9 @@ class GlobalConstants {
   ///
   static const pointTrader = "8";
 
+  /// Battlegrounds POI — opens the battle (Rock-Paper-Scissors) screen.
+  static const pointBattleground = "9";
+
   ///
   static bool menuHasNotification(UserData ud) {
     if (ud.daily > dailyGiftFreq) {
@@ -131,7 +134,7 @@ String timeAgoSinceDate(DateTime date, {bool numericDates = true}) {
   } else if ((difference.inDays / 365).floor() >= 1) {
     return (numericDates) ? '1 year ago' : 'Last year';
   } else if ((difference.inDays / 30).floor() >= 2) {
-    return '${(difference.inDays / 365).floor()} months ago';
+    return '${(difference.inDays / 30).floor()} months ago';
   } else if ((difference.inDays / 30).floor() >= 1) {
     return (numericDates) ? '1 month ago' : 'Last month';
   } else if ((difference.inDays / 7).floor() >= 2) {

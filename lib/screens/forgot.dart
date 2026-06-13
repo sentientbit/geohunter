@@ -79,6 +79,7 @@ class _ForgotPageState extends State<ForgotPage> {
 
   @override
   void dispose() {
+    _emailController.dispose();
     super.dispose();
   }
 

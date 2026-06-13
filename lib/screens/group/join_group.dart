@@ -81,6 +81,8 @@ class _JoinGroupState extends State<JoinGroup> {
 
   @override
   void dispose() {
+    _guildUidController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 

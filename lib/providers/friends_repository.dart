@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/app_error.dart';
 import '../models/friends_response.dart';
 import 'api_provider.dart';
 
@@ -27,10 +28,18 @@ class FriendsRepository {
   ///   https://host/qr/friendship/TOKEN/bogus
   ///                 0  1    2       3     4     5
   /// so `url.split('/')[5]` yields the token.
-  /// Throws [AppError] if the server rejects the request.
+  /// Throws [AppError] if the scanned code is not a friendship QR or the
+  /// server rejects the request.
   Future<void> addFriend(String scannedUrl) async {
-    final token = scannedUrl.split('/')[5];
-    await _api.put('/friends/$token', {});
+    final parts = scannedUrl.split('/');
+    if (parts.length <= 5 || parts[5].isEmpty) {
+      throw const AppError(
+        code: 'INVALID_QR',
+        message: 'That is not a GeoHunter friendship QR code.',
+        statusCode: 0,
+      );
+    }
+    await _api.put('/friends/${parts[5]}', {});
   }
 }
 

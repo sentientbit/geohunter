@@ -104,6 +104,8 @@ class _InGroupState extends ConsumerState<InGroup> {
 
   @override
   void dispose() {
+    _guildNameController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 

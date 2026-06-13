@@ -28,7 +28,6 @@
 // self-contained and runnable in isolation.
 
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_interface.dart';
 import 'package:dio/dio.dart';

@@ -19,6 +19,7 @@ import '../../providers/equipment_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/user_provider.dart';
 import '../../screens/account/equipment.dart';
+import '../../shared/app_theme.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
@@ -94,6 +95,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   @override
   void dispose() {
+    _usernameController.dispose();
+    _statusTextController.dispose();
     super.dispose();
   }
 
@@ -815,7 +818,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         AppLocalizations.of(context)!
                             .translate('update_profile_username_label'),
                         style: TextStyle(
-                          color: Colors.white,
+                          color: kSilver,
                           fontSize: 16,
                           fontFamily: 'Open Sans',
                           fontWeight: FontWeight.bold,
@@ -880,7 +883,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         AppLocalizations.of(context)!
                             .translate('update_profile_gender_label'),
                         style: TextStyle(
-                          color: Colors.white,
+                          color: kSilver,
                           fontSize: 16,
                           fontFamily: 'Open Sans',
                           fontWeight: FontWeight.bold,
@@ -922,7 +925,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         AppLocalizations.of(context)!
                             .translate('update_profile_location_privacy_label'),
                         style: TextStyle(
-                          color: Colors.white,
+                          color: kSilver,
                           fontSize: 16,
                           fontFamily: 'Open Sans',
                           fontWeight: FontWeight.bold,
@@ -961,7 +964,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         AppLocalizations.of(context)!
                             .translate('update_profile_language_label'),
                         style: TextStyle(
-                            color: Colors.white,
+                            color: kSilver,
                             fontSize: 16,
                             fontFamily: 'Open Sans',
                             fontWeight: FontWeight.bold,
@@ -994,7 +997,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         AppLocalizations.of(context)!
                             .translate('update_profile_status_text_label'),
                         style: TextStyle(
-                            color: Colors.white,
+                            color: kSilver,
                             fontSize: 16,
                             fontFamily: 'Open Sans',
                             fontWeight: FontWeight.bold,
@@ -1103,6 +1106,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       // Navigator.of(context).pushNamed('/poi-list');
       // log.d(body);
     } on AppError catch (err) {
+      if (!mounted) return;
       err.show(context);
     } catch (err) {
       debugPrint('updateProfile unexpected error: $err');

@@ -237,21 +237,20 @@ class UserData {
     if (json == null) return;
     id = json["user_id"].toString();
     username = json["username"];
-    guildId = json["guild"]["id"].toString();
+    guildId = ((json["guild"] as Map?)?["id"])?.toString() ?? "0";
     lat = double.tryParse(json["lat"].toString()) ?? 51.5;
     lng = double.tryParse(json["lng"].toString()) ?? 0.0;
-    picture = json["picture"]["thumbnail"];
+    picture = (json["picture"] as Map?)?["thumbnail"]?.toString() ?? "";
     sex = json["sex"].toString();
     language = json["language"];
     locationPrivacy = json["location_privacy"].toString();
     status = json["status"].toString();
     level = double.tryParse(json["level"].toString()) ?? 0.0;
-    percentage = int.parse(json["percentage"].toString());
+    percentage = int.tryParse(json["percentage"].toString()) ?? 0;
     coins = double.tryParse(json["coins"].toString()) ?? 0.0;
     mining = json["mining"] ?? 3600;
-    unnaprovedMembers = (json["unapproved_members"] != null)
-        ? int.parse(json["unapproved_members"].toString())
-        : 0;
+    unnaprovedMembers =
+        int.tryParse(json["unapproved_members"]?.toString() ?? '0') ?? 0;
     xp = json["xp"] ?? 0;
     unread = ((json["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
     attack = StatRange.fromList((json["attack"] ?? []) as List);

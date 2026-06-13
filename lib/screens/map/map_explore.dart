@@ -464,18 +464,10 @@ class _PoiMapState extends ConsumerState<PoiMap>
     });
   }
 
-  // Change map theme based on daylight
+  // Applies the current map style (day/night) to the app bar and tiles.
+  // Style follows system brightness at startup and the manual toggle after;
+  // it is NOT driven by sun position.
   void dayAndNight(LtLn location) async {
-    var datenow = DateTime.now();
-
-    //datenow = DateTime.parse("2020-05-30 13:18:04Z"); print('--- log. dayAndNight ---'); print(datenow);
-
-    final astroResult =
-        SunCalc.getTimes(datenow, location.latitude, location.longitude);
-
-    var isDayTime =
-        SunCalc.isDaytime(datenow, astroResult.sunrise, astroResult.sunset);
-
     if (_mapStyleState == 1 /* night */) {
       setState(() {
         _customAppBarTextColor = Colors.white;
@@ -503,8 +495,9 @@ class _PoiMapState extends ConsumerState<PoiMap>
       case GlobalConstants.pointGirl:    return 'Campfire';
       case GlobalConstants.pointRuins:   return 'Ruins';
       case GlobalConstants.pointLibrary: return 'Library';
-      case GlobalConstants.pointTrader:  return 'Trader';
-      default:                           return 'Point';
+      case GlobalConstants.pointTrader:      return 'Trader';
+      case GlobalConstants.pointBattleground: return 'Battleground';
+      default:                               return 'Point';
     }
   }
 
@@ -744,7 +737,9 @@ class _PoiMapState extends ConsumerState<PoiMap>
         actionText = "Chop";
         actionIcon = RPGAwesome.battered_axe;
       } else if (_pois[_mineIdx].properties.ico ==
-          GlobalConstants.pointBattle) {
+              GlobalConstants.pointBattle ||
+          _pois[_mineIdx].properties.ico ==
+              GlobalConstants.pointBattleground) {
         actionText = "Fight";
         actionIcon = RPGAwesome.broadsword;
       } else if (_pois[_mineIdx].properties.ico == GlobalConstants.pointBoy) {
@@ -780,7 +775,9 @@ class _PoiMapState extends ConsumerState<PoiMap>
           side: const BorderSide(width: 1, color: Colors.white),
         ),
         onPressed: () {
-          if (_pois[_mineIdx].properties.ico == GlobalConstants.pointBattle) {
+          if (_pois[_mineIdx].properties.ico == GlobalConstants.pointBattle ||
+              _pois[_mineIdx].properties.ico ==
+                  GlobalConstants.pointBattleground) {
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -1103,6 +1100,8 @@ class _PoiMapState extends ConsumerState<PoiMap>
       highlight = Color(0xaa5c085c);
     } else if (icoVar == 8) {
       highlight = Color(0xaa322600);
+    } else if (icoVar == 9) {
+      highlight = Color(0xaa4a0000); // deep crimson — battle arena
     }
 
     return GestureDetector(
@@ -1418,12 +1417,7 @@ class _PoiMapState extends ConsumerState<PoiMap>
               ? child
               : Container(
                   color: const Color(0xff111111),
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                      color: Color(0xffe6a04e),
-                      strokeWidth: 2,
-                    ),
-                  ),
+                  child: Center(child: kCompassLoader()),
                 ),
           errorBuilder: (_, __, ___) => Container(
             color: const Color(0xff111111),
