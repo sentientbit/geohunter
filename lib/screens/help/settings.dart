@@ -1,6 +1,7 @@
 ///
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
 //import 'package:logger/logger.dart';
@@ -11,10 +12,13 @@ import '../../models/app_error.dart';
 import '../../models/player_stats.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
+import '../../shared/app_theme.dart';
+import '../../shared/equipment_loader.dart';
 import '../../providers/custom_interceptors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/user_provider.dart';
 import '../../shared/constants.dart';
+import '../../shared/sfx.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
 
@@ -50,6 +54,9 @@ class _SettingsState extends ConsumerState<SettingsPage> {
   /// Curent loggedin user
   User _user = User.blank();
 
+  // Sounds + vibrate are DEVICE-LOCAL settings: the backend only persists
+  // music and notification levels (its responses hardcode the rest to 0),
+  // so these two come from secure storage, never from the server.
   bool _soundsEnabled = false;
 
   bool _vibrateEnabled = false;
@@ -58,10 +65,19 @@ class _SettingsState extends ConsumerState<SettingsPage> {
 
   int musicLevel = 0;
 
+  static const _localStorage = FlutterSecureStorage();
+
   @override
   void initState() {
     super.initState();
+    _soundsEnabled = Sfx.enabled;
+    _loadVibrate();
     _getUserDetails();
+  }
+
+  void _loadVibrate() async {
+    final v = await _localStorage.read(key: 'vibrate_enabled');
+    if (mounted) setState(() => _vibrateEnabled = v == '1');
   }
 
   @override
@@ -93,18 +109,10 @@ class _SettingsState extends ConsumerState<SettingsPage> {
       ],
     );
 
-    final saveButton = OutlinedButton(
-      style: OutlinedButton.styleFrom(
-        padding: EdgeInsets.all(16),
-        backgroundColor: GlobalConstants.appBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.0),
-        ),
-        side: BorderSide(width: 1, color: Colors.white),
-      ),
-      onPressed: _updateSettings,
+    final saveButton = kStoneButton(
+      onTap: _updateSettings,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           Icon(Icons.done, color: Color(0xffe6a04e)),
           Text(
@@ -136,7 +144,7 @@ class _SettingsState extends ConsumerState<SettingsPage> {
             ),
           ),
           Container(
-            alignment: Alignment.topRight,
+            alignment: Alignment.topLeft,
             padding: const EdgeInsets.only(top: 90.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -317,10 +325,9 @@ class _SettingsState extends ConsumerState<SettingsPage> {
                             ],
                           ),
                           SizedBox(height: 18),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: <Widget>[saveButton],
-                          ),
+                          // kStoneButton is full-width; never put it bare in a
+                          // Row — unbounded width breaks layout in release.
+                          saveButton,
                         ],
                       ),
                     ),
@@ -347,33 +354,37 @@ class _SettingsState extends ConsumerState<SettingsPage> {
     CustomInterceptors.setStoredCookies(
         GlobalConstants.apiHostUrl, _user.toMap());
 
+    // Sounds + vibrate persist locally (the backend ignores them).
+    await Sfx.setEnabled(_soundsEnabled);
+    await _localStorage.write(
+        key: 'vibrate_enabled', value: _vibrateEnabled ? '1' : '0');
+
     try {
       await ApiProvider().put('/settings', {
         "music": _user.details.settings.music,
         "notification": _user.details.settings.notifications,
-        "sounds": _user.details.settings.sounds,
-        "vibrate": _user.details.settings.vibrate,
       });
     } on AppError catch (err) {
+      if (!mounted) return;
       err.show(context);
     } catch (err) {
       debugPrint('_updateSettings unexpected error: $err');
     }
 
+    if (!mounted) return;
     ref.invalidate(userProvider);
-
-    if (mounted) context.pop();
+    context.pop();
   }
 
   ///
   void _getUserDetails() async {
-    /// populate initial data from cookies
     _user = await ApiProvider().getStoredUser();
 
     dynamic response;
     try {
-      response = await _apiProvider.get("/equipment");
+      response = await _apiProvider.get('/equipment');
     } on AppError catch (err) {
+      if (!mounted) return;
       err.show(context);
       return;
     } catch (err) {
@@ -381,18 +392,15 @@ class _SettingsState extends ConsumerState<SettingsPage> {
       return;
     }
 
-    // update local data
-    _user.details.coins = double.tryParse(response["coins"].toString()) ?? 0.0;
-    _user.details.guildId = (response["guild"]?["id"] ?? '0').toString();
-    _user.details.mining = response["mining"];
-    _user.details.xp = response["xp"];
-    _user.details.unread = ((response["unread"] ?? []) as List).map((e) => (e as num).toInt()).toList();
-    _user.details.attack = StatRange.fromList((response["attack"] ?? []) as List);
-    _user.details.defense = StatRange.fromList((response["defense"] ?? []) as List);
-    _user.details.daily = response["daily"];
-    if (response is Map && response.containsKey("settings")) {
-      _user.details.settings = PlayerSettings.fromList((response["settings"] ?? [0, 0, 0]) as List);
-    } else {
+    // Apply common fields via shared loader.
+    // Note: applyEquipmentResponse writes settings only when the server sends
+    // them. The else-branch below handles the missing-settings fallback.
+    applyEquipmentResponse(_user, response as Map<String, dynamic>);
+
+    // Settings-specific fallback: if the server didn't send a settings key,
+    // rebuild the settings object from the current local slider values so we
+    // don't lose any in-progress slider state the user set before saving.
+    if (!(response as Map).containsKey('settings')) {
       _user.details.settings = PlayerSettings(
         music: musicLevel,
         notifications: notificationLevel,
@@ -400,17 +408,15 @@ class _SettingsState extends ConsumerState<SettingsPage> {
         vibrate: _vibrateEnabled ? 1 : 0,
       );
     }
-    _user.details.costs = ActionCosts.fromList((response["costs"] ?? [0.1, 0.1, 0.1]) as List);
 
+    if (!mounted) return;
     ref.invalidate(userProvider);
 
     setState(() {
       musicLevel = _user.details.settings.music;
       notificationLevel = _user.details.settings.notifications;
-      _soundsEnabled = _user.details.settings.isSoundsOn;
-      _vibrateEnabled = _user.details.settings.isVibrateOn;
+      // _soundsEnabled / _vibrateEnabled are device-local — the server
+      // hardcodes them to 0 in its settings array, so never read them here.
     });
-
-    return;
   }
 }

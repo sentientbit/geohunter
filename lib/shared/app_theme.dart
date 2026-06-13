@@ -8,14 +8,14 @@ import 'package:flutter/material.dart';
 
 // ── Palette ────────────────────────────────────────────────────────────────────
 
-/// Ultra-dark card background — nearly black, slightly transparent.
-const kCardBg = Color(0xcc050505);
+/// Dark card background — semi-transparent so the scene texture shows through.
+const kCardBg = Color(0xaa0e0c08);
 
 /// Silver-white — primary body text.
 const kSilver = Color(0xffC8C8D0);
 
 /// Dimmer silver — section labels, secondary text.
-const kSilverDim = Color(0xff9898A8);
+const kSilverDim = Color(0xffB8B8C4);
 
 /// Warm gold — accent for research, forge, and reward UI.
 const kGold = Color(0xffe6a04e);
@@ -80,3 +80,101 @@ Widget kEldritchDivider(Color accent) => Padding(
                 color: accent.withValues(alpha: 0.35), thickness: 0.6)),
       ]),
     );
+
+// ── Primary action button ──────────────────────────────────────────────────────
+/// Dark semi-transparent fill, gold border, ambient gold glow.
+/// Tapping brightens the fill so the press is clearly felt.
+///
+/// Usage:
+///   kStoneButton(onTap: _doSomething, child: Text('Craft', style: ...))
+Widget kStoneButton({
+  required VoidCallback? onTap,
+  required Widget child,
+  EdgeInsetsGeometry padding =
+      const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+  double radius = 10,
+}) =>
+    _KStoneButton(
+      onTap: onTap,
+      padding: padding,
+      radius: radius,
+      child: child,
+    );
+
+class _KStoneButton extends StatefulWidget {
+  final VoidCallback? onTap;
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final double radius;
+
+  const _KStoneButton({
+    required this.onTap,
+    required this.child,
+    required this.padding,
+    required this.radius,
+  });
+
+  @override
+  State<_KStoneButton> createState() => _KStoneButtonState();
+}
+
+class _KStoneButtonState extends State<_KStoneButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown:   (_) => setState(() => _pressed = true),
+      onTapUp:     (_) { setState(() => _pressed = false); widget.onTap?.call(); },
+      onTapCancel: ()  => setState(() => _pressed = false),
+      child: Opacity(
+        opacity: widget.onTap == null ? 0.38 : 1.0,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 90),
+          width: double.infinity,
+          padding: widget.padding,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.radius),
+            // Fill brightens slightly when pressed.
+            color: _pressed
+                ? const Color(0xff3a2810)
+                : const Color(0xcc1a1008),
+            border: Border.all(
+              color: _pressed
+                  ? const Color(0xffe6a04e)           // full gold when pressed
+                  : const Color(0xaae6a04e),          // 67% gold at rest
+              width: 1.2,
+            ),
+            boxShadow: _pressed
+                ? []                                  // flush with surface when pressed
+                : [
+                    // Ambient gold glow — makes the button readable on any bg.
+                    BoxShadow(
+                      color: const Color(0xffe6a04e).withValues(alpha: 0.18),
+                      blurRadius: 14,
+                      spreadRadius: 1,
+                    ),
+                    // Drop shadow for lift.
+                    const BoxShadow(
+                      color: Color(0xaa000000),
+                      blurRadius: 6,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+          ),
+          child: Center(child: widget.child),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Compass loader ─────────────────────────────────────────────────────────────
+/// Replaces CircularProgressIndicator across all screens.
+/// Usage: Center(child: kCompassLoader) or just kCompassLoader inside a Center.
+Widget kCompassLoader({double size = 150}) => Image.asset(
+      'assets/images/compass.gif',
+      width: size,
+      height: size,
+    );
+

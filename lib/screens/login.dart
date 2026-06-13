@@ -1,8 +1,7 @@
 ///
 import 'dart:math' as math;
-import 'dart:ui';
 
-import 'package:flame_audio/flame_audio.dart';
+import '../shared/sfx.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_offline/flutter_offline.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -375,7 +374,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ),
       ),
       onPressed: () {
-        FlameAudio.play(
+        Sfx.play(
             'sfx/bookOpen_${(math.Random.secure().nextInt(2) + 1).toString()}.mp3');
         context.push('/terms');
       },
@@ -415,7 +414,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     // );
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: GlobalConstants.appBg,
       resizeToAvoidBottomInset: false,
       body: OfflineBuilder(
         connectivityBuilder: (
@@ -423,16 +422,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           connectivity,
           child,
         ) {
+          // No BackdropFilter here: full-screen blur flickers on emulator
+          // GPUs and re-renders every frame. The banner alone is enough.
           if (connectivity.isEmpty || connectivity.contains(ConnectivityResult.none)) {
             return Stack(children: <Widget>[
               child,
-              BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                child: Container(
-                    color: Colors.black.withValues(alpha: 0),
-                    // child: child,
-                    child: NetworkStatusMessage()),
-              )
+              NetworkStatusMessage(),
             ]);
           } else {
             return child;

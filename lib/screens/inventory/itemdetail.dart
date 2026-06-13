@@ -1,4 +1,4 @@
-import 'package:flame_audio/flame_audio.dart';
+import '../../shared/sfx.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +7,7 @@ import 'package:geohunter/fonts/rpg_awesome_icons.dart';
 import '../../app_localizations.dart';
 import '../../models/app_error.dart';
 import '../../models/item.dart';
+import '../../models/materialmodel.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/inventory_provider.dart';
 import '../../providers/inventory_repository.dart';
@@ -42,6 +43,9 @@ class _ItemDetailState extends ConsumerState<ItemDetailPage> {
   String _blueprintImg = '';
   String _blueprintName = '';
   final _misc = <String>[];
+
+  /// Disassembly components from /itemdetails (empty = no recorded recipe).
+  final _components = <Materialmodel>[];
 
   final _inventoryRepo = InventoryRepository();
   final _apiProvider   = ApiProvider();
@@ -294,6 +298,53 @@ class _ItemDetailState extends ConsumerState<ItemDetailPage> {
     );
   }
 
+  // ── Components section ───────────────────────────────────────────────────────
+  /// Disassembly components — what this item breaks down into.
+  /// Hidden when the item has no recorded recipe (empty array from the API).
+  Widget _buildComponents() {
+    if (_components.isEmpty) return const SizedBox.shrink();
+    return _card(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _sectionLabel('Components'),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: _components.map((m) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.black38,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: _accent.withValues(alpha: 0.3)),
+                ),
+                padding: const EdgeInsets.all(6),
+                child: m.img != 'nothing.png'
+                    ? Image.asset(
+                        'assets/images/materials/${m.img}',
+                        fit: BoxFit.contain,
+                      )
+                    : const Icon(Icons.help_outline,
+                        color: Colors.white24, size: 28),
+              ),
+              const SizedBox(height: 4),
+              SizedBox(
+                width: 72,
+                child: Text(
+                  '${m.name} ×${m.nr}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: _silverDim, fontSize: 12),
+                ),
+              ),
+            ],
+          )).toList(),
+        ),
+      ]),
+    );
+  }
+
   // ── Disassemble section ──────────────────────────────────────────────────────────
 
   Widget _buildDisassemble(BuildContext context) {
@@ -486,6 +537,10 @@ class _ItemDetailState extends ConsumerState<ItemDetailPage> {
                 const SizedBox(height: 4),
                 _buildOrigin(),
               ],
+              if (_components.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                _buildComponents(),
+              ],
               const SizedBox(height: 4),
               _buildDisassemble(context),
             ]),
@@ -558,7 +613,7 @@ class _ItemDetailState extends ConsumerState<ItemDetailPage> {
     if (response['success'] == true) {
       ref.invalidate(inventoryProvider);
       ref.invalidate(userProvider);
-      FlameAudio.play('sfx/break_1.mp3');
+      Sfx.play('sfx/break_1.mp3');
       showDialog(
         context: context,
         builder: (ctx) => CustomDialog(
@@ -586,6 +641,10 @@ class _ItemDetailState extends ConsumerState<ItemDetailPage> {
         _description  = response['description']['en'] ?? '';
         _blueprintName = response['blueprint']['name'] ?? '';
         _blueprintImg  = response['blueprint']['img'] ?? '';
+        _components.clear();
+        for (final m in (response['materials'] as List? ?? [])) {
+          _components.add(Materialmodel.fromJson(m));
+        }
       });
     } on AppError catch (err) {
       debugPrint(err.toString());

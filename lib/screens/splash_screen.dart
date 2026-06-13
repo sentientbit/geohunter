@@ -2,7 +2,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flame_audio/flame_audio.dart';
+import '../shared/sfx.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_offline/flutter_offline.dart';
@@ -15,10 +15,10 @@ import 'package:double_back_to_close_app/double_back_to_close_app.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../fonts/rpg_awesome_icons.dart';
-import '../models/user.dart';
 import '../providers/custom_interceptors.dart';
 import '../providers/user_provider.dart';
 import '../shared/auth_utils.dart';
+import '../shared/app_theme.dart';
 import '../shared/constants.dart';
 
 ///
@@ -164,7 +164,7 @@ class SplashScreenState extends ConsumerState<SplashScreen> {
         ),
       ),
       onPressed: () {
-        FlameAudio.play(
+        Sfx.play(
             'sfx/bookOpen_${(math.Random.secure().nextInt(2) + 1).toString()}.mp3');
         context.push('/terms');
       },
@@ -181,32 +181,25 @@ class SplashScreenState extends ConsumerState<SplashScreen> {
           flex: 8,
           child: Padding(
             padding: EdgeInsets.all(0),
-            child: OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                padding: EdgeInsets.all(16),
-                backgroundColor: GlobalConstants.appBg,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                ),
-                side: BorderSide(width: 1, color: Colors.white),
-              ),
-              onPressed: () {
-                buttonContinue();
-              },
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Icon(Icons.hiking, color: Color(0xffe6a04e)),
-                  Text(
-                    ' Continue Adventuring',
-                    style: TextStyle(
-                      color: Color(0xffe6a04e),
-                      fontSize: 18,
-                      fontFamily: 'Cormorant SC',
-                      fontWeight: FontWeight.bold,
+            child: kStoneButton(
+              onTap: buttonContinue,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Icon(Icons.hiking, color: Color(0xffe6a04e)),
+                    Text(
+                      ' Continue Adventuring',
+                      style: TextStyle(
+                        color: Color(0xffe6a04e),
+                        fontSize: 18,
+                        fontFamily: 'Cormorant SC',
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

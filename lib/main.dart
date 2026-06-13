@@ -19,6 +19,7 @@ import 'providers/custom_interceptors.dart';
 import 'router.dart';
 import 'shared/auth_utils.dart';
 import 'shared/constants.dart';
+import 'shared/sfx.dart';
 
 /// assert debug mode
 bool get isInDebugMode {
@@ -72,6 +73,9 @@ Future<void> main() async {
   //   StreamMines     → dead code (never written to externally)
   //   StreamUserData  → userProvider       (lib/providers/user_provider.dart)
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+  // Load the device-local sound-effects toggle (backend doesn't persist it).
+  await Sfx.init();
 
   // This captures errors reported by the Flutter framework.
   FlutterError.onError = (details) async {

@@ -2,14 +2,12 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flame_audio/flame_audio.dart';
+import '../../shared/sfx.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:loading_overlay/loading_overlay.dart';
 import 'package:go_router/go_router.dart';
-
-//import 'package:logger/logger.dart';
 
 ///
 import '../../fonts/rpg_awesome_icons.dart';
@@ -18,9 +16,11 @@ import '../../models/forge_result.dart';
 import '../../models/user.dart';
 import '../../providers/forge_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/inventory_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../screens/forge/blueprints.dart';
 import '../../screens/forge/materials.dart';
+import '../../shared/app_theme.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
@@ -39,7 +39,8 @@ class ForgePage extends ConsumerStatefulWidget {
 }
 
 ///
-class _ForgeState extends ConsumerState<ForgePage> {
+class _ForgeState extends ConsumerState<ForgePage>
+    with SingleTickerProviderStateMixin {
   /// Secure Storage for User Data
   final _storage = FlutterSecureStorage();
 
@@ -64,112 +65,520 @@ class _ForgeState extends ConsumerState<ForgePage> {
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  // Shimmer animation for crafted item reveal
+  late final AnimationController _shimmerCtrl;
+  late final Animation<double> _shimmerAnim;
+
   @override
   void initState() {
     super.initState();
     _getPlacements();
+    _shimmerCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat();
+    _shimmerAnim = Tween<double>(begin: -1.0, end: 2.0).animate(
+      CurvedAnimation(parent: _shimmerCtrl, curve: Curves.easeInOut),
+    );
   }
 
   @override
   void dispose() {
+    _shimmerCtrl.dispose();
     _subscription?.cancel();
     _subscription = null;
     super.dispose();
   }
 
-  Widget blueprintPlace() {
-    return Ink(
-      decoration: BoxDecoration(
-        image: DecorationImage(
-          image: (_blueprintImg == "")
-              ? ExactAssetImage("assets/images/items/nothing.png")
-              : ExactAssetImage("assets/images/blueprints/$_blueprintImg"),
-          fit: BoxFit.contain,
-        ),
-      ),
-      child: InkWell(
-        onTap: () async {
-          _clearPlacements();
-          final picked = await Navigator.push<bool>(
-            context,
-            MaterialPageRoute(
-              builder: (context) => BlueprintSelectPage(),
-            ),
-          );
-          if ((picked == true) && mounted) _getPlacements();
-        },
-        splashColor: Colors.brown.withValues(alpha: 0.5),
-      ),
-    );
-  }
+  // ── Slot widgets ─────────────────────────────────────────────────────────────
 
-  Widget materialPlace(int idx) {
-    var mat0 = 0;
-    for (var mat in _materialsId) {
-      if (mat > 0) {
-        mat0 = mat;
-      }
+  Widget _blueprintSlot() {
+    final filled = _blueprintId > 0;
+
+    void openPicker() async {
+      _clearPlacements();
+      final picked = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) => BlueprintSelectPage()),
+      );
+      if ((picked == true) && mounted) _getPlacements();
     }
 
-    return Ink(
-      decoration: BoxDecoration(
-        image: DecorationImage(
-          image: (_materialsImg[idx] == "")
-              ? ExactAssetImage("assets/images/items/nothing.png")
-              : ExactAssetImage(
-                  "assets/images/materials/${_materialsImg[idx]}"),
-          fit: BoxFit.contain,
-        ),
-      ),
-      child: InkWell(
-        onTap: () async {
-          FlameAudio.play(
-              'sfx/hammer_${(math.Random.secure().nextInt(3) + 1).toString()}.mp3');
-          if (_blueprintId == 0) {
-            showDialog(
-              context: context,
-              builder: (context) => CustomDialog(
-                title: 'Error',
-                description: "Please select a blueprint first",
-                buttonText: "Okay",
-                images: [],
-                callback: () {},
+    // One box, one border — content swaps, container never changes.
+    final box = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        GestureDetector(
+          onTap: openPicker,
+          child: Container(
+            width: 130,
+            height: 130,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: filled
+                    ? kGold.withValues(alpha: 0.55)
+                    : Colors.white.withValues(alpha: 0.18),
+                width: filled ? 1.2 : 1.0,
               ),
-            );
-            return;
-          }
-          final picked = await Navigator.push<bool>(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MaterialSelectPage(
-                  blueprintId: _blueprintId, placement: idx, mat0: mat0),
             ),
-          );
-          if ((picked == true) && mounted) _getPlacements();
-        },
-        splashColor: Colors.brown.withValues(alpha: 0.5),
+            child: filled
+                ? Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Image.asset(
+                      'assets/images/blueprints/$_blueprintImg',
+                      fit: BoxFit.contain,
+                    ),
+                  )
+                : const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add, color: kSilver, size: 32),
+                      SizedBox(height: 6),
+                      Text(
+                        'Select Blueprint',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: kSilver,
+                          fontSize: 13,
+                          fontFamily: 'Cormorant SC',
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+        // ✕ badge — only when filled
+        if (filled)
+          Positioned(
+            top: -10,
+            right: -10,
+            child: GestureDetector(
+              onTap: _clearPlacements,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: const Color(0xff1a1a1a),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: kGold.withValues(alpha: 0.6),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        blurRadius: 6,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.close, color: kGold, size: 14),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          box,
+            const SizedBox(height: 8),
+          // Always reserve the name row height so empty and filled cards are the same size
+          Text(
+            filled ? _blueprintName : '',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: kSilver,
+              fontSize: 15,
+              fontFamily: 'Cormorant SC',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget itemLogo() {
-    return Ink(
-      decoration: BoxDecoration(
-        image: DecorationImage(
-          image: (_craftedItemImg == "")
-              ? ExactAssetImage("assets/images/items/nothing.png")
-              : ExactAssetImage("assets/images/items/$_craftedItemImg"),
-          fit: BoxFit.contain,
+  // Four small L-bracket engravings at each corner of a socket.
+  Widget _socketCorners(Color color) {
+    const len = 9.0;
+    const thick = 1.5;
+    final c = color.withValues(alpha: 0.55);
+    Widget hLine() => Container(width: len, height: thick, color: c);
+    Widget vLine() => Container(width: thick, height: len, color: c);
+    return Stack(children: [
+      Positioned(top: 0, left: 0, child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [vLine(), hLine()])),
+      Positioned(top: 0, right: 0, child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [hLine(), vLine()])),
+      Positioned(bottom: 0, left: 0, child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [vLine(), hLine()])),
+      Positioned(bottom: 0, right: 0, child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [hLine(), vLine()])),
+    ]);
+  }
+
+  Widget _materialSlot(int idx) {
+    final filled = _materialsId[idx] > 0;
+    var mat0 = 0;
+    for (var mat in _materialsId) {
+      if (mat > 0) mat0 = mat;
+    }
+
+    // Border colours: dark steel when empty, warm gold when occupied.
+    final borderColor = filled
+        ? kGold.withValues(alpha: 0.75)
+        : const Color(0xff484848);
+
+    return Column(
+      children: [
+        // Socket container
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: const Color(0xff0b0b0b),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: borderColor, width: 1.2),
+                boxShadow: [
+                  // Outer glow when filled
+                  if (filled)
+                    BoxShadow(
+                      color: kGold.withValues(alpha: 0.22),
+                      blurRadius: 18,
+                      spreadRadius: 1,
+                    ),
+                  // Deep shadow for depth
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(9),
+                child: Stack(
+                  children: [
+                    // Content
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () async {
+                          Sfx.play(
+                              'sfx/hammer_${(math.Random.secure().nextInt(3) + 1)}.mp3');
+                          if (_blueprintId == 0) {
+                            showDialog(
+                              context: context,
+                              builder: (context) => CustomDialog(
+                                title: 'Error',
+                                description: 'Please select a blueprint first',
+                                buttonText: 'Okay',
+                                images: [],
+                                callback: () {},
+                              ),
+                            );
+                            return;
+                          }
+                          final picked = await Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => MaterialSelectPage(
+                                  blueprintId: _blueprintId,
+                                  placement: idx,
+                                  mat0: mat0),
+                            ),
+                          );
+                          if ((picked == true) && mounted) _getPlacements();
+                        },
+                        splashColor: kGold.withValues(alpha: 0.25),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: filled
+                              ? Image.asset(
+                                  'assets/images/materials/${_materialsImg[idx]}',
+                                  fit: BoxFit.contain,
+                                )
+                              : Center(
+                                  child: Icon(Icons.add,
+                                      color: const Color(0xff3a3a3a), size: 26),
+                                ),
+                        ),
+                      ),
+                    ),
+                    // Inner-shadow vignette (simulates depth/inset)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(9),
+                            gradient: RadialGradient(
+                              center: Alignment.center,
+                              radius: 1.0,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: 0.35),
+                              ],
+                              stops: const [0.55, 1.0],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Engraved corner marks
+            Positioned.fill(
+              child: IgnorePointer(
+                child: _socketCorners(filled ? kGold : const Color(0xff585858)),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        SizedBox(
+          width: 88,
+          child: Text(
+            filled ? _materialsName[idx] : '— empty —',
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: filled ? kSilver : const Color(0xff3a3a3a),
+              fontSize: 11,
+              fontFamily: 'Open Sans',
+              height: 1.3,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _clearCraftedItem() {
+    setState(() {
+      _craftedItemImg    = '';
+      _craftedItemName   = '';
+      _craftedItemRarity = '';
+    });
+  }
+
+  Widget _craftedItemSection(User user) {
+    final filled = _craftedItemImg.isNotEmpty;
+    final rarityInt = int.tryParse(_craftedItemRarity) ?? 0;
+    final rarityColor = colorRarity(rarityInt);
+
+    // AnimatedSwitcher handles the filled ↔ empty transition.
+    // The key on each child changes when the item changes, so the switcher
+    // always animates when the crafted item is set or cleared.
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 380),
+      switchOutCurve: Curves.easeIn,
+      switchInCurve: Curves.easeOut,
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.86, end: 1.0).animate(animation),
+          child: child,
         ),
       ),
-      child: InkWell(
-        onTap: () async {
-          _craftItem();
-        },
-        splashColor: Colors.brown.withValues(alpha: 0.5),
+      child: filled
+          ? _craftedItemFilled(rarityInt, rarityColor)
+          : _craftedItemEmpty(),
+    );
+  }
+
+  // ── Empty state ─────────────────────────────────────────────────────────────
+  Widget _craftedItemEmpty() {
+    return Padding(
+      key: const ValueKey('crafted_empty'),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: const Color(0xff0b0b0b),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: const Color(0xff303030), width: 1),
+              ),
+              child: Center(
+                child: Icon(RPGAwesome.forging,
+                    color: const Color(0xff2e2e2e), size: 32),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Text(
+              'Result appears\nafter forging',
+              style: TextStyle(
+                color: const Color(0xff2e2e2e),
+                fontSize: 15,
+                fontFamily: 'Open Sans',
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+  // ── Filled — dramatic reveal ────────────────────────────────────────────────
+  Widget _craftedItemFilled(int rarityInt, Color rarityColor) {
+    return GestureDetector(
+      key: ValueKey(_craftedItemImg),
+      onTap: _clearCraftedItem,
+      child: AnimatedBuilder(
+        animation: _shimmerAnim,
+        builder: (context, child) => ShaderMask(
+          blendMode: BlendMode.srcATop,
+          shaderCallback: (rect) => LinearGradient(
+            begin: Alignment(_shimmerAnim.value - 1, -0.3),
+            end: Alignment(_shimmerAnim.value + 0.4, 0.3),
+            colors: [
+              Colors.transparent,
+              rarityColor.withValues(alpha: 0.12),
+              Colors.white.withValues(alpha: 0.10),
+              Colors.transparent,
+            ],
+            stops: const [0.0, 0.4, 0.6, 1.0],
+          ).createShader(rect),
+          child: child!,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Row(
+            children: [
+              // Item image with rarity glow ring
+              Container(
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                  color: const Color(0xff0b0b0b),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: rarityColor.withValues(alpha: 0.7),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: rarityColor.withValues(alpha: 0.35),
+                      blurRadius: 22,
+                      spreadRadius: 2,
+                    ),
+                    BoxShadow(
+                      color: rarityColor.withValues(alpha: 0.15),
+                      blurRadius: 40,
+                      spreadRadius: 6,
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(9),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Image.asset(
+                          'assets/images/items/$_craftedItemImg',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: _socketCorners(rarityColor),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Name + rarity chip + dismiss hint
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _craftedItemName,
+                      style: TextStyle(
+                        color: rarityColor,
+                        fontSize: 24,
+                        fontFamily: 'Cormorant SC',
+                        fontWeight: FontWeight.bold,
+                        shadows: [
+                          Shadow(
+                              color: rarityColor.withValues(alpha: 0.8),
+                              blurRadius: 14),
+                          Shadow(
+                              color: rarityColor.withValues(alpha: 0.4),
+                              blurRadius: 28),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    _rarityChip(rarityInt, rarityColor),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Tap to dismiss',
+                      style: TextStyle(
+                        color: kSilverDim.withValues(alpha: 0.45),
+                        fontSize: 10,
+                        fontFamily: 'Open Sans',
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
+
+  Widget _rarityChip(int rarity, Color color) {
+    const labels = {
+      0: 'Common',
+      1: 'Uncommon',
+      2: 'Rare',
+      3: 'Epic',
+      4: 'Legendary',
+      5: 'Mythic',
+    };
+    final label = labels[rarity] ?? 'Unknown';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.4), width: 0.8),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontFamily: 'Open Sans',
+          fontWeight: FontWeight.bold,
+          letterSpacing: 2.5,
+        ),
+      ),
+    );
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────────
 
   void choiceAction(BuildContext context, PopupMenuChoice choice) async {
     if (choice == PopupMenuChoice.refreshForge) {
@@ -186,10 +595,7 @@ class _ForgeState extends ConsumerState<ForgePage> {
     if (!GlobalConstants.menuHasNotification(userDetails)) {
       return IconButton(
         color: Colors.white,
-        icon: Icon(
-          Icons.menu,
-          color: Colors.white,
-        ),
+        icon: Icon(Icons.menu, color: Colors.white),
         onPressed: () {
           if (_scaffoldKey.currentState != null) {
             _scaffoldKey.currentState?.openDrawer();
@@ -216,10 +622,7 @@ class _ForgeState extends ConsumerState<ForgePage> {
           height: 25,
           child: Stack(
             children: [
-              Icon(
-                Icons.menu,
-                color: Colors.white,
-              ),
+              Icon(Icons.menu, color: Colors.white),
               Positioned(
                 left: 25,
                 top: 0,
@@ -230,18 +633,8 @@ class _ForgeState extends ConsumerState<ForgePage> {
                     color: Colors.red,
                     shape: BoxShape.circle,
                   ),
-                  child: Center(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.red,
-                      ),
-                      width: 10,
-                      height: 10,
-                    ),
-                  ),
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -251,61 +644,63 @@ class _ForgeState extends ConsumerState<ForgePage> {
 
   ///
   Widget build(BuildContext context) {
-    //ignore: omit_local_variable_types
     int currentTabIndex = 0;
     final user = ref.watch(userProvider).valueOrNull ?? User.blank();
+    final craftingCost = user.details.costs.crafting.toDouble();
 
-    /// Application top Bar
     final topBar = AppBar(
       leading: leadingIcon(context, user.details),
-      elevation: 0.1,
+      elevation: 0,
       backgroundColor: Colors.transparent,
-      title: Text(
-        "Forge",
-        style: Style.topBar,
-      ),
+      title: Text("Forge", style: Style.topBar),
       actions: <Widget>[
+        // Coin balance chip
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: Colors.black45,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: kGold.withValues(alpha: 0.4), width: 0.8),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.monetization_on, color: kGold, size: 14),
+              SizedBox(width: 4),
+              Text(
+                user.details.coins.toStringAsFixed(2),
+                style: TextStyle(
+                  color: kGold,
+                  fontSize: 13,
+                  fontFamily: 'Open Sans',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(width: 4),
         PopupMenuButton<PopupMenuChoice>(
           iconColor: Colors.white,
-          onSelected: (onSel) {
-            choiceAction(context, onSel);
-          },
+          onSelected: (onSel) => choiceAction(context, onSel),
           itemBuilder: (context) => <PopupMenuEntry<PopupMenuChoice>>[
             PopupMenuItem<PopupMenuChoice>(
               value: PopupMenuChoice.refreshForge,
               child: Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.autorenew,
-                    size: 24,
-                    color: Colors.white,
-                  ),
-                  SizedBox(width: 10.0),
-                  Text(
-                    'Cleanup',
-                    style: TextStyle(
-                      color: Colors.white,
-                    ),
-                  ),
+                children: [
+                  Icon(Icons.autorenew, size: 24, color: Colors.white),
+                  SizedBox(width: 10),
+                  Text('Cleanup', style: TextStyle(color: Colors.white)),
                 ],
               ),
             ),
             PopupMenuItem<PopupMenuChoice>(
               value: PopupMenuChoice.showCoinSheet,
               child: Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.monetization_on,
-                    size: 24,
-                    color: Colors.white,
-                  ),
-                  SizedBox(width: 10.0),
-                  Text(
-                    'Get more coins',
-                    style: TextStyle(
-                      color: Colors.white,
-                    ),
-                  ),
+                children: [
+                  Icon(Icons.monetization_on, size: 24, color: Colors.white),
+                  SizedBox(width: 10),
+                  Text('Get more coins', style: TextStyle(color: Colors.white)),
                 ],
               ),
             ),
@@ -319,228 +714,103 @@ class _ForgeState extends ConsumerState<ForgePage> {
       ],
     );
 
-    /// What happens when clicking the Bottom Navbar
     onTapped(int index) {
-      setState(() {
-        currentTabIndex = index;
-      });
-      /* if index == 0 We are here: Forge */
-      if (index == 1) {
-        //Navigator.of(context).pop();
-        context.replace('/research');
-      }
+      setState(() => currentTabIndex = index);
+      if (index == 1) context.replace('/research');
     }
 
-    final cleanButton = OutlinedButton(
+    // ── Coin sheet (unchanged layout, kept compact) ──────────────────────────
+    final watchAdButton = OutlinedButton(
       style: OutlinedButton.styleFrom(
-        padding: EdgeInsets.all(2),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
         backgroundColor: GlobalConstants.appBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.0),
-        ),
-        side: BorderSide(width: 1, color: Colors.white),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        side: const BorderSide(width: 1, color: Colors.white),
       ),
-      onPressed: () async {
-        _clearPlacements();
-      },
+      onPressed: () {},
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Icon(Icons.autorenew, color: Color(0xffe6a04e)),
-          Text(
-            " Clean",
-            style: TextStyle(
-                color: Color(0xffe6a04e),
-                fontSize: 18,
-                fontFamily: 'Cormorant SC',
-                fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-
-    final craftButton = OutlinedButton(
-      style: OutlinedButton.styleFrom(
-        padding: EdgeInsets.all(2),
-        backgroundColor: GlobalConstants.appBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.0),
-        ),
-        side: BorderSide(width: 1, color: Colors.white),
-      ),
-      onPressed: () async {
-        _craftItem();
-      },
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Icon(RPGAwesome.forging, color: Color(0xffe6a04e)),
-          Text(
-            " Craft",
-            style: TextStyle(
-                color: Color(0xffe6a04e),
-                fontSize: 18,
-                fontFamily: 'Cormorant SC',
-                fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-
-    final watchAdButton = Padding(
-      padding: EdgeInsets.all(0),
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          padding:
-              EdgeInsets.only(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
-          backgroundColor: GlobalConstants.appBg,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          side: BorderSide(width: 1, color: Colors.white),
-        ),
-        onPressed: () {},
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(Icons.ondemand_video, color: Color(0xffe6a04e)),
-            Text(
-              " Watch ad",
+        children: [
+          Icon(Icons.ondemand_video, color: kGold),
+          Text(' Watch ad',
               style: TextStyle(
-                color: Color(0xffe6a04e),
-                fontSize: 16,
-                fontFamily: 'Cormorant SC',
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    ///
-    Color itemColorRarity(String rarity) {
-      if (rarity == "") {
-        return Colors.white;
-      }
-      return colorRarity(int.tryParse(rarity) ?? 0);
-    }
-
-    Widget purchaseCoinsButton(int idx) {
-      return Padding(
-        padding: EdgeInsets.all(0),
-        child: OutlinedButton(
-          style: OutlinedButton.styleFrom(
-            padding:
-                EdgeInsets.only(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
-            backgroundColor: GlobalConstants.appBg,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.0),
-            ),
-            side: BorderSide(width: 1, color: Colors.white),
-          ),
-          onPressed: () {},
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Icon(Icons.ondemand_video, color: Color(0xffe6a04e)),
-              Text(
-                " 0.0",
-                style: TextStyle(
-                  color: Color(0xffe6a04e),
+                  color: kGold,
                   fontSize: 16,
                   fontFamily: 'Cormorant SC',
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+
+    final coinSheet = Container(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+      decoration: BoxDecoration(color: const Color(0xcc222222)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.clear, color: Colors.white),
+                onPressed: () => setState(() => _showCoinSheet = false),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    Text('Watch an ad to gain a few coins.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white, fontSize: 14)),
+                    SizedBox(height: 8),
+                    watchAdButton,
+                  ],
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  children: [
+                    Text('Coming soon',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white, fontSize: 14)),
+                    SizedBox(height: 8),
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 10, horizontal: 16),
+                        backgroundColor: GlobalConstants.appBg,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        side: const BorderSide(width: 1, color: Colors.white),
+                      ),
+                      onPressed: () {},
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.monetization_on, color: kGold),
+                          Text(' 0.0',
+                              style: TextStyle(
+                                  color: kGold,
+                                  fontSize: 16,
+                                  fontFamily: 'Cormorant SC',
+                                  fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        ),
-      );
-    }
-
-    final coinSheet = Stack(
-      children: <Widget>[
-        Container(
-          height: 170,
-          padding: EdgeInsets.only(top: 0.0, left: 30.0, right: 30.0),
-          width: MediaQuery.of(context).size.width,
-          decoration: BoxDecoration(color: Color(0xcc222222)),
-          child: Column(
-            children: <Widget>[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: <Widget>[
-                  IconButton(
-                    icon: Icon(
-                      Icons.clear,
-                      color: Colors.white,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _showCoinSheet = !_showCoinSheet;
-                      });
-                    },
-                  ),
-                ],
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Expanded(
-                    flex: 5,
-                    child: Container(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          Text(
-                            'Watch an ad to gain a few coins.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                            ),
-                          ),
-                          SizedBox(height: 10),
-                          watchAdButton,
-                        ],
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 1,
-                    child: SizedBox(width: 1),
-                  ),
-                  Expanded(
-                    flex: 5,
-                    child: Container(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          Text(
-                            "Coming soon",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                            ),
-                          ),
-                          SizedBox(height: 10),
-                          purchaseCoinsButton(0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
 
+    // ── Main body ────────────────────────────────────────────────────────────
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -549,253 +819,159 @@ class _ForgeState extends ConsumerState<ForgePage> {
       child: Scaffold(
         backgroundColor: GlobalConstants.appBg,
         appBar: topBar,
-        //extendBodyBehindAppBar: true,
         body: LoadingOverlay(
-        isLoading: _isLoading,
-        opacity: 0.5,
-        color: Colors.black,
-        progressIndicator: CircularProgressIndicator(
-          backgroundColor: Colors.black,
-          valueColor: AlwaysStoppedAnimation<Color>(Color(0xffe6a04e)),
-        ),
-        child: Stack(
-          children: <Widget>[
-            Container(
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('assets/images/blacksmith_hammer.jpg'),
-                  fit: BoxFit.fill,
+          isLoading: _isLoading,
+          opacity: 0.5,
+          color: Colors.black,
+          progressIndicator: CircularProgressIndicator(
+            backgroundColor: Colors.black,
+            valueColor: AlwaysStoppedAnimation<Color>(kGold),
+          ),
+          child: Stack(
+            children: [
+              // ── Background with dark overlay ──────────────────────────
+              Container(
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('assets/images/blacksmith_hammer.png'),
+                    fit: BoxFit.cover,
+                    colorFilter: ColorFilter.mode(
+                      Colors.black.withValues(alpha: 0.60),
+                      BlendMode.darken,
+                    ),
+                  ),
                 ),
               ),
-            ),
-            Container(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: <Widget>[
-                    _showCoinSheet ? coinSheet : SizedBox(height: 1),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        Expanded(
-                          flex: 1,
-                          child: Text(""),
-                        ),
-                        Expanded(
-                          flex: 3,
-                          child: Container(
-                            padding: const EdgeInsets.all(7.0),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.white),
-                              borderRadius: BorderRadius.circular(5.0),
-                              color: Colors.black,
-                            ),
-                            child: Text(
-                              "No bonus",
-                              style: TextStyle(
-                                color: GlobalConstants.appFg,
-                                fontSize: 16.0,
-                                backgroundColor: Colors.black,
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          flex: 4,
-                          child: Card(
-                            color: Colors.transparent,
-                            child: SizedBox(
-                                child: blueprintPlace(),
-                                width: 110,
-                                height: 110),
-                          ),
-                        ),
-                        Expanded(
-                          flex: 3,
-                          child: cleanButton,
-                        ),
-                        Expanded(
-                          flex: 1,
-                          child: Text(""),
-                        ),
-                      ],
-                    ),
-                    Card(
-                      color: Color.fromARGB(140, 0, 0, 0),
-                      child: Text(
-                        (_blueprintName == "")
-                            ? " Select Blueprint "
-                            : _blueprintName,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontFamily: 'Cormorant SC',
-                          fontWeight: FontWeight.bold,
-                          shadows: <Shadow>[
-                            Shadow(
-                                offset: Offset(1.0, 1.0),
-                                blurRadius: 3.0,
-                                color: Color.fromARGB(255, 0, 0, 0))
-                          ],
-                        ),
-                      ),
-                    ),
-                    Card(
-                      color: Color.fromARGB(140, 0, 0, 0),
-                      child: SizedBox(
-                          child: Icon(
-                            Icons.add,
-                            color: GlobalConstants.appFg,
-                          ),
-                          width: 30,
-                          height: 30),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        Expanded(
-                          flex: 4,
-                          child: Card(
-                            color: Colors.transparent,
-                            child: SizedBox(
-                                child: materialPlace(0),
-                                width: 110,
-                                height: 110),
-                          ),
-                        ),
-                        Expanded(
-                          flex: 4,
-                          child: Card(
-                            color: Colors.transparent,
-                            child: SizedBox(
-                                child: materialPlace(1),
-                                width: 110,
-                                height: 110),
-                          ),
-                        ),
-                        Expanded(
-                          flex: 4,
-                          child: Card(
-                            color: Colors.transparent,
-                            child: SizedBox(
-                                child: materialPlace(2),
-                                width: 110,
-                                height: 110),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Card(
-                      color: Color.fromARGB(140, 0, 0, 0),
-                      child: Text(
-                        " Materials ",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontFamily: 'Cormorant SC',
-                          fontWeight: FontWeight.bold,
-                          shadows: <Shadow>[
-                            Shadow(
-                                offset: Offset(1.0, 1.0),
-                                blurRadius: 3.0,
-                                color: Color.fromARGB(255, 0, 0, 0))
-                          ],
-                        ),
-                      ),
-                    ),
-                    Card(
-                      color: Color.fromARGB(140, 0, 0, 0),
-                      child: SizedBox(
-                          child: Icon(
-                            Icons.arrow_downward,
-                            color: GlobalConstants.appFg,
-                          ),
-                          width: 30,
-                          height: 30),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: <Widget>[
-                        Expanded(
-                          flex: 1,
-                          child: Text(""),
-                        ),
-                        Expanded(
-                          flex: 3,
-                          child: Container(
-                            padding: const EdgeInsets.all(7.0),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.white),
-                              borderRadius: BorderRadius.circular(5.0),
-                              color: Colors.black,
-                            ),
-                            child: Text(
-                              "${user.details.costs.crafting.toString()} Coins",
-                              style: TextStyle(
-                                color: GlobalConstants.appFg,
-                                fontSize: 16.0,
-                                backgroundColor: Colors.black,
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          flex: 4,
-                          child: Card(
-                            color: Colors.transparent,
-                            child: SizedBox(
-                                child: itemLogo(), width: 110, height: 110),
-                          ),
-                        ),
-                        Expanded(flex: 3, child: craftButton),
-                        Expanded(
-                          flex: 1,
-                          child: Text(""),
-                        ),
-                      ],
-                    ),
-                    Card(
-                      color: Color.fromARGB(140, 0, 0, 0),
-                      child: Text(
-                        (_craftedItemName == "") ? " Item " : _craftedItemName,
-                        style: TextStyle(
-                          color: itemColorRarity(_craftedItemRarity),
-                          fontSize: 18,
-                          fontFamily: 'Cormorant SC',
-                          fontWeight: FontWeight.bold,
-                          shadows: <Shadow>[
-                            Shadow(
-                                offset: Offset(1.0, 1.0),
-                                blurRadius: 3.0,
-                                color: Color.fromARGB(255, 0, 0, 0))
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+              // Vertical gradient — darker at top and bottom for depth
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.50),
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.60),
+                    ],
+                    stops: const [0.0, 0.45, 1.0],
+                  ),
                 ),
               ),
-            ),
-          ],
+              // ── Content ───────────────────────────────────────────────
+              SafeArea(
+                top: false,
+                child: SingleChildScrollView(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Coin sheet
+                      if (_showCoinSheet) ...[
+                        coinSheet,
+                        SizedBox(height: 8),
+                      ],
+
+                      // ── BLUEPRINT card ─────────────────────────────────
+                      Container(
+                        // No padding — slot fills the card edge-to-edge.
+                        decoration: kCardDecoration(
+                          _blueprintId > 0 ? kGold : kSilverDim,
+                          glowAlpha: _blueprintId > 0 ? 0.10 : 0.03,
+                        ),
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+                              child: Text('BLUEPRINT', style: kSectionLabel),
+                            ),
+                            _blueprintSlot(),
+                          ],
+                        ),
+                      ),
+
+                      kEldritchDivider(kGold),
+
+                      // ── MATERIALS card ─────────────────────────────────
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: kCardDecoration(
+                          _materialsId.any((id) => id > 0)
+                              ? kGold
+                              : kSilverDim,
+                          glowAlpha:
+                              _materialsId.any((id) => id > 0) ? 0.08 : 0.03,
+                        ),
+                        child: Column(
+                          children: [
+                            Text('MATERIALS', style: kSectionLabel),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _materialSlot(0),
+                                _materialSlot(1),
+                                _materialSlot(2),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      kEldritchDivider(kGold),
+
+                      // ── CRAFTED ITEM card ──────────────────────────────
+                      Container(
+                        decoration: kCardDecoration(
+                          _craftedItemImg.isNotEmpty
+                              ? colorRarity(
+                                  int.tryParse(_craftedItemRarity) ?? 0)
+                              : kSilverDim,
+                          glowAlpha:
+                              _craftedItemImg.isNotEmpty ? 0.10 : 0.03,
+                        ),
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+                              child: Text('CRAFTED ITEM', style: kSectionLabel),
+                            ),
+                            _craftedItemSection(user),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // ── CRAFT BUTTON ──────────────────────────────────
+                      _craftButton(craftingCost),
+
+                      SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
         key: _scaffoldKey,
         drawer: DrawerPage(),
         bottomNavigationBar: BottomNavigationBar(
           onTap: onTapped,
           currentIndex: currentTabIndex,
           backgroundColor: GlobalConstants.appBg,
-          selectedItemColor: Color(0xfffeb53b),
-          selectedLabelStyle: TextStyle(fontSize: 14),
+          selectedItemColor: kGold,
+          selectedLabelStyle: const TextStyle(fontSize: 14),
           unselectedItemColor: Colors.white,
-          unselectedLabelStyle: TextStyle(fontSize: 14),
+          unselectedLabelStyle: const TextStyle(fontSize: 14),
           items: [
             BottomNavigationBarItem(
               icon: Icon(RPGAwesome.forging, color: Colors.white),
               label: 'Forge',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.import_contacts, color: Colors.white),
+              icon: const Icon(Icons.import_contacts, color: Colors.white),
               label: 'Research',
             ),
           ],
@@ -803,6 +979,33 @@ class _ForgeState extends ConsumerState<ForgePage> {
       ),
     );
   }
+
+  Widget _craftButton(double craftingCost) {
+    final costLabel = craftingCost > 0
+        ? '  ·  ${craftingCost.toStringAsFixed(craftingCost == craftingCost.truncateToDouble() ? 0 : 2)} coins'
+        : '';
+    return kStoneButton(
+      onTap: _craftItem,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(RPGAwesome.forging, color: kGold, size: 20),
+          const SizedBox(width: 8),
+          Text(
+            'Craft$costLabel',
+            style: const TextStyle(
+              color: kGold,
+              fontSize: 18,
+              fontFamily: 'Cormorant SC',
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Data logic (unchanged) ────────────────────────────────────────────────
 
   void _getPlacements() async {
     var secureStorage = await _storage.readAll();
@@ -867,6 +1070,7 @@ class _ForgeState extends ConsumerState<ForgePage> {
       });
       return;
     }
+    setState(() => _isLoading = true);
     ForgeResult result;
     try {
       result = await ref.read(forgeRepositoryProvider).craft(
@@ -877,13 +1081,17 @@ class _ForgeState extends ConsumerState<ForgePage> {
           );
     } on AppError catch (err) {
       if (!mounted) return;
+      setState(() => _isLoading = false);
       err.show(context);
       return;
     } catch (err) {
       debugPrint('_craftItem unexpected error: $err');
+      if (mounted) setState(() => _isLoading = false);
       return;
     }
 
+    if (!mounted) return;
+    setState(() => _isLoading = false);
     if (result.item.nr > 0) {
       _clearPlacements();
       setState(() {
@@ -891,8 +1099,9 @@ class _ForgeState extends ConsumerState<ForgePage> {
         _craftedItemName = result.item.name;
         _craftedItemRarity = result.item.rarity.toString();
       });
-      FlameAudio.play('sfx/anvil_1.mp3');
+      Sfx.play('sfx/anvil_1.mp3');
     }
     ref.invalidate(userProvider);
+    ref.invalidate(inventoryProvider);
   }
 }
