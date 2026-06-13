@@ -16,6 +16,7 @@ import 'package:workmanager/workmanager.dart';
 import 'app_localizations.dart';
 import 'providers/api_provider.dart';
 import 'providers/custom_interceptors.dart';
+import 'providers/user_provider.dart';
 import 'router.dart';
 import 'shared/auth_utils.dart';
 import 'shared/constants.dart';
@@ -119,12 +120,24 @@ class _AppStartupWidgetState extends State<AppStartupWidget> {
   }
 }
 
-class MainApp extends StatelessWidget {
+class MainApp extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Drive the app's UI locale from the account language so the whole app —
+    // not just server content — follows the Settings language choice. Null
+    // (logged out / not yet loaded) falls back to the device locale via
+    // localeResolutionCallback below.
+    final accountLang = ref.watch(userProvider).valueOrNull?.details.language;
+    final Locale? locale = accountLang == 'ro'
+        ? const Locale('ro', 'RO')
+        : accountLang == 'en'
+            ? const Locale('en', 'US')
+            : null;
+
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       routerConfig: appRouter,
+      locale: locale,
       theme: ThemeData(
         // canvasColor is what BottomNavigationBar actually reads in M3.
         // bottomNavigationBarTheme + elevation:0 also needed to suppress tint.

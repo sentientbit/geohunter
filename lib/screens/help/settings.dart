@@ -16,6 +16,7 @@ import '../../shared/app_theme.dart';
 import '../../shared/equipment_loader.dart';
 import '../../providers/custom_interceptors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/journal_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../shared/constants.dart';
 import '../../shared/sfx.dart';
@@ -64,6 +65,12 @@ class _SettingsState extends ConsumerState<SettingsPage> {
   int notificationLevel = 0;
 
   int musicLevel = 0;
+
+  // Account language ('en'/'ro'). Persisted server-side via PUT /profile — the
+  // same mechanism the Profile page uses (the API DOES support this, so it is
+  // not internal-only). Drives server-rendered content (the Keeper's Journal,
+  // item/material names) and, via main.dart, the app's own UI locale.
+  String _language = 'en';
 
   static const _localStorage = FlutterSecureStorage();
 
@@ -325,6 +332,55 @@ class _SettingsState extends ConsumerState<SettingsPage> {
                             ],
                           ),
                           SizedBox(height: 18),
+                          Row(
+                            children: <Widget>[
+                              Expanded(
+                                flex: 10,
+                                child: ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: const Icon(Icons.language,
+                                      color: Colors.white),
+                                  title: const Text(
+                                    'Language',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontFamily: 'Open Sans',
+                                      fontWeight: FontWeight.bold,
+                                      shadows: <Shadow>[
+                                        Shadow(
+                                            offset: Offset(1.0, 1.0),
+                                            blurRadius: 3.0,
+                                            color: Color.fromARGB(255, 0, 0, 0))
+                                      ],
+                                    ),
+                                  ),
+                                  trailing: DropdownButton<String>(
+                                    dropdownColor: GlobalConstants.appBg,
+                                    value: _language,
+                                    underline: const SizedBox.shrink(),
+                                    style: const TextStyle(
+                                        color: Color(0xffe6a04e), fontSize: 16),
+                                    icon: const Icon(Icons.arrow_drop_down,
+                                        color: Color(0xffe6a04e)),
+                                    items: const [
+                                      DropdownMenuItem(
+                                          value: 'en', child: Text('English')),
+                                      DropdownMenuItem(
+                                          value: 'ro', child: Text('Română')),
+                                    ],
+                                    onChanged: (v) =>
+                                        setState(() => _language = v ?? 'en'),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 1,
+                                child: SizedBox(),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 18),
                           // kStoneButton is full-width; never put it bare in a
                           // Row — unbounded width breaks layout in release.
                           saveButton,
@@ -344,6 +400,10 @@ class _SettingsState extends ConsumerState<SettingsPage> {
   }
 
   void _updateSettings() async {
+    // Capture before mutating _user so we only hit /profile when it changed.
+    final languageChanged = _language != _user.details.language;
+
+    _user.details.language = _language;
     _user.details.settings = PlayerSettings(
       music: musicLevel,
       notifications: notificationLevel,
@@ -371,8 +431,30 @@ class _SettingsState extends ConsumerState<SettingsPage> {
       debugPrint('_updateSettings unexpected error: $err');
     }
 
+    // Account language lives on the profile. Send the full profile field set
+    // (same shape the Profile page uses) so we don't blank the other fields.
+    if (languageChanged) {
+      try {
+        await ApiProvider().put('/profile', {
+          "username": _user.details.username,
+          "sex": _user.details.sex,
+          "location_privacy": _user.details.locationPrivacy,
+          "language": _language,
+          "status": _user.details.status,
+        });
+      } on AppError catch (err) {
+        if (!mounted) return;
+        err.show(context);
+      } catch (err) {
+        debugPrint('_updateSettings language update error: $err');
+      }
+    }
+
     if (!mounted) return;
     ref.invalidate(userProvider);
+    // Server-rendered content (Journal pages, item names) is language-keyed,
+    // so force the Journal to refetch in the new language.
+    if (languageChanged) ref.invalidate(journalProvider);
     context.pop();
   }
 
@@ -415,6 +497,7 @@ class _SettingsState extends ConsumerState<SettingsPage> {
     setState(() {
       musicLevel = _user.details.settings.music;
       notificationLevel = _user.details.settings.notifications;
+      _language = (_user.details.language == 'ro') ? 'ro' : 'en';
       // _soundsEnabled / _vibrateEnabled are device-local — the server
       // hardcodes them to 0 in its settings array, so never read them here.
     });
