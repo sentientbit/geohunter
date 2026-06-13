@@ -59,12 +59,18 @@ Published by Sentient Bit, Brașov, Romania.
 ## Required fields checklist (Uptodown)
 - [ ] APK upload: build/app/outputs/flutter-apk/app-release.apk
 - [ ] Icon: assets/images/icon-512.png (512×512) — Uptodown derives listing icon from APK too
-- [ ] Privacy policy URL: https://thegeohunter.com/privacy  (host store/PRIVACY-POLICY.md there)
+- [x] Privacy policy URL: https://thegeohunter.com/privacy-policy  (LIVE, 200; /privacy 301s here)
+- [x] Terms URL (if asked): https://thegeohunter.com/terms-and-conditions  (LIVE)
+- [x] Account-deletion URL (if asked): https://thegeohunter.com/account-deletion  (LIVE)
 - [ ] Screenshots: store/screenshots/*.png (phone)
 - [ ] Short + full description: above
 - [ ] Category: Games → Adventure
 - [ ] Developer/publisher: Sentient Bit
 - [ ] Contact email: office@sentientbit.com
+
+NOTE: point Uptodown at the LIVE privacy URL above — do NOT host store/PRIVACY-POLICY.md
+as a second copy. The live page is the canonical, audited policy maintained with the
+site; the local .md is a superseded draft kept only for reference.
 
 ## Tags / keywords
 exploration, location, GPS, adventure, map, mining, crafting, forge, RPG, walking,

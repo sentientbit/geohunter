@@ -1,5 +1,10 @@
 # GeoHunter — Privacy Policy
 
+> **SUPERSEDED — do not host this file.** The canonical, audited privacy policy
+> is live at https://thegeohunter.com/privacy-policy (the `/privacy` alias 301s
+> there). Point Uptodown and any store at that URL. This draft is kept only as a
+> reference snapshot; the live page is maintained with the site.
+
 _Last updated: 13 June 2026_
 
 GeoHunter ("the app", "we", "us") is a location-based exploration game published by
