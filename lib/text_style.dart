@@ -38,16 +38,22 @@ class Style {
       ]);
 
   ///
+  // White title with an 8-direction black outline so every app bar stays
+  // legible on any background (bright satellite tiles included), not just a
+  // single drop shadow. Mirrors the map app bar's outlined title.
   static final TextStyle topBar = baseTextStyle.copyWith(
     color: GlobalConstants.appFg,
     fontFamily: "Cormorant SC",
-    fontWeight: FontWeight.bold,
-    shadows: <Shadow>[
-      Shadow(
-        offset: Offset(1.0, 1.0),
-        blurRadius: 3.0,
-        color: Color.fromARGB(255, 0, 0, 0),
-      ),
+    fontWeight: FontWeight.w800,
+    shadows: const <Shadow>[
+      Shadow(offset: Offset(-1.5, -1.5), blurRadius: 1, color: Colors.black),
+      Shadow(offset: Offset(1.5, -1.5), blurRadius: 1, color: Colors.black),
+      Shadow(offset: Offset(1.5, 1.5), blurRadius: 1, color: Colors.black),
+      Shadow(offset: Offset(-1.5, 1.5), blurRadius: 1, color: Colors.black),
+      Shadow(offset: Offset(0, -1.8), blurRadius: 1, color: Colors.black),
+      Shadow(offset: Offset(0, 1.8), blurRadius: 1, color: Colors.black),
+      Shadow(offset: Offset(-1.8, 0), blurRadius: 1, color: Colors.black),
+      Shadow(offset: Offset(1.8, 0), blurRadius: 1, color: Colors.black),
     ],
   );
 

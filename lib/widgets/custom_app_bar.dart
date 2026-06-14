@@ -46,12 +46,21 @@ class CustomAppBar extends StatelessWidget {
   //     printer: PrettyPrinter(
   //         colors: true, printEmojis: true, printTime: true, lineLength: 80));
 
+  /// White icon with a black shadow halo, legible on any map background.
+  static const List<Shadow> _iconHalo = [
+    Shadow(color: Colors.black, blurRadius: 4),
+    Shadow(color: Colors.black, blurRadius: 4),
+  ];
+
   ///
   Widget leadingIcon(BuildContext context) {
     if (!hasNotification) {
       return IconButton(
-        color: iconColor,
-        icon: icon,
+        icon: Icon(
+          icon.icon ?? Icons.menu,
+          color: Colors.white,
+          shadows: _iconHalo,
+        ),
         onPressed: () {
           if (scaffoldKey.currentState != null) {
             scaffoldKey.currentState?.openDrawer();
@@ -81,6 +90,7 @@ class CustomAppBar extends StatelessWidget {
               Icon(
                 Icons.menu,
                 color: Colors.white,
+                shadows: _iconHalo,
               ),
               Positioned(
                 left: 25,
@@ -111,17 +121,43 @@ class CustomAppBar extends StatelessWidget {
     );
   }
 
+  /// App name rendered as white text with a black outline (stroke behind fill),
+  /// so it stays legible on any background — bright satellite or dark tiles.
+  Widget _outlinedTitle() {
+    const base = TextStyle(
+      fontSize: 26,
+      fontFamily: "Cormorant SC",
+      fontWeight: FontWeight.w800,
+    );
+    return Stack(
+      children: <Widget>[
+        // Black outline. A leaner stroke (2.2) relative to the bigger/bolder
+        // letters so it edges the glyphs without swallowing their white fill.
+        Text(
+          GlobalConstants.appName,
+          style: base.copyWith(
+            foreground: Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2.2
+              ..color = Colors.black,
+          ),
+        ),
+        // White fill, plus a soft dark shadow for extra separation on busy tiles.
+        Text(
+          GlobalConstants.appName,
+          style: base.copyWith(
+            color: Colors.white,
+            shadows: const [Shadow(color: Colors.black, blurRadius: 3)],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      title: Text(
-        GlobalConstants.appName,
-        style: TextStyle(
-          color: textColor,
-          fontFamily: "Cormorant SC",
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+      title: _outlinedTitle(),
       backgroundColor: Colors.transparent,
       elevation: 0,
       titleSpacing: 0.0,

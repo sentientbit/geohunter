@@ -98,6 +98,21 @@ class _PoiMapState extends ConsumerState<PoiMap>
   /// Initialised from system brightness in initState.
   int _mapStyleState = 0;
 
+  // POI / player marker on-screen size, 3:4 to match the pin art aspect
+  // (296x394). flutter_map markers are screen-space, so this is a fixed size at
+  // every zoom level — bump these two numbers to scale all map pins.
+  static const double kMarkerWidth = 50;
+  static const double kMarkerHeight = 67;
+
+  // Category-colour halo behind the emblem — a touch wider than the pin so the
+  // colour rings out around the stone frame.
+  static const double kDiscDiameter = 60;
+
+  // MapTiler key for the satellite/hybrid basemap. It ships in the APK + repo,
+  // so restrict it in the MapTiler console (Allowed user-agent header =
+  // com.apsoni.geocraft, which is what the TileLayer sends below).
+  static const String kMapTilerKey = 'OvIsNOlM56qEp0tcUWvU';
+
   ///
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -601,13 +616,18 @@ class _PoiMapState extends ConsumerState<PoiMap>
   /// dark/night → CartoDB Dark Matter; terrain → OpenTopoMap; otherwise OSM.
   String get _effectiveTileUrl {
     if (mapType == 'outdoors') {
-      return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+      // Light theme = MapTiler Satellite (pure imagery, no labels). Hybrid's
+      // baked-in raster labels pixelate on hi-DPI screens; a pin-based walking
+      // game navigates by terrain + the GPS dot, so labels aren't needed.
+      return 'https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=$kMapTilerKey';
     } else if (mapType == 'dark') {
+      // Dark theme = CartoDB Dark Matter (the dark sibling of Voyager/Positron;
+      // there is no separate "Voyager Dark").
       return 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
     } else if (mapType == 'terrain') {
       return 'https://a.tile.opentopomap.org/{z}/{x}/{y}.png';
     }
-    return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+    return 'https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=$kMapTilerKey';
   }
 
   _onAddPinButtonPressed() {
@@ -767,14 +787,8 @@ class _PoiMapState extends ConsumerState<PoiMap>
 
     if (inRange) {
       // In range — action button (Read / Mine / Fight …)
-      return OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          backgroundColor: GlobalConstants.appBg,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          side: const BorderSide(width: 1, color: Colors.white),
-        ),
-        onPressed: () {
+      return kStoneButton(
+        onTap: () {
           if (_pois[_mineIdx].properties.ico == GlobalConstants.pointBattle ||
               _pois[_mineIdx].properties.ico ==
                   GlobalConstants.pointBattleground) {
@@ -792,14 +806,14 @@ class _PoiMapState extends ConsumerState<PoiMap>
           }
         },
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(actionIcon, color: const Color(0xffe90e25)),
-            const SizedBox(width: 4),
+            Icon(actionIcon, color: kGold),
+            const SizedBox(width: 6),
             Text(
               actionText,
               style: const TextStyle(
-                color: Color(0xffe90e25),
+                color: kGold,
                 fontSize: 16,
                 fontFamily: 'Cormorant SC',
                 fontWeight: FontWeight.bold,
@@ -1109,14 +1123,32 @@ class _PoiMapState extends ConsumerState<PoiMap>
         _onClickMarker(idx, mine);
         _onAddPinButtonPressed();
       },
-      child: Container(
-        //alignment: Alignment.bottomCenter,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(color: highlight, shape: BoxShape.circle),
-        child: Image.asset(
-          "assets/images/markers/${icoVar.toString()}.png",
-          width: 100,
-          height: 133,
+      child: SizedBox(
+        width: kDiscDiameter,
+        height: kMarkerHeight,
+        child: Stack(
+          alignment: Alignment.topCenter,
+          clipBehavior: Clip.none,
+          children: [
+            // Category-colour halo: a disc a bit larger than the emblem, nudged
+            // up so the colour rings out evenly around the round stone frame
+            // instead of pooling down toward the tail.
+            Transform.translate(
+              offset: const Offset(0, -5),
+              child: Container(
+                width: kDiscDiameter,
+                height: kDiscDiameter,
+                decoration:
+                    BoxDecoration(color: highlight, shape: BoxShape.circle),
+              ),
+            ),
+            Image.asset(
+              "assets/images/markers/${icoVar.toString()}.png",
+              width: kMarkerWidth,
+              height: kMarkerHeight,
+              fit: BoxFit.contain,
+            ),
+          ],
         ),
       ),
     );
@@ -1134,6 +1166,17 @@ class _PoiMapState extends ConsumerState<PoiMap>
     }
 
     return Marker(
+      // Without an explicit size flutter_map defaults the marker box to 30x30
+      // and clips the pin art down to a dot. Size the box to the art (3:4) so
+      // the pin renders full-size. Markers are screen-space, so this is a fixed
+      // on-screen size regardless of zoom (standard map-pin behaviour).
+      // Box must be as wide as the colour halo (kDiscDiameter) or the disc gets
+      // clipped to the emblem width and barely shows — which is why POIs looked
+      // washed-out while the wider player markers showed their halo fine.
+      width: kDiscDiameter,
+      height: kMarkerHeight,
+      // Anchor the teardrop tip on the coordinate, not the centre.
+      alignment: Alignment.topCenter,
       point: LatLng(mine.geometry.coordinates[1], mine.geometry.coordinates[0]),
       child: Builder(
           builder: (BuildContext context) =>
@@ -1163,14 +1206,32 @@ class _PoiMapState extends ConsumerState<PoiMap>
 
     return GestureDetector(
       onTap: () {},
-      child: Container(
-        //alignment: Alignment.bottomCenter,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(color: highlight, shape: BoxShape.circle),
-        child: Image.asset(
-          "assets/images/markers/${icoVar.toString()}.png",
-          width: 100,
-          height: 133,
+      child: SizedBox(
+        width: kDiscDiameter,
+        height: kMarkerHeight,
+        child: Stack(
+          alignment: Alignment.topCenter,
+          clipBehavior: Clip.none,
+          children: [
+            // Category-colour halo: a disc a bit larger than the emblem, nudged
+            // up so the colour rings out evenly around the round stone frame
+            // instead of pooling down toward the tail.
+            Transform.translate(
+              offset: const Offset(0, -5),
+              child: Container(
+                width: kDiscDiameter,
+                height: kDiscDiameter,
+                decoration:
+                    BoxDecoration(color: highlight, shape: BoxShape.circle),
+              ),
+            ),
+            Image.asset(
+              "assets/images/markers/${icoVar.toString()}.png",
+              width: kMarkerWidth,
+              height: kMarkerHeight,
+              fit: BoxFit.contain,
+            ),
+          ],
         ),
       ),
     );
@@ -1188,6 +1249,9 @@ class _PoiMapState extends ConsumerState<PoiMap>
     }
 
     return Marker(
+      width: kDiscDiameter,
+      height: kMarkerHeight,
+      alignment: Alignment.topCenter,
       point: LatLng(mine.geometry.coordinates[1], mine.geometry.coordinates[0]),
       child: Builder(
           builder: (BuildContext context) =>
