@@ -66,7 +66,7 @@ Published by Sentient Bit, Brașov, Romania.
 - [ ] Short + full description: above
 - [ ] Category: Games → Adventure
 - [ ] Developer/publisher: Sentient Bit
-- [ ] Contact email: office@sentientbit.com
+- [ ] Contact email: c4xp@msn.com  (Uptodown account email)
 
 NOTE: point Uptodown at the LIVE privacy URL above — do NOT host store/PRIVACY-POLICY.md
 as a second copy. The live page is the canonical, audited policy maintained with the
