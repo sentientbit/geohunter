@@ -132,7 +132,9 @@ class MainApp extends ConsumerWidget {
         ? const Locale('ro', 'RO')
         : accountLang == 'en'
             ? const Locale('en', 'US')
-            : null;
+            : accountLang == 'fr'
+                ? const Locale('fr', 'FR')
+                : null;
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
@@ -158,6 +160,7 @@ class MainApp extends ConsumerWidget {
       supportedLocales: [
         Locale('en', 'US'),
         Locale('ro', 'RO'),
+        Locale('fr', 'FR'),
       ],
       localizationsDelegates: [
         AppLocalizations.delegate,

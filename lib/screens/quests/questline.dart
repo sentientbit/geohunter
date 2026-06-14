@@ -618,7 +618,7 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
           elevation: 0.1,
           backgroundColor: Colors.transparent,
           title: Text(
-            "Quests",
+            AppLocalizations.of(context)!.translate('drawer_rewards'),
             style: Style.topBar,
           ),
           actions: [

@@ -17,7 +17,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 
 # versionCode AUTOINCREMENTED in android/app/build.gradle versionCode +1
-version: 1.1.79
+version: 1.1.80
 
 environment:
   sdk: '>=3.3.4 <4.0.0'
@@ -135,6 +135,7 @@ flutter:
     - assets/secrets.json
     - assets/i18n/ro.json
     - assets/i18n/en.json
+    - assets/i18n/fr.json
     - assets/audio/music/
     - assets/audio/sfx/
 

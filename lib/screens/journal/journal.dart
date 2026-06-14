@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -30,7 +31,8 @@ class JournalPageScreen extends ConsumerWidget {
     final appBar = AppBar(
       elevation: 0.1,
       backgroundColor: Colors.transparent,
-      title: Text('The Keeper\'s Journal', style: Style.topBar),
+      title: Text(AppLocalizations.of(context)!.translate('drawer_journal'),
+          style: Style.topBar),
       iconTheme: const IconThemeData(color: Colors.white),
       actions: [
         IconButton(

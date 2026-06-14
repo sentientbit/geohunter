@@ -105,7 +105,7 @@ class _SettingsState extends ConsumerState<SettingsPage> {
       elevation: 0.1,
       backgroundColor: Colors.transparent,
       title: Text(
-        "Settings",
+        AppLocalizations.of(context)!.translate('drawer_settings'),
         style: Style.topBar,
       ),
       actions: [
@@ -368,6 +368,8 @@ class _SettingsState extends ConsumerState<SettingsPage> {
                                           value: 'en', child: Text('English')),
                                       DropdownMenuItem(
                                           value: 'ro', child: Text('Română')),
+                                      DropdownMenuItem(
+                                          value: 'fr', child: Text('Français')),
                                     ],
                                     onChanged: (v) =>
                                         setState(() => _language = v ?? 'en'),

@@ -270,7 +270,9 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
                 ),
                 ListTile(
                   leading: Icon(Icons.widgets, color: GlobalConstants.appFg),
-                  title: Text('Inventory', style: Style.menuTextStyle),
+                  title: Text(
+                      AppLocalizations.of(context)!.translate('drawer_inventory'),
+                      style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
                     context.push('/inventory');
@@ -279,7 +281,9 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
                 ListTile(
                   leading:
                       Icon(RPGAwesome.forging, color: GlobalConstants.appFg),
-                  title: Text('Forge', style: Style.menuTextStyle),
+                  title: Text(
+                      AppLocalizations.of(context)!.translate('drawer_forge'),
+                      style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
                     context.push('/forge');
@@ -291,7 +295,7 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
                     children: <Widget>[
                       Text(
                           AppLocalizations.of(context)!
-                              .translate('drawer_quests'),
+                              .translate('drawer_rewards'),
                           style: Style.menuTextStyle),
                       SizedBox(
                         width: 20,
@@ -307,7 +311,8 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
                 ListTile(
                   leading:
                       Icon(Icons.auto_stories, color: GlobalConstants.appFg),
-                  title: Text("The Keeper's Journal",
+                  title: Text(
+                      AppLocalizations.of(context)!.translate('drawer_journal'),
                       style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
@@ -363,7 +368,9 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
                 ListTile(
                   leading: Icon(RPGAwesome.crossed_swords,
                       color: GlobalConstants.appFg),
-                  title: Text('Battle Training', style: Style.menuTextStyle),
+                  title: Text(
+                      AppLocalizations.of(context)!.translate('drawer_battle'),
+                      style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
                     context.push('/battle');
@@ -382,7 +389,9 @@ class _DrawerPageState extends ConsumerState<DrawerPage> {
                 ListTile(
                   leading:
                       Icon(RPGAwesome.repair, color: GlobalConstants.appFg),
-                  title: Text("Settings", style: Style.menuTextStyle),
+                  title: Text(
+                      AppLocalizations.of(context)!.translate('drawer_settings'),
+                      style: Style.menuTextStyle),
                   onTap: () {
                     playClick();
                     context.push('/settings');

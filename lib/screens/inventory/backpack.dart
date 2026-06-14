@@ -1,5 +1,6 @@
 /// based on https://proandroiddev.com/flutter-thursday-02-beautiful-list-ui-and-detail-page-a9245f5ceaf0
 import 'package:flutter/material.dart';
+import '../../app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -273,7 +274,7 @@ class _InventoryState extends ConsumerState<InventoryPage> {
           elevation: 0.1,
           backgroundColor: Colors.transparent,
           title: Text(
-            "Inventory",
+            AppLocalizations.of(context)!.translate('drawer_inventory'),
             style: Style.topBar,
           ),
           actions: <Widget>[

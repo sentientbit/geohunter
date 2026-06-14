@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import '../../shared/sfx.dart';
 import 'package:flutter/material.dart';
+import '../../app_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geohunter/models/visitevent.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
@@ -751,7 +752,8 @@ class _RockPaperScissorsState extends ConsumerState<RockPaperScissorsPage> {
       ),
       elevation: 0,
       backgroundColor: Colors.transparent,
-      title: Text('Battle Training', style: Style.topBar),
+      title: Text(AppLocalizations.of(context)!.translate('drawer_battle'),
+          style: Style.topBar),
       actions: [
         // Coin chip
         Container(
