@@ -1,6 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../shared/journal_image.dart';
 
 import '../../models/app_error.dart';
 import '../../models/journal_change.dart';
@@ -88,9 +91,24 @@ class _JournalReadScreenState extends ConsumerState<JournalReadScreen> {
   }
 
   Widget _buildPage(BuildContext context, JournalPage page) {
+    final imageUrl = journalImageUrl(page.img);
     return ListView(
       padding: const EdgeInsets.fromLTRB(18, 8, 18, 40),
       children: [
+        if (imageUrl != null) ...[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: CachedNetworkImage(
+              imageUrl: imageUrl,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: 180,
+              placeholder: (_, __) => const SizedBox(height: 180),
+              errorWidget: (_, __, ___) => const SizedBox.shrink(),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         Text(page.title,
             style: TextStyle(
               color: kGold,

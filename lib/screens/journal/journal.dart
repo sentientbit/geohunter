@@ -1,7 +1,10 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../shared/journal_image.dart';
 
 import '../../models/journal_card.dart';
 import '../../models/journal_gate.dart';
@@ -461,9 +464,13 @@ class _JournalThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Storylet art isn't bundled in the app (it's web-portal content), so we
-    // render a deliberate themed icon. `img` is retained in the model for when
-    // art is served over the network.
+    // Storylet art is server-hosted and rendered over the network (it grows
+    // arc-by-arc without app releases). Until a loadable URL is available the
+    // themed icon stands in — and also serves as placeholder/error fallback.
+    final icon = Icon(Icons.auto_stories,
+        color: locked ? const Color(0xff55504a) : kGold, size: 22);
+    final url = journalImageUrl(img);
+
     final box = Container(
       width: 46,
       height: 46,
@@ -471,8 +478,19 @@ class _JournalThumb extends StatelessWidget {
         color: locked ? const Color(0xff1b1814) : const Color(0xff2a2113),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Icon(Icons.auto_stories,
-          color: locked ? const Color(0xff55504a) : kGold, size: 22),
+      clipBehavior: Clip.antiAlias,
+      child: url == null
+          ? icon
+          : CachedNetworkImage(
+              imageUrl: url,
+              fit: BoxFit.cover,
+              width: 46,
+              height: 46,
+              color: locked ? const Color(0x99000000) : null,
+              colorBlendMode: locked ? BlendMode.darken : null,
+              placeholder: (_, __) => icon,
+              errorWidget: (_, __, ___) => icon,
+            ),
     );
 
     if (!locked) return box;
