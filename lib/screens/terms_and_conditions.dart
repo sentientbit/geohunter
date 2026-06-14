@@ -8,7 +8,9 @@ import 'package:flutter/material.dart';
 import '../app_localizations.dart';
 import '../models/app_error.dart';
 import '../providers/api_provider.dart';
+import '../shared/app_theme.dart';
 import '../shared/constants.dart';
+import '../shared/journal_html.dart';
 import '../widgets/custom_app_bar.dart';
 
 ///
@@ -74,68 +76,56 @@ class _TermsAndPrivacyPageState extends State<TermsAndPrivacyPage> {
                 ),
               ),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: <Widget>[
-                  OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.only(
-                          left: 10, right: 10, top: 10, bottom: 10),
-                      backgroundColor: GlobalConstants.appBg,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      side: BorderSide(width: 1, color: Colors.white),
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _showTerms = true;
-                      });
-                    },
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        Icon(Icons.security, color: Color(0xffe6a04e)),
-                        Text(
-                          " Terms",
-                          style: TextStyle(
-                            color: Color(0xffe6a04e),
-                            fontSize: 18,
-                            fontFamily: 'Cormorant SC',
-                            fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: kStoneButton(
+                      onTap: () {
+                        setState(() {
+                          _showTerms = true;
+                        });
+                      },
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Icon(Icons.security, color: kGold),
+                          const SizedBox(width: 6),
+                          Text(
+                            "Terms",
+                            style: const TextStyle(
+                              color: kGold,
+                              fontSize: 18,
+                              fontFamily: 'Cormorant SC',
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                  OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.only(
-                          left: 10, right: 10, top: 10, bottom: 10),
-                      backgroundColor: GlobalConstants.appBg,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      side: BorderSide(width: 1, color: Colors.white),
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _showTerms = false;
-                      });
-                    },
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        Icon(Icons.person, color: Color(0xffe6a04e)),
-                        Text(
-                          " Privacy",
-                          style: TextStyle(
-                            color: Color(0xffe6a04e),
-                            fontSize: 18,
-                            fontFamily: 'Cormorant SC',
-                            fontWeight: FontWeight.bold,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: kStoneButton(
+                      onTap: () {
+                        setState(() {
+                          _showTerms = false;
+                        });
+                      },
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Icon(Icons.person, color: kGold),
+                          const SizedBox(width: 6),
+                          Text(
+                            "Privacy",
+                            style: const TextStyle(
+                              color: kGold,
+                              fontSize: 18,
+                              fontFamily: 'Cormorant SC',
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -149,16 +139,14 @@ class _TermsAndPrivacyPageState extends State<TermsAndPrivacyPage> {
                         top: 10.0, left: 10.0, bottom: 10.0, right: 10.0),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text(
+                        // Server returns HTML (h1/p/…); render it natively
+                        // instead of dumping raw tags as text.
+                        ...renderJournalHtml(
                           _showTerms ? _terms : _privacy,
-                          style: TextStyle(
-                            color: Color(0xffffffff),
-                            fontSize: 18,
-                            fontFamily: 'Cormorant SC',
-                            fontWeight: FontWeight.bold,
-                          ),
+                          textColor: Colors.white,
+                          fontSize: 16,
                         ),
                       ],
                     ),

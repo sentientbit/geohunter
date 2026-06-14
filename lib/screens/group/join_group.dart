@@ -10,6 +10,7 @@ import '../../models/app_error.dart';
 import '../../models/user.dart';
 import '../../providers/api_provider.dart';
 import '../../providers/custom_interceptors.dart';
+import '../../shared/app_theme.dart';
 import '../../shared/constants.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_dialog.dart';
@@ -89,32 +90,22 @@ class _JoinGroupState extends State<JoinGroup> {
   Widget build(BuildContext context) {
     final deviceSize = MediaQuery.of(context).size;
 
-    final joinButton = Padding(
-      padding: EdgeInsets.all(0),
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          padding: EdgeInsets.all(16),
-          backgroundColor: GlobalConstants.appBg,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
+    final joinButton = kStoneButton(
+      onTap: () => _joinGuild(context),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(Icons.login, color: kGold),
+          const SizedBox(width: 6),
+          Text(
+            'Join',
+            style: const TextStyle(
+                color: kGold,
+                fontSize: 18,
+                fontFamily: 'Cormorant SC',
+                fontWeight: FontWeight.bold),
           ),
-          side: BorderSide(width: 1, color: Colors.white),
-        ),
-        onPressed: () => _joinGuild(context),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(Icons.close, color: Color(0xffe6a04e)),
-            Text(
-              'Join',
-              style: TextStyle(
-                  color: Color(0xffe6a04e),
-                  fontSize: 18,
-                  fontFamily: 'Cormorant SC',
-                  fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
+        ],
       ),
     );
 

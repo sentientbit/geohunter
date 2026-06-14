@@ -8,6 +8,7 @@ import '../../models/guild_list_response.dart';
 import '../../models/user.dart';
 import '../../providers/guild_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../shared/app_theme.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/drawer.dart';
@@ -203,26 +204,19 @@ class _NoGroupState extends ConsumerState<NoGroup> {
           context, MaterialPageRoute(builder: (context) => CreateGroup()));
     }
 
-    final myguildButton = OutlinedButton(
-      style: OutlinedButton.styleFrom(
-        padding: EdgeInsets.all(16),
-        backgroundColor: GlobalConstants.appBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.0),
-        ),
-        side: BorderSide(width: 1, color: Colors.white),
-      ),
-      onPressed: () {
+    final myguildButton = kStoneButton(
+      onTap: () {
         context.go('/in-group');
       },
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(Icons.redo, color: Color(0xffe6a04e)),
+          Icon(Icons.redo, color: kGold),
+          const SizedBox(width: 6),
           Text(
-            " My guild",
-            style: TextStyle(
-              color: Color(0xffe6a04e),
+            "My guild",
+            style: const TextStyle(
+              color: kGold,
               fontSize: 18,
               fontFamily: 'Cormorant SC',
               fontWeight: FontWeight.bold,
@@ -232,24 +226,17 @@ class _NoGroupState extends ConsumerState<NoGroup> {
       ),
     );
 
-    final createButton = OutlinedButton(
-      style: OutlinedButton.styleFrom(
-        padding: EdgeInsets.all(16),
-        backgroundColor: GlobalConstants.appBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.0),
-        ),
-        side: BorderSide(width: 1, color: Colors.white),
-      ),
-      onPressed: () => _goCreate(context),
+    final createButton = kStoneButton(
+      onTap: () => _goCreate(context),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(Icons.add, color: Color(0xffe6a04e)),
+          Icon(Icons.add, color: kGold),
+          const SizedBox(width: 6),
           Text(
-            " Create new",
-            style: TextStyle(
-              color: Color(0xffe6a04e),
+            "Create new",
+            style: const TextStyle(
+              color: kGold,
               fontSize: 18,
               fontFamily: 'Cormorant SC',
               fontWeight: FontWeight.bold,
@@ -259,24 +246,17 @@ class _NoGroupState extends ConsumerState<NoGroup> {
       ),
     );
 
-    final joinButton = OutlinedButton(
-      style: OutlinedButton.styleFrom(
-        padding: EdgeInsets.all(16),
-        backgroundColor: GlobalConstants.appBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.0),
-        ),
-        side: BorderSide(width: 1, color: Colors.white),
-      ),
-      onPressed: () => _goJoin(context),
+    final joinButton = kStoneButton(
+      onTap: () => _goJoin(context),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(Icons.redo, color: Color(0xffe6a04e)),
+          Icon(Icons.redo, color: kGold),
+          const SizedBox(width: 6),
           Text(
-            " Join private",
-            style: TextStyle(
-                color: Color(0xffe6a04e),
+            "Join private",
+            style: const TextStyle(
+                color: kGold,
                 fontSize: 18,
                 fontFamily: 'Cormorant SC',
                 fontWeight: FontWeight.bold),
@@ -368,10 +348,16 @@ class _NoGroupState extends ConsumerState<NoGroup> {
                   child: Container(
                     alignment: Alignment.bottomLeft,
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: <Widget>[
-                        (userGuildId != "0") ? myguildButton : createButton,
-                        (userGuildId != "0") ? Text("") : joinButton,
+                        Expanded(
+                            child: (userGuildId != "0")
+                                ? myguildButton
+                                : createButton),
+                        const SizedBox(width: 12),
+                        Expanded(
+                            child: (userGuildId != "0")
+                                ? const SizedBox()
+                                : joinButton),
                       ],
                     ),
                   ),

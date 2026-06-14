@@ -142,25 +142,17 @@ class _BlueprintListState extends ConsumerState<BlueprintListPage> {
               style: TextStyle(color: Colors.white70, fontSize: 16),
             ),
             SizedBox(height: 24),
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                backgroundColor: GlobalConstants.appBg,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                side: BorderSide(width: 1, color: Colors.white),
-              ),
-              onPressed: () => _goForge(context, blp),
+            kStoneButton(
+              onTap: () => _goForge(context, blp),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.construction, color: Color(0xffe6a04e)),
+                  Icon(Icons.construction, color: kGold),
                   SizedBox(width: 8),
                   Text(
                     'Go to Forge',
                     style: TextStyle(
-                      color: Color(0xffe6a04e),
+                      color: kGold,
                       fontSize: 18,
                       fontFamily: 'Cormorant SC',
                       fontWeight: FontWeight.bold,

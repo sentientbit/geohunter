@@ -21,6 +21,7 @@ import '../models/app_error.dart';
 import '../providers/api_provider.dart';
 import '../providers/custom_interceptors.dart';
 import '../providers/user_provider.dart';
+import '../shared/app_theme.dart';
 import '../shared/constants.dart';
 import '../widgets/network_status_message.dart';
 
@@ -293,20 +294,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     var szHeight = MediaQuery.of(context).size.height;
 
-    final loginButton = OutlinedButton(
-      style: OutlinedButton.styleFrom(
-        padding: EdgeInsets.all(16),
-        backgroundColor: GlobalConstants.appBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.0),
-        ),
-        side: BorderSide(width: 1, color: Colors.white),
-      ),
-      onPressed: login,
+    final loginButton = kStoneButton(
+      onTap: login,
       child: Text(
         AppLocalizations.of(context)!.translate('submit_login'),
-        style: TextStyle(
-            color: Color(0xffe6a04e),
+        style: const TextStyle(
+            color: kGold,
             fontSize: 18,
             fontFamily: 'Cormorant SC',
             fontWeight: FontWeight.bold),

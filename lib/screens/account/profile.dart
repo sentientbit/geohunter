@@ -110,12 +110,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   bool isValidLanguage(String input) {
-    if (input == "en") {
-      return true;
-    } else if (input == "ro") {
-      return true;
-    }
-    return false;
+    return input == "en" || input == "ro" || input == "fr";
   }
 
   Container _normalDown() => Container(
@@ -447,27 +442,24 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       DropdownMenuItem<String>(
         value: "ro",
         child: Text("Română"),
+      ),
+      DropdownMenuItem<String>(
+        value: "fr",
+        child: Text("Français"),
       )
     ];
 
-    final updateProfileButton = OutlinedButton(
-      style: OutlinedButton.styleFrom(
-        padding: EdgeInsets.all(16),
-        backgroundColor: GlobalConstants.appBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.0),
-        ),
-        side: BorderSide(width: 1, color: Colors.white),
-      ),
-      onPressed: _updateProfile,
+    final updateProfileButton = kStoneButton(
+      onTap: _updateProfile,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(Icons.done, color: Color(0xffe6a04e)),
+          Icon(Icons.done, color: kGold),
+          const SizedBox(width: 6),
           Text(
-            " ${AppLocalizations.of(context)!.translate('save')}",
-            style: TextStyle(
-              color: Color(0xffe6a04e),
+            AppLocalizations.of(context)!.translate('save'),
+            style: const TextStyle(
+              color: kGold,
               fontSize: 18,
               fontFamily: 'Cormorant SC',
               fontWeight: FontWeight.bold,
@@ -1035,10 +1027,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         ),
                       ),
                       SizedBox(height: 18),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[updateProfileButton],
-                      ),
+                      updateProfileButton,
                       SizedBox(height: 58),
                     ],
                   ),

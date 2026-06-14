@@ -10,7 +10,7 @@ import 'package:go_router/go_router.dart';
 import '../app_localizations.dart';
 import '../models/app_error.dart';
 import '../providers/api_provider.dart';
-import '../shared/constants.dart';
+import '../shared/app_theme.dart';
 import '../widgets/custom_dialog.dart';
 import '../widgets/network_status_message.dart';
 
@@ -93,33 +93,23 @@ class _ForgotPageState extends State<ForgotPage> {
   Widget build(BuildContext context) {
     final deviceSize = MediaQuery.of(context).size;
 
-    final resetPassword = Padding(
-      padding: EdgeInsets.all(0),
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          padding: EdgeInsets.all(16),
-          backgroundColor: GlobalConstants.appBg,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          side: BorderSide(width: 1, color: Colors.white),
-        ),
-        onPressed: _recoverPassword,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(Icons.shopping_cart, color: Color(0xffe6a04e)),
-            Text(
-              AppLocalizations.of(context)!.translate('recover_btn'),
-              style: TextStyle(
-                color: Color(0xffe6a04e),
-                fontSize: 18,
-                fontFamily: 'Cormorant SC',
-                fontWeight: FontWeight.bold,
-              ),
+    final resetPassword = kStoneButton(
+      onTap: _recoverPassword,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(Icons.lock_reset, color: kGold),
+          const SizedBox(width: 6),
+          Text(
+            AppLocalizations.of(context)!.translate('recover_btn'),
+            style: const TextStyle(
+              color: kGold,
+              fontSize: 18,
+              fontFamily: 'Cormorant SC',
+              fontWeight: FontWeight.bold,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
 

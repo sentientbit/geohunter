@@ -14,6 +14,7 @@ import '../../providers/friends_provider.dart';
 import '../../providers/friends_repository.dart';
 import '../../providers/user_provider.dart';
 import '../../screens/friendship/showqr.dart';
+import '../../shared/app_theme.dart';
 import '../../shared/constants.dart';
 import '../../text_style.dart';
 import '../../widgets/custom_dialog.dart';
@@ -58,27 +59,20 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
   }
 
   Widget camButton() {
-    return OutlinedButton(
-      style: OutlinedButton.styleFrom(
-        padding: EdgeInsets.only(left: 10, right: 10, top: 10, bottom: 10),
-        backgroundColor: GlobalConstants.appBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.0),
-        ),
-        side: BorderSide(width: 1, color: Colors.white),
-      ),
-      onPressed: () {
+    return kStoneButton(
+      onTap: () {
         afterScan();
         Navigator.of(context).pop();
       },
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(Icons.done, color: Color(0xffe6a04e)),
+          Icon(Icons.done, color: kGold),
+          const SizedBox(width: 6),
           Text(
-            " Okay",
-            style: TextStyle(
-              color: Color(0xffe6a04e),
+            "Okay",
+            style: const TextStyle(
+              color: kGold,
               fontSize: 16,
               fontFamily: 'Cormorant SC',
               fontWeight: FontWeight.bold,
@@ -158,13 +152,7 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
                         ),
                       ),
                       SizedBox(height: 24.0),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        textDirection: TextDirection.rtl,
-                        children: <Widget>[
-                          camButton(),
-                        ],
-                      ),
+                      camButton(),
                     ],
                   ),
                 ),

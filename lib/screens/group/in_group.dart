@@ -17,6 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/user_provider.dart';
 import '../../screens/friendship/paldetail.dart';
 import '../../screens/group/no_group.dart';
+import '../../shared/app_theme.dart';
 import '../../shared/constants.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/drawer.dart';
@@ -289,131 +290,91 @@ class _InGroupState extends ConsumerState<InGroup> {
     }
 
     // Button to save and update the guild's details
-    final saveButton = Padding(
-      padding: EdgeInsets.all(0),
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          padding: EdgeInsets.all(16),
-          backgroundColor: GlobalConstants.appBg,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          side: BorderSide(width: 1, color: Colors.white),
-        ),
-        onPressed: _saveGuildDetails,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(Icons.check, color: Color(0xffe6a04e)),
-            Text(
-              'Save',
-              style: TextStyle(
-                color: Color(0xffe6a04e),
-                fontSize: 18,
-                fontFamily: 'Cormorant SC',
-                fontWeight: FontWeight.bold,
-              ),
+    final saveButton = kStoneButton(
+      onTap: _saveGuildDetails,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(Icons.check, color: kGold),
+          const SizedBox(width: 6),
+          Text(
+            'Save',
+            style: const TextStyle(
+              color: kGold,
+              fontSize: 18,
+              fontFamily: 'Cormorant SC',
+              fontWeight: FontWeight.bold,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
 
     // Button to delete the guild and all members associated with it
-    final deleteButton = Padding(
-      padding: EdgeInsets.all(0),
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          padding: EdgeInsets.all(16),
-          backgroundColor: GlobalConstants.appBg,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          side: BorderSide(width: 1, color: Colors.white),
-        ),
-        onPressed: () {
-          _confirmDelete(_scaffoldKey.currentContext);
-        },
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(Icons.delete_outline, color: Color(0xffe6a04e)),
-            Text(
-              "Delete",
-              style: TextStyle(
-                color: Color(0xffe6a04e),
-                fontSize: 18,
-                fontFamily: 'Cormorant SC',
-                fontWeight: FontWeight.bold,
-              ),
+    final deleteButton = kStoneButton(
+      onTap: () {
+        _confirmDelete(_scaffoldKey.currentContext);
+      },
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(Icons.delete_outline, color: kGold),
+          const SizedBox(width: 6),
+          Text(
+            "Delete",
+            style: const TextStyle(
+              color: kGold,
+              fontSize: 18,
+              fontFamily: 'Cormorant SC',
+              fontWeight: FontWeight.bold,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
 
-    final leaveButton = Padding(
-      padding: EdgeInsets.all(0),
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          padding: EdgeInsets.all(16),
-          backgroundColor: GlobalConstants.appBg,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          side: BorderSide(width: 1, color: Colors.white),
-        ),
-        onPressed: () {
-          _confirmLeave(_scaffoldKey.currentContext!);
-        },
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(Icons.undo, color: Color(0xffe6a04e)),
-            Text(
-              "Leave Guild",
-              style: TextStyle(
-                color: Color(0xffe6a04e),
-                fontSize: 18,
-                fontFamily: 'Cormorant SC',
-                fontWeight: FontWeight.bold,
-              ),
+    final leaveButton = kStoneButton(
+      onTap: () {
+        _confirmLeave(_scaffoldKey.currentContext!);
+      },
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(Icons.undo, color: kGold),
+          const SizedBox(width: 6),
+          Text(
+            "Leave Guild",
+            style: const TextStyle(
+              color: kGold,
+              fontSize: 18,
+              fontFamily: 'Cormorant SC',
+              fontWeight: FontWeight.bold,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
 
-    final browseButton = Padding(
-      padding: EdgeInsets.all(0),
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          padding: EdgeInsets.all(16),
-          backgroundColor: GlobalConstants.appBg,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          side: BorderSide(width: 1, color: Colors.white),
-        ),
-        onPressed: () {
-          Navigator.push(
-              context, MaterialPageRoute(builder: (context) => NoGroup()));
-        },
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(Icons.list, color: Color(0xffe6a04e)),
-            Text(
-              "Browse",
-              style: TextStyle(
-                color: Color(0xffe6a04e),
-                fontSize: 18,
-                fontFamily: 'Cormorant SC',
-                fontWeight: FontWeight.bold,
-              ),
+    final browseButton = kStoneButton(
+      onTap: () {
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => NoGroup()));
+      },
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(Icons.list, color: kGold),
+          const SizedBox(width: 6),
+          Text(
+            "Browse",
+            style: const TextStyle(
+              color: kGold,
+              fontSize: 18,
+              fontFamily: 'Cormorant SC',
+              fontWeight: FontWeight.bold,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
 
@@ -715,15 +676,13 @@ class _InGroupState extends ConsumerState<InGroup> {
                                   )
                                 : Text(''),
                           SizedBox(height: 18),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          Column(
                             children: <Widget>[
                               browseButton,
+                              const SizedBox(height: 10),
                               _isGroupOwner ? saveButton : leaveButton,
-                              if (_isGroupOwner)
-                                Center(
-                                  child: deleteButton,
-                                )
+                              if (_isGroupOwner) const SizedBox(height: 10),
+                              if (_isGroupOwner) deleteButton,
                             ],
                           ),
                           Padding(

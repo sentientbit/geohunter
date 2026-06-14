@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 ///
+import '../shared/app_theme.dart';
 import '../shared/constants.dart';
 
 ///
@@ -123,41 +124,27 @@ class CustomDialog extends StatelessWidget {
                     ),
                   ],
                   SizedBox(height: 24.0),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    textDirection: TextDirection.rtl,
-                    children: <Widget>[
-                      OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.only(
-                              left: 10, right: 10, top: 10, bottom: 10),
-                          backgroundColor: GlobalConstants.appBg,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10.0),
+                  kStoneButton(
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      callback();
+                    },
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Icon(Icons.check, color: kGold),
+                        const SizedBox(width: 6),
+                        Text(
+                          buttonText,
+                          style: const TextStyle(
+                            color: kGold,
+                            fontSize: 16,
+                            fontFamily: 'Cormorant SC',
+                            fontWeight: FontWeight.bold,
                           ),
-                          side: BorderSide(width: 1, color: Colors.white),
                         ),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          callback();
-                        },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
-                            Icon(Icons.check, color: Color(0xffe6a04e)),
-                            Text(
-                              " $buttonText",
-                              style: TextStyle(
-                                color: Color(0xffe6a04e),
-                                fontSize: 16,
-                                fontFamily: 'Cormorant SC',
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),

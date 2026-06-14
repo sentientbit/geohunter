@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import '../../shared/sfx.dart';
 import 'package:flutter/material.dart';
+import '../../app_localizations.dart';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:loading_overlay/loading_overlay.dart';
@@ -652,7 +653,8 @@ class _ForgeState extends ConsumerState<ForgePage>
       leading: leadingIcon(context, user.details),
       elevation: 0,
       backgroundColor: Colors.transparent,
-      title: Text("Forge", style: Style.topBar),
+      title: Text(AppLocalizations.of(context)!.translate('drawer_forge'),
+          style: Style.topBar),
       actions: <Widget>[
         // Coin balance chip
         Container(
@@ -720,18 +722,14 @@ class _ForgeState extends ConsumerState<ForgePage>
     }
 
     // ── Coin sheet (unchanged layout, kept compact) ──────────────────────────
-    final watchAdButton = OutlinedButton(
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-        backgroundColor: GlobalConstants.appBg,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        side: const BorderSide(width: 1, color: Colors.white),
-      ),
-      onPressed: () {},
+    final watchAdButton = kStoneButton(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+      onTap: () {},
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.ondemand_video, color: kGold),
+          const SizedBox(width: 6),
           Text(' Watch ad',
               style: TextStyle(
                   color: kGold,
@@ -778,20 +776,15 @@ class _ForgeState extends ConsumerState<ForgePage>
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.white, fontSize: 14)),
                     SizedBox(height: 8),
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 10, horizontal: 16),
-                        backgroundColor: GlobalConstants.appBg,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        side: const BorderSide(width: 1, color: Colors.white),
-                      ),
-                      onPressed: () {},
+                    kStoneButton(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 10, horizontal: 16),
+                      onTap: () {},
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.monetization_on, color: kGold),
+                          const SizedBox(width: 6),
                           Text(' 0.0',
                               style: TextStyle(
                                   color: kGold,
