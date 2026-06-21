@@ -1,4 +1,5 @@
 import '../../shared/sfx.dart';
+import '../../shared/item_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -138,8 +139,8 @@ class _ItemDetailState extends ConsumerState<ItemDetailPage> {
             ),
           ),
           // Item image on top
-          Image.asset(
-            'assets/images/items/${widget.item.img}',
+          Image(
+            image: itemImageProvider(widget.item.img),
             height: 180,
             width:  180,
             fit: BoxFit.contain,

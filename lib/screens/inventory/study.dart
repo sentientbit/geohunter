@@ -1,5 +1,6 @@
 ///
 import 'dart:math' as math;
+import '../../shared/item_image.dart';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -564,8 +565,8 @@ class _StudyDetailState extends ConsumerState<StudyDetailPage> {
                       if (recipe.unlocked && recipe.img.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.all(6),
-                          child: Image.asset(
-                            'assets/images/items/${recipe.img}',
+                          child: Image(
+                            image: itemImageProvider(recipe.img),
                             fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) => const Icon(
                                 Icons.help_outline,

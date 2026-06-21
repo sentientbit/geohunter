@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../shared/item_image.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -86,7 +87,7 @@ abstract class MineResultHelper {
 
     for (final item in result.items) {
       if (item.img.isNotEmpty) {
-        images.add(Image.asset('assets/images/items/${item.img}'));
+        images.add(Image(image: itemImageProvider(item.img)));
       }
     }
     for (final mat in result.materials) {

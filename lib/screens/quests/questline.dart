@@ -1,4 +1,5 @@
 import 'dart:math';
+import '../../shared/item_image.dart';
 
 ///
 import 'dart:ui';
@@ -108,7 +109,7 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
     );
 
     var itemImg = Image(
-      image: AssetImage('assets/images/items/${nextReward.item.img}'),
+      image: itemImageProvider(nextReward.item.img),
       height: 76.0,
       width: 76.0,
     );
@@ -463,7 +464,7 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
     } else if (reward.itemId > 0) {
       grabed = reward.item.name;
       rewardImg = Image(
-        image: AssetImage('assets/images/items/${reward.item.img}'),
+        image: itemImageProvider(reward.item.img),
         height: 76.0,
         width: 76.0,
       );
@@ -763,7 +764,7 @@ class _QuestLinePageState extends ConsumerState<QuestLinePage> {
       }
       for (dynamic value in (response["items"] ?? [])) {
         if (value?.containsKey("img") == true && value["img"] != "") {
-          imagesArr.add(Image.asset("assets/images/items/${value['img']}"));
+          imagesArr.add(Image(image: itemImageProvider(value['img'].toString())));
         }
       }
 

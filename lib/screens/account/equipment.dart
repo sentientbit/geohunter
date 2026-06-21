@@ -1,5 +1,6 @@
 ///
 import 'package:flutter/material.dart';
+import '../../shared/item_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 ///
@@ -95,7 +96,7 @@ class _EquipmentState extends ConsumerState<EquipmentPage> {
 
   Widget _makeListTile(BuildContext context, int index) {
     var netImg = Image(
-      image: AssetImage('assets/images/items/${_items[index].img}'),
+      image: itemImageProvider(_items[index].img),
       height: 76.0,
       width: 76.0,
     );

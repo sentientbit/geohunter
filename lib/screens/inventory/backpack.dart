@@ -1,5 +1,6 @@
 /// based on https://proandroiddev.com/flutter-thursday-02-beautiful-list-ui-and-detail-page-a9245f5ceaf0
 import 'package:flutter/material.dart';
+import '../../shared/item_image.dart';
 import '../../app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -67,7 +68,7 @@ class _InventoryState extends ConsumerState<InventoryPage> {
 
   Widget _makeListTile(BuildContext context, Item item) {
     final netImg = Image(
-      image: AssetImage('assets/images/items/${item.img}'),
+      image: itemImageProvider(item.img),
       height: 76.0,
       width: 76.0,
     );

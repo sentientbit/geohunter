@@ -1,5 +1,6 @@
 ///
 import 'dart:async';
+import '../../shared/item_image.dart';
 import 'dart:math' as math;
 
 import '../../shared/sfx.dart';
@@ -490,8 +491,8 @@ class _ForgeState extends ConsumerState<ForgePage>
                       borderRadius: BorderRadius.circular(9),
                       child: Padding(
                         padding: const EdgeInsets.all(8),
-                        child: Image.asset(
-                          'assets/images/items/$_craftedItemImg',
+                        child: Image(
+                          image: itemImageProvider(_craftedItemImg),
                           fit: BoxFit.contain,
                         ),
                       ),

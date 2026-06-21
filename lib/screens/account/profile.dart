@@ -1,5 +1,6 @@
 ///
 import 'dart:ui';
+import '../../shared/item_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_offline/flutter_offline.dart';
@@ -246,7 +247,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   stops: [0.4, 1.0],
                 ),
                 image: DecorationImage(
-                  image: ExactAssetImage("assets/images/items/${eqp.img}"),
+                  image: itemImageProvider(eqp.img),
                   fit: BoxFit.cover,
                 ),
               )
