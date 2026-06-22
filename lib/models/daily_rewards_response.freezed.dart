@@ -25,7 +25,19 @@ mixin _$DailyRewardsResponse {
   @JsonKey(name: 'next_reward', fromJson: _parseNextReward)
   DailyReward get nextReward => throw _privateConstructorUsedError;
   @JsonKey(name: 'seconds_elapsed', fromJson: _parseInt)
-  int get secondsElapsed => throw _privateConstructorUsedError;
+  int get secondsElapsed =>
+      throw _privateConstructorUsedError; // The full cycle (one entry per day) — powers the day-strip with previews
+// and lock states. Added server-side for the mobile "Archivist's Offering".
+  @JsonKey(name: 'schedule', fromJson: _parsePastRewards)
+  List<DailyReward> get schedule => throw _privateConstructorUsedError;
+  @JsonKey(name: 'cycle_total', fromJson: _parseCycleTotal)
+  int get cycleTotal => throw _privateConstructorUsedError;
+  @JsonKey(name: 'consecutive_recoveries', fromJson: _parseInt)
+  int get consecutiveRecoveries => throw _privateConstructorUsedError;
+  @JsonKey(name: 'daily_reward_freq', fromJson: _parseFreq)
+  int get dailyRewardFreq => throw _privateConstructorUsedError;
+  @JsonKey(name: 'daily_reward_reset', fromJson: _parseReset)
+  int get dailyRewardReset => throw _privateConstructorUsedError;
 
   /// Create a copy of DailyRewardsResponse
   /// with the given fields replaced by the non-null parameter values.
@@ -45,8 +57,16 @@ abstract class $DailyRewardsResponseCopyWith<$Res> {
       List<DailyReward> pastRewards,
       @JsonKey(name: 'next_reward', fromJson: _parseNextReward)
       DailyReward nextReward,
-      @JsonKey(name: 'seconds_elapsed', fromJson: _parseInt)
-      int secondsElapsed});
+      @JsonKey(name: 'seconds_elapsed', fromJson: _parseInt) int secondsElapsed,
+      @JsonKey(name: 'schedule', fromJson: _parsePastRewards)
+      List<DailyReward> schedule,
+      @JsonKey(name: 'cycle_total', fromJson: _parseCycleTotal) int cycleTotal,
+      @JsonKey(name: 'consecutive_recoveries', fromJson: _parseInt)
+      int consecutiveRecoveries,
+      @JsonKey(name: 'daily_reward_freq', fromJson: _parseFreq)
+      int dailyRewardFreq,
+      @JsonKey(name: 'daily_reward_reset', fromJson: _parseReset)
+      int dailyRewardReset});
 }
 
 /// @nodoc
@@ -68,6 +88,11 @@ class _$DailyRewardsResponseCopyWithImpl<$Res,
     Object? pastRewards = null,
     Object? nextReward = null,
     Object? secondsElapsed = null,
+    Object? schedule = null,
+    Object? cycleTotal = null,
+    Object? consecutiveRecoveries = null,
+    Object? dailyRewardFreq = null,
+    Object? dailyRewardReset = null,
   }) {
     return _then(_value.copyWith(
       pastRewards: null == pastRewards
@@ -81,6 +106,26 @@ class _$DailyRewardsResponseCopyWithImpl<$Res,
       secondsElapsed: null == secondsElapsed
           ? _value.secondsElapsed
           : secondsElapsed // ignore: cast_nullable_to_non_nullable
+              as int,
+      schedule: null == schedule
+          ? _value.schedule
+          : schedule // ignore: cast_nullable_to_non_nullable
+              as List<DailyReward>,
+      cycleTotal: null == cycleTotal
+          ? _value.cycleTotal
+          : cycleTotal // ignore: cast_nullable_to_non_nullable
+              as int,
+      consecutiveRecoveries: null == consecutiveRecoveries
+          ? _value.consecutiveRecoveries
+          : consecutiveRecoveries // ignore: cast_nullable_to_non_nullable
+              as int,
+      dailyRewardFreq: null == dailyRewardFreq
+          ? _value.dailyRewardFreq
+          : dailyRewardFreq // ignore: cast_nullable_to_non_nullable
+              as int,
+      dailyRewardReset: null == dailyRewardReset
+          ? _value.dailyRewardReset
+          : dailyRewardReset // ignore: cast_nullable_to_non_nullable
               as int,
     ) as $Val);
   }
@@ -99,8 +144,16 @@ abstract class _$$DailyRewardsResponseImplCopyWith<$Res>
       List<DailyReward> pastRewards,
       @JsonKey(name: 'next_reward', fromJson: _parseNextReward)
       DailyReward nextReward,
-      @JsonKey(name: 'seconds_elapsed', fromJson: _parseInt)
-      int secondsElapsed});
+      @JsonKey(name: 'seconds_elapsed', fromJson: _parseInt) int secondsElapsed,
+      @JsonKey(name: 'schedule', fromJson: _parsePastRewards)
+      List<DailyReward> schedule,
+      @JsonKey(name: 'cycle_total', fromJson: _parseCycleTotal) int cycleTotal,
+      @JsonKey(name: 'consecutive_recoveries', fromJson: _parseInt)
+      int consecutiveRecoveries,
+      @JsonKey(name: 'daily_reward_freq', fromJson: _parseFreq)
+      int dailyRewardFreq,
+      @JsonKey(name: 'daily_reward_reset', fromJson: _parseReset)
+      int dailyRewardReset});
 }
 
 /// @nodoc
@@ -119,6 +172,11 @@ class __$$DailyRewardsResponseImplCopyWithImpl<$Res>
     Object? pastRewards = null,
     Object? nextReward = null,
     Object? secondsElapsed = null,
+    Object? schedule = null,
+    Object? cycleTotal = null,
+    Object? consecutiveRecoveries = null,
+    Object? dailyRewardFreq = null,
+    Object? dailyRewardReset = null,
   }) {
     return _then(_$DailyRewardsResponseImpl(
       pastRewards: null == pastRewards
@@ -133,6 +191,26 @@ class __$$DailyRewardsResponseImplCopyWithImpl<$Res>
           ? _value.secondsElapsed
           : secondsElapsed // ignore: cast_nullable_to_non_nullable
               as int,
+      schedule: null == schedule
+          ? _value._schedule
+          : schedule // ignore: cast_nullable_to_non_nullable
+              as List<DailyReward>,
+      cycleTotal: null == cycleTotal
+          ? _value.cycleTotal
+          : cycleTotal // ignore: cast_nullable_to_non_nullable
+              as int,
+      consecutiveRecoveries: null == consecutiveRecoveries
+          ? _value.consecutiveRecoveries
+          : consecutiveRecoveries // ignore: cast_nullable_to_non_nullable
+              as int,
+      dailyRewardFreq: null == dailyRewardFreq
+          ? _value.dailyRewardFreq
+          : dailyRewardFreq // ignore: cast_nullable_to_non_nullable
+              as int,
+      dailyRewardReset: null == dailyRewardReset
+          ? _value.dailyRewardReset
+          : dailyRewardReset // ignore: cast_nullable_to_non_nullable
+              as int,
     ));
   }
 }
@@ -146,8 +224,19 @@ class _$DailyRewardsResponseImpl extends _DailyRewardsResponse {
       @JsonKey(name: 'next_reward', fromJson: _parseNextReward)
       required this.nextReward,
       @JsonKey(name: 'seconds_elapsed', fromJson: _parseInt)
-      this.secondsElapsed = 0})
+      this.secondsElapsed = 0,
+      @JsonKey(name: 'schedule', fromJson: _parsePastRewards)
+      final List<DailyReward> schedule = const [],
+      @JsonKey(name: 'cycle_total', fromJson: _parseCycleTotal)
+      this.cycleTotal = 9,
+      @JsonKey(name: 'consecutive_recoveries', fromJson: _parseInt)
+      this.consecutiveRecoveries = 0,
+      @JsonKey(name: 'daily_reward_freq', fromJson: _parseFreq)
+      this.dailyRewardFreq = 84000,
+      @JsonKey(name: 'daily_reward_reset', fromJson: _parseReset)
+      this.dailyRewardReset = 172800})
       : _pastRewards = pastRewards,
+        _schedule = schedule,
         super._();
 
   factory _$DailyRewardsResponseImpl.fromJson(Map<String, dynamic> json) =>
@@ -168,10 +257,35 @@ class _$DailyRewardsResponseImpl extends _DailyRewardsResponse {
   @override
   @JsonKey(name: 'seconds_elapsed', fromJson: _parseInt)
   final int secondsElapsed;
+// The full cycle (one entry per day) — powers the day-strip with previews
+// and lock states. Added server-side for the mobile "Archivist's Offering".
+  final List<DailyReward> _schedule;
+// The full cycle (one entry per day) — powers the day-strip with previews
+// and lock states. Added server-side for the mobile "Archivist's Offering".
+  @override
+  @JsonKey(name: 'schedule', fromJson: _parsePastRewards)
+  List<DailyReward> get schedule {
+    if (_schedule is EqualUnmodifiableListView) return _schedule;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_schedule);
+  }
+
+  @override
+  @JsonKey(name: 'cycle_total', fromJson: _parseCycleTotal)
+  final int cycleTotal;
+  @override
+  @JsonKey(name: 'consecutive_recoveries', fromJson: _parseInt)
+  final int consecutiveRecoveries;
+  @override
+  @JsonKey(name: 'daily_reward_freq', fromJson: _parseFreq)
+  final int dailyRewardFreq;
+  @override
+  @JsonKey(name: 'daily_reward_reset', fromJson: _parseReset)
+  final int dailyRewardReset;
 
   @override
   String toString() {
-    return 'DailyRewardsResponse(pastRewards: $pastRewards, nextReward: $nextReward, secondsElapsed: $secondsElapsed)';
+    return 'DailyRewardsResponse(pastRewards: $pastRewards, nextReward: $nextReward, secondsElapsed: $secondsElapsed, schedule: $schedule, cycleTotal: $cycleTotal, consecutiveRecoveries: $consecutiveRecoveries, dailyRewardFreq: $dailyRewardFreq, dailyRewardReset: $dailyRewardReset)';
   }
 
   @override
@@ -184,7 +298,16 @@ class _$DailyRewardsResponseImpl extends _DailyRewardsResponse {
             (identical(other.nextReward, nextReward) ||
                 other.nextReward == nextReward) &&
             (identical(other.secondsElapsed, secondsElapsed) ||
-                other.secondsElapsed == secondsElapsed));
+                other.secondsElapsed == secondsElapsed) &&
+            const DeepCollectionEquality().equals(other._schedule, _schedule) &&
+            (identical(other.cycleTotal, cycleTotal) ||
+                other.cycleTotal == cycleTotal) &&
+            (identical(other.consecutiveRecoveries, consecutiveRecoveries) ||
+                other.consecutiveRecoveries == consecutiveRecoveries) &&
+            (identical(other.dailyRewardFreq, dailyRewardFreq) ||
+                other.dailyRewardFreq == dailyRewardFreq) &&
+            (identical(other.dailyRewardReset, dailyRewardReset) ||
+                other.dailyRewardReset == dailyRewardReset));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -193,7 +316,12 @@ class _$DailyRewardsResponseImpl extends _DailyRewardsResponse {
       runtimeType,
       const DeepCollectionEquality().hash(_pastRewards),
       nextReward,
-      secondsElapsed);
+      secondsElapsed,
+      const DeepCollectionEquality().hash(_schedule),
+      cycleTotal,
+      consecutiveRecoveries,
+      dailyRewardFreq,
+      dailyRewardReset);
 
   /// Create a copy of DailyRewardsResponse
   /// with the given fields replaced by the non-null parameter values.
@@ -213,7 +341,17 @@ abstract class _DailyRewardsResponse extends DailyRewardsResponse {
       @JsonKey(name: 'next_reward', fromJson: _parseNextReward)
       required final DailyReward nextReward,
       @JsonKey(name: 'seconds_elapsed', fromJson: _parseInt)
-      final int secondsElapsed}) = _$DailyRewardsResponseImpl;
+      final int secondsElapsed,
+      @JsonKey(name: 'schedule', fromJson: _parsePastRewards)
+      final List<DailyReward> schedule,
+      @JsonKey(name: 'cycle_total', fromJson: _parseCycleTotal)
+      final int cycleTotal,
+      @JsonKey(name: 'consecutive_recoveries', fromJson: _parseInt)
+      final int consecutiveRecoveries,
+      @JsonKey(name: 'daily_reward_freq', fromJson: _parseFreq)
+      final int dailyRewardFreq,
+      @JsonKey(name: 'daily_reward_reset', fromJson: _parseReset)
+      final int dailyRewardReset}) = _$DailyRewardsResponseImpl;
   const _DailyRewardsResponse._() : super._();
 
   factory _DailyRewardsResponse.fromJson(Map<String, dynamic> json) =
@@ -227,7 +365,23 @@ abstract class _DailyRewardsResponse extends DailyRewardsResponse {
   DailyReward get nextReward;
   @override
   @JsonKey(name: 'seconds_elapsed', fromJson: _parseInt)
-  int get secondsElapsed;
+  int get secondsElapsed; // The full cycle (one entry per day) — powers the day-strip with previews
+// and lock states. Added server-side for the mobile "Archivist's Offering".
+  @override
+  @JsonKey(name: 'schedule', fromJson: _parsePastRewards)
+  List<DailyReward> get schedule;
+  @override
+  @JsonKey(name: 'cycle_total', fromJson: _parseCycleTotal)
+  int get cycleTotal;
+  @override
+  @JsonKey(name: 'consecutive_recoveries', fromJson: _parseInt)
+  int get consecutiveRecoveries;
+  @override
+  @JsonKey(name: 'daily_reward_freq', fromJson: _parseFreq)
+  int get dailyRewardFreq;
+  @override
+  @JsonKey(name: 'daily_reward_reset', fromJson: _parseReset)
+  int get dailyRewardReset;
 
   /// Create a copy of DailyRewardsResponse
   /// with the given fields replaced by the non-null parameter values.

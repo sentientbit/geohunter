@@ -14,6 +14,12 @@ DailyReward _parseNextReward(dynamic v) =>
 
 int _parseInt(dynamic v) => int.tryParse(v?.toString() ?? '0') ?? 0;
 
+// Defaults double as a pre-deploy fallback: older servers omit these keys, so a
+// null value must resolve to the historically-hardcoded constant, not 0.
+int _parseCycleTotal(dynamic v) => int.tryParse(v?.toString() ?? '') ?? 9;
+int _parseFreq(dynamic v) => int.tryParse(v?.toString() ?? '') ?? 84000;
+int _parseReset(dynamic v) => int.tryParse(v?.toString() ?? '') ?? 172800;
+
 /// Typed result of GET /api/dailyrewards.
 ///
 /// Dashboard state fields (coins, xp, guild, etc.) are present in the raw
@@ -32,6 +38,23 @@ class DailyRewardsResponse with _$DailyRewardsResponse {
     @JsonKey(name: 'seconds_elapsed', fromJson: _parseInt)
     @Default(0)
     int secondsElapsed,
+    // The full cycle (one entry per day) — powers the day-strip with previews
+    // and lock states. Added server-side for the mobile "Archivist's Offering".
+    @JsonKey(name: 'schedule', fromJson: _parsePastRewards)
+    @Default([])
+    List<DailyReward> schedule,
+    @JsonKey(name: 'cycle_total', fromJson: _parseCycleTotal)
+    @Default(9)
+    int cycleTotal,
+    @JsonKey(name: 'consecutive_recoveries', fromJson: _parseInt)
+    @Default(0)
+    int consecutiveRecoveries,
+    @JsonKey(name: 'daily_reward_freq', fromJson: _parseFreq)
+    @Default(84000)
+    int dailyRewardFreq,
+    @JsonKey(name: 'daily_reward_reset', fromJson: _parseReset)
+    @Default(172800)
+    int dailyRewardReset,
   }) = _DailyRewardsResponse;
 
   factory DailyRewardsResponse.fromJson(Map<String, dynamic> json) =>
