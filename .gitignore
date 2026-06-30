@@ -99,6 +99,5 @@ android/key.properties
 /geocraft.jks
 assets/secrets.json
 .flutter-plugins-dependencies
-pubspec.lock
 ios/Podfile.lock
 ui.xml
